@@ -49,6 +49,7 @@ import tuwien.auto.calimero.exception.KNXTimeoutException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
+import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.KNXDisconnectException;
@@ -134,6 +135,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private final LogService logger;
 
+	private final int lengthDoA;
+
 	// pre-condition: device != null, link != null
 	ManagementServiceNotifier(final BaseKnxDevice device, final KNXNetworkLink link)
 		throws KNXLinkClosedException
@@ -142,6 +145,14 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		tl = new TransportLayerImpl(link, true);
 		tl.addTransportListener(this);
 		logger = device.getLogger();
+
+		final int medium = device.getDeviceLink().getKNXMedium().getMedium();
+		if (medium == KNXMediumSettings.MEDIUM_PL110)
+			lengthDoA = 2;
+		else if (medium == KNXMediumSettings.MEDIUM_RF)
+			lengthDoA = 6;
+		else
+			lengthDoA = 0;
 	}
 
 	public void broadcast(final FrameEvent e)
@@ -397,14 +408,14 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private void onDoASelectiveRead(final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 0, 0, "domain address selective read"))
+		// selective read service is only defined for RF (domain length 2)
+		if (!verifyLength(data.length, 5, 5, "domain address selective read"))
 			return;
 		final byte[] domain = DataUnitBuilder.copyOfRange(data, 0, 2);
-		final IndividualAddress start = new IndividualAddress(DataUnitBuilder.copyOfRange(data, 2,
-				4));
+		final IndividualAddress ia = new IndividualAddress(DataUnitBuilder.copyOfRange(data, 2, 4));
 		final int range = data[4];
 
-		final ServiceResult sr = mgmtSvc.readDomainAddress(domain, start, range);
+		final ServiceResult sr = mgmtSvc.readDomainAddress(domain, ia, range);
 		sendDoAresponse(respondTo, sr);
 	}
 
@@ -414,8 +425,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			return;
 
 		final byte[] domain = sr.getResult();
-		if (domain.length != 2 && domain.length != 6) {
-			logger.error("domain address length " + domain.length + " not in {2, 6} - ignore");
+		if (domain.length != lengthDoA) {
+			logger.error("length of domain address is " + domain.length + " bytes, should be "
+					+ lengthDoA + " - ignore");
 			return;
 		}
 		final byte[] apdu = DataUnitBuilder.createAPDU(DOA_RESPONSE, domain);
@@ -424,9 +436,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private void onDoAWrite(final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 0, 0, "domain address write"))
+		if (!verifyLength(data.length, 2, 6, "domain address write"))
 			return;
-		final byte[] domain = DataUnitBuilder.copyOfRange(data, 0, 2);
+		final byte[] domain = DataUnitBuilder.copyOfRange(data, 0, lengthDoA);
 		/*final ServiceResult sr =*/ mgmtSvc.writeDomainAddress(domain);
 	}
 
