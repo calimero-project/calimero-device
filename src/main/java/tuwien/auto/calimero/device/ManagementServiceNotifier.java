@@ -38,6 +38,8 @@ package tuwien.auto.calimero.device;
 
 import java.util.EventObject;
 
+import org.slf4j.Logger;
+
 import tuwien.auto.calimero.CloseEvent;
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DetachEvent;
@@ -48,7 +50,6 @@ import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.exception.KNXTimeoutException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
-import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
@@ -133,7 +134,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private final TransportLayer tl;
 	private ManagementService mgmtSvc;
 
-	private final LogService logger;
+	private final Logger logger;
 
 	private final int lengthDoA;
 

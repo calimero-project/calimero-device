@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2014 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -291,14 +291,16 @@ public class BaseKnxDeviceTest extends TestCase
 	// a KNX subnetwork without existing link to a real KNX installation.
 	private class VirtualLink implements KNXNetworkLink
 	{
-		private final EventListeners listeners = new EventListeners();
-		private final EventListeners otherListeners = new EventListeners();
+		private final EventListeners<NetworkLinkListener> listeners = new EventListeners<>(
+				NetworkLinkListener.class, null);
+		private final EventListeners<NetworkLinkListener> otherListeners = new EventListeners<>(
+				NetworkLinkListener.class, null);
 		private volatile boolean closed;
 		private volatile int hopCount = 6;
 		private KNXMediumSettings ms = TPSettings.TP1;
 
 		// not private since access is required from subclass to its fields
-		/*private*/final List list = Collections.synchronizedList(new LinkedList());
+		/*private*/final List<Object[]> list = Collections.synchronizedList(new LinkedList<>());
 		/*private*/final Thread dispatcher;
 
 		public VirtualLink()
@@ -315,9 +317,14 @@ public class BaseKnxDeviceTest extends TestCase
 						while (true) {
 							// XXX if we spuriously wake up, remove will throw if no entry
 							if (list.size() > 0) {
-								final Object[] item = (Object[]) list.remove(0);
-								VirtualLink.this.mySend((CEMILData) item[0],
-									(EventListeners) item[1], (EventListeners) item[2]);
+								final Object[] item = list.remove(0);
+								@SuppressWarnings("unchecked")
+								final EventListeners<NetworkLinkListener> one =
+									(EventListeners<NetworkLinkListener>) item[1];
+								@SuppressWarnings("unchecked")
+								final EventListeners<NetworkLinkListener> two =
+									(EventListeners<NetworkLinkListener>) item[2];
+								VirtualLink.this.mySend((CEMILData) item[0], one, two);
 							}
 							synchronized (this) {
 								wait();
@@ -449,8 +456,8 @@ public class BaseKnxDeviceTest extends TestCase
 			}
 		}
 
-		private void mySend(final CEMILData msg, final EventListeners one,
-			final EventListeners two)
+		private void mySend(final CEMILData msg, final EventListeners<NetworkLinkListener> one,
+			final EventListeners<NetworkLinkListener> two)
 		{
 			try {
 				System.out.println(DataUnitBuilder.decode(msg.getPayload(),

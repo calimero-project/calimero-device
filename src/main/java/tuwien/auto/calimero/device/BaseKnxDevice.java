@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2014 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -40,13 +40,14 @@ import java.nio.charset.Charset;
 import java.util.EventObject;
 import java.util.StringTokenizer;
 
+import org.slf4j.Logger;
+
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.exception.KNXFormatException;
 import tuwien.auto.calimero.exception.KNXIllegalArgumentException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
-import tuwien.auto.calimero.log.LogManager;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
@@ -73,7 +74,7 @@ public class BaseKnxDevice implements KnxDevice
 
 	//private ProcessCommunicator recv;
 
-	private final LogService logger;
+	private final Logger logger;
 
 	// service event threading
 	static final int INCOMING_EVENTS_THREADED = 1;
@@ -111,7 +112,7 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		this.name = name;
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
-		logger = LogManager.getManager().getLogService(name);
+		logger = LogService.getLogger(name);
 	}
 
 	/**
@@ -519,7 +520,7 @@ public class BaseKnxDevice implements KnxDevice
 		return new byte[] { (byte) uchar };
 	}
 
-	LogService getLogger()
+	Logger getLogger()
 	{
 		return logger;
 	}

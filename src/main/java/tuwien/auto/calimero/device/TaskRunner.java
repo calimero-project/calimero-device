@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012 B. Malinowsky
+    Copyright (c) 2012, 2014 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ import java.util.List;
 
 class TaskRunner extends Thread
 {
-	private final List tasks = new LinkedList();
+	private final List<Runnable> tasks = new LinkedList<>();
 
 	/**
 	 * Creates a new task runner.
@@ -65,12 +65,12 @@ class TaskRunner extends Thread
 					synchronized (this) {
 						wait();
 						if (!tasks.isEmpty())
-							r = (Runnable) tasks.remove(0);
+							r = tasks.remove(0);
 					}
 				}
 				if (r == null) {
 					synchronized (this) {
-						r = (Runnable) tasks.remove(0);
+						r = tasks.remove(0);
 					}
 				}
 				try {

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2014 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,7 +39,10 @@ package tuwien.auto.calimero.device;
 import junit.framework.TestCase;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.exception.KNXException;
+import tuwien.auto.calimero.mgmt.PropertyAccess;
+import tuwien.auto.calimero.server.InterfaceObject;
 import tuwien.auto.calimero.server.InterfaceObjectServer;
+import tuwien.auto.calimero.server.KNXPropertyException;
 import tuwien.auto.calimero.server.knxnetip.KNXnetIPServer;
 
 /**
@@ -52,6 +55,7 @@ public class ManagementServiceTest extends TestCase
 
 	public static class DefaultMgmtLogic implements ManagementService {
 
+		@Override
 		public ServiceResult writeProperty(final int objectIndex, final int propertyId,
 			final int startIndex, final int elements, final byte[] data)
 		{
@@ -193,6 +197,16 @@ public class ManagementServiceTest extends TestCase
 				// mask type (8 bit): Medium Type (4 bit), Firmware Type (4 bit)
 				// firmware version (8 bit): version (4 bit), sub code (4 bit)
 				descriptor = new byte[2];
+
+				final byte[] mask = null;// ios.getProperty(InterfaceObject.DEVICE_OBJECT,
+											// 1, PropertyAccess.PID., 1, 1);
+				try {
+					final byte[] firmware = ios.getProperty(InterfaceObject.DEVICE_OBJECT, 1,
+							PropertyAccess.PID.FIRMWARE_REVISION, 1, 1);
+				}
+				catch (final KNXPropertyException e) {
+					e.printStackTrace();
+				}
 			}
 			else if (type == 2) {
 				// application manufacturer (16 bit) | device type (16 bit) | version (8

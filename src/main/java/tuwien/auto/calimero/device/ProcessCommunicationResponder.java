@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2014 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,6 +38,8 @@ package tuwien.auto.calimero.device;
 
 import java.util.EventListener;
 
+import org.slf4j.Logger;
+
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DetachEvent;
 import tuwien.auto.calimero.GroupAddress;
@@ -59,7 +61,6 @@ import tuwien.auto.calimero.exception.KNXTimeoutException;
 import tuwien.auto.calimero.internal.EventListeners;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
-import tuwien.auto.calimero.log.LogManager;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.process.ProcessCommunicationBase;
 import tuwien.auto.calimero.process.ProcessListener;
@@ -79,11 +80,11 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	private static final int GROUP_RESPONSE = 0x40;
 
 	private final KNXNetworkLink lnk;
-	private final EventListeners listeners;
+	private final EventListeners<ProcessListener> listeners;
 	private volatile Priority priority = Priority.LOW;
 
 	private volatile boolean detached;
-	private final LogService logger;
+	private final Logger logger;
 
 	/**
 	 * Creates a new process communicator attached to the supplied KNX network link.
@@ -99,8 +100,8 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		if (!link.isOpen())
 			throw new KNXLinkClosedException();
 		lnk = link;
-		logger = LogManager.getManager().getLogService("process " + link.getName());
-		listeners = new EventListeners(logger);
+		logger = LogService.getLogger("process " + link.getName());
+		listeners = new EventListeners<>(ProcessListener.class, logger);
 	}
 
 	/* (non-Javadoc)
@@ -270,7 +271,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		//lnk.removeLinkListener(lnkListener);
 		fireDetached();
 		logger.info("detached from " + lnk.getName());
-		LogManager.getManager().removeLogService(logger.getName());
+		LogService.removeLogger(logger);
 		return lnk;
 	}
 

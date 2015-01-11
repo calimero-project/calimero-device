@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2014 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,15 +42,13 @@ import tuwien.auto.calimero.IndividualAddress;
  * Service interface for KNX application layer management services.
  * <p>
  * A {@link BaseKnxDevice} implements (or refers to) this interface to process and respond to
- * application layer management services requests originating from a remote communication
- * partner.<br>
- * This enables a Calimero KNX device to be notified, respond to, and update its
- * device state, as part of KNX management services and management procedures.
+ * application layer management services requests originating from a remote communication partner.<br>
+ * This enables a Calimero KNX device to be notified, respond to, and update its device state, as
+ * part of KNX management services and management procedures.
  * <p>
- * The service interface uses {@link ServiceResult}s to hand back the results for any
- * further processing by the lower communication layers. Such a service result can provide
- * its result either in form of data, or alternatively as command executed via
- * {@link ServiceResult#run()}.
+ * The service interface uses {@link ServiceResult}s to hand back the results for any further
+ * processing by the lower communication layers. Such a service result can provide its result either
+ * in form of data, or alternatively as command executed via {@link ServiceResult#run()}.
  *
  * @see ServiceResult
  * @author B. Malinowsky
@@ -61,8 +59,8 @@ public interface ManagementService
 	 * Invoked for an application layer property read service.
 	 * <p>
 	 * For data result, expects the requested number of property values as byte array.<br>
-	 * To indicate an (illegal) access problem, or protected memory, use a service result
-	 * with a data byte array of length 0.
+	 * To indicate an (illegal) access problem, or protected memory, use a service result with a
+	 * data byte array of length 0.
 	 *
 	 * @param objectIndex
 	 * @param propertyId
@@ -100,8 +98,8 @@ public interface ManagementService
 	/**
 	 * Invoked for an application layer memory read service.
 	 * <p>
-	 * The read memory bytes returned from this method is sent back to the client using a
-	 * memory read response.
+	 * The read memory bytes returned from this method is sent back to the client using a memory
+	 * read response.
 	 *
 	 * @param startAddress
 	 * @param bytes
@@ -140,8 +138,8 @@ public interface ManagementService
 	 * <p>
 	 * Currently, two descriptor types are defined in KNX:<br>
 	 * Structure of descriptor type 0:<br>
-	 * | mask type (8 bit): Medium Type (4 bit), Firmware Type (4 bit) |
-	 * firmware version (8 bit): version (4 bit), sub code (4 bit) |
+	 * | mask type (8 bit): Medium Type (4 bit), Firmware Type (4 bit) | firmware version (8 bit):
+	 * version (4 bit), sub code (4 bit) |
 	 * <p>
 	 * Structure of descriptor type 1:<br>
 	 * | application manufacturer (16 bit) | device type (16 bit) | version (8 bit) | link mgmt
@@ -165,11 +163,11 @@ public interface ManagementService
 	ServiceResult management(int svcType, byte[] asdu);
 
 	/**
-	 * Returns whether verify mode is enabled on this endpoint for certain management
-	 * services requested by clients.
+	 * Returns whether verify mode is enabled on this endpoint for certain management services
+	 * requested by clients.
 	 * <p>
-	 * Verifying mode is used by services concerned with writing memory data, and
-	 * specifies how the KNX device will respond to the service.
+	 * Verifying mode is used by services concerned with writing memory data, and specifies how the
+	 * KNX device will respond to the service.
 	 *
 	 * @return <code>true</code> if verify mode is enabled, <code>false</code> otherwise
 	 */
