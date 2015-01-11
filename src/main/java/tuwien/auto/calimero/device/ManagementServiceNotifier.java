@@ -406,7 +406,6 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		sendDoAresponse(respondTo, sr);
 	}
 
-
 	private void onDoASelectiveRead(final Destination respondTo, final byte[] data)
 	{
 		// selective read service is only defined for RF (domain length 2)
@@ -728,7 +727,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private void sendBroadcast(final boolean system, final byte[] apdu, final Priority p)
 	{
 		final String type = system ? "system" : "domain";
-		logger.trace(this.device.getAddress() + "-> " + type + " broadcast" + " respond with "
+		logger.trace(this.device.getAddress() + "->[" + type + " broadcast]" + " respond with "
 				+ DataUnitBuilder.toHex(apdu, " "));
 		try {
 				tl.broadcast(system, p, apdu);

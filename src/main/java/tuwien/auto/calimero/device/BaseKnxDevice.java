@@ -44,8 +44,6 @@ import org.slf4j.Logger;
 
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.Settings;
-import tuwien.auto.calimero.exception.KNXFormatException;
-import tuwien.auto.calimero.exception.KNXIllegalArgumentException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
@@ -118,17 +116,15 @@ public class BaseKnxDevice implements KnxDevice
 	/**
 	 * Creates a new KNX device.
 	 * <p>
-	 * The device individual address (see {@link IndividualAddress}) can either be a
-	 * configured subnetwork unique device address, or the default individual address if
-	 * no address was assigned to the device.<br>
-	 * The default individual device address consists of a medium dependent default
-	 * subnetwork address and the device address for unregistered devices. Unregistered
-	 * devices are identified by using the device address 0xff, a value reserved for this
-	 * purpose.<br>
+	 * The device individual address (see {@link IndividualAddress}) can either be a configured
+	 * subnetwork unique device address, or the default individual address if no address was
+	 * assigned to the device.<br>
+	 * The default individual device address consists of a medium dependent default subnetwork
+	 * address and the device address for unregistered devices. Unregistered devices are identified
+	 * by using the device address 0xff, a value reserved for this purpose.<br>
 	 * <br>
-	 * The subnetwork address part describes the individual address
-	 * <i>area</i> and <i>line</i>. The defined default subnetwork address by medium is,
-	 * listed as "Medium" : "Subnetwork address":
+	 * The subnetwork address part describes the individual address <i>area</i> and <i>line</i>. The
+	 * defined default subnetwork address by medium is, listed as "Medium" : "Subnetwork address":
 	 * <ul>
 	 * <li>TP 0: 0x01</li>
 	 * <li>TP 1: 0x02</li>
@@ -137,9 +133,8 @@ public class BaseKnxDevice implements KnxDevice
 	 * <li>RF: 0x05</li>
 	 * </ul>
 	 *
-	 * @param device the device address, or the default individual address; if a device
-	 *        address is assigned, this address shall be unique in the subnetwork the
-	 *        device resides
+	 * @param device the device address, or the default individual address; if a device address is
+	 *        assigned, this address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to
 	 * @throws KNXLinkClosedException
 	 * @throws KNXPropertyException
@@ -154,17 +149,15 @@ public class BaseKnxDevice implements KnxDevice
 	/**
 	 * Creates a new KNX device.
 	 * <p>
-	 * The device individual address (see {@link IndividualAddress}) can either be a
-	 * configured subnetwork unique device address, or the default individual address if
-	 * no address was assigned to the device.<br>
-	 * The default individual device address consists of a medium dependent default
-	 * subnetwork address and the device address for unregistered devices. Unregistered
-	 * devices are identified by using the device address 0xff, a value reserved for this
-	 * purpose.<br>
+	 * The device individual address (see {@link IndividualAddress}) can either be a configured
+	 * subnetwork unique device address, or the default individual address if no address was
+	 * assigned to the device.<br>
+	 * The default individual device address consists of a medium dependent default subnetwork
+	 * address and the device address for unregistered devices. Unregistered devices are identified
+	 * by using the device address 0xff, a value reserved for this purpose.<br>
 	 * <br>
-	 * The subnetwork address part describes the individual address
-	 * <i>area</i> and <i>line</i>. The defined default subnetwork address by medium is,
-	 * listed as "Medium" : "Subnetwork address":
+	 * The subnetwork address part describes the individual address <i>area</i> and <i>line</i>. The
+	 * defined default subnetwork address by medium is, listed as "Medium" : "Subnetwork address":
 	 * <ul>
 	 * <li>TP 0: 0x01</li>
 	 * <li>TP 1: 0x02</li>
@@ -173,9 +166,8 @@ public class BaseKnxDevice implements KnxDevice
 	 * <li>RF: 0x05</li>
 	 * </ul>
 	 *
-	 * @param device the device address, or the default individual address; if a device
-	 *        address is assigned, this address shall be unique in the subnetwork the
-	 *        device resides
+	 * @param device the device address, or the default individual address; if a device address is
+	 *        assigned, this address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to
 	 * @param process the device process communication service handler
 	 * @param mgmt the device management service handler
@@ -193,9 +185,9 @@ public class BaseKnxDevice implements KnxDevice
 	/**
 	 * Assigns a new KNX individual address to this device.
 	 * <p>
-	 * This method set the new address, and does <i>not</i> perform any other management
-	 * or configuration tasks, e.g., ensuring a subnetwork unique device address, or
-	 * publish the new address on the network.
+	 * This method set the new address, and does <i>not</i> perform any other management or
+	 * configuration tasks, e.g., ensuring a subnetwork unique device address, or publish the new
+	 * address on the network.
 	 *
 	 * @param address the new device address
 	 */
@@ -266,10 +258,10 @@ public class BaseKnxDevice implements KnxDevice
 	 * device uses service handlers, but did not set them during object creation using the supplied
 	 * constructor.
 	 *
-	 * @param process the device handler for process communication, <code>null</code> if this
+	 * @param process the device handler for process communication, <code>null</code> if this device
+	 *        does not use such handler
+	 * @param mgmt the device handler for device management services, <code>null</code> if this
 	 *        device does not use such handler
-	 * @param mgmt the device handler for device management services, <code>null</code> if
-	 *        this device does not use such handler
 	 */
 	protected synchronized final void setServiceHandler(final ProcessCommunicationService process,
 		final ManagementService mgmt)
@@ -281,14 +273,13 @@ public class BaseKnxDevice implements KnxDevice
 	void dispatch(final ServiceNotifier sn, final EventObject e)
 	{
 		if (threadingPolicy == INCOMING_EVENTS_THREADED) {
-			runTask(new Runnable()
-			{
+			runTask(new Runnable() {
 				public void run()
 				{
 					final ServiceResult sr = sn.dispatch(e);
 					// mgmt svc notifier always returns null, so don't check here for now
 					//if (sr != null)
-						sn.response(e, sr);
+					sn.response(e, sr);
 				}
 			});
 		}
@@ -296,10 +287,9 @@ public class BaseKnxDevice implements KnxDevice
 			// the mgmt svc notifier does processing only in response, therefore it
 			// always returns null here
 			final ServiceResult sr = sn.dispatch(e);
-			// ... because of this,  allow null for mgmt svc notifier
+			// ... because of this, allow null for mgmt svc notifier
 			if (sn instanceof ManagementServiceNotifier || sr != null) {
-				runTask(new Runnable()
-				{
+				runTask(new Runnable() {
 					public void run()
 					{
 						sn.response(e, sr);
@@ -334,12 +324,7 @@ public class BaseKnxDevice implements KnxDevice
 	private void initKnxProperties() throws KNXPropertyException
 	{
 		if (ios == null) {
-			try {
-				ios = new InterfaceObjectServer(false);
-			}
-			catch (final KNXFormatException e) {
-				throw new KNXIllegalArgumentException("cannot create interface object server", e);
-			}
+			ios = new InterfaceObjectServer(false);
 		}
 
 		// initialize interface device object properties
@@ -423,7 +408,7 @@ public class BaseKnxDevice implements KnxDevice
 				4, // Starting, required for apps with >2 s startup time
 				5, // Shutting down
 		};
-		 // TODO format is usage dependent: 1 byte read / 10 bytes write
+		// TODO format is usage dependent: 1 byte read / 10 bytes write
 		final int runState = RunStateEnum[1];
 		final int firmwareRev = 3;
 
@@ -461,12 +446,12 @@ public class BaseKnxDevice implements KnxDevice
 		setMemory(0x60, programmingMode ? 1 : 0);
 
 		// Run State (Application Program Object)
-		ios.setProperty(appProgamObject, objectInstance,
-				PropertyAccess.PID.RUN_STATE_CONTROL, 1, 1, fromWord(runState));
+		ios.setProperty(appProgamObject, objectInstance, PropertyAccess.PID.RUN_STATE_CONTROL, 1,
+				1, fromWord(runState));
 
 		// Firmware Revision
-		ios.setProperty(devObject, objectInstance,
-				PropertyAccess.PID.FIRMWARE_REVISION, 1, 1, fromWord(firmwareRev));
+		ios.setProperty(devObject, objectInstance, PropertyAccess.PID.FIRMWARE_REVISION, 1, 1,
+				fromWord(firmwareRev));
 
 		// Hardware Type
 		final byte[] hwType = new byte[6];
