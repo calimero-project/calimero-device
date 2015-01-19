@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,7 +43,6 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.exception.KNXIllegalArgumentException;
 import tuwien.auto.calimero.exception.KNXTimeoutException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
-import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.process.ProcessCommunicator;
 import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
@@ -61,15 +60,15 @@ final class ProcessServiceNotifier implements ServiceNotifier, ProcessListener
 	private final ProcessCommunicationResponder res;
 
 	// pre-condition: knxDevice != null, link != null
-	ProcessServiceNotifier(final BaseKnxDevice device, final KNXNetworkLink link)
+	ProcessServiceNotifier(final BaseKnxDevice device)
 		throws KNXLinkClosedException
 	{
 		if (device == null)
 			throw new NullPointerException("KNX device is required");
 		this.device = device;
-		recv = new ProcessCommunicatorImpl(link);
+		recv = new ProcessCommunicatorImpl(device.getDeviceLink());
 		recv.addProcessListener(this);
-		res = new ProcessCommunicationResponder(link);
+		res = new ProcessCommunicationResponder(device.getDeviceLink());
 	}
 
 	public void groupReadRequest(final ProcessEvent e)

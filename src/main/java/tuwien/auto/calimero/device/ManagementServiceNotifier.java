@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2014 B. Malinowsky
+    Copyright (c) 2012, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,9 +47,8 @@ import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.exception.KNXTimeoutException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
-import tuwien.auto.calimero.link.KNXNetworkLink;
-import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
+import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.KNXDisconnectException;
@@ -138,11 +137,11 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private final int lengthDoA;
 
 	// pre-condition: device != null, link != null
-	ManagementServiceNotifier(final BaseKnxDevice device, final KNXNetworkLink link)
+	ManagementServiceNotifier(final BaseKnxDevice device)
 		throws KNXLinkClosedException
 	{
 		this.device = device;
-		tl = new TransportLayerImpl(link, true);
+		tl = new TransportLayerImpl(device.getDeviceLink(), true);
 		tl.addTransportListener(this);
 		logger = device.getLogger();
 
