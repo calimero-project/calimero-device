@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2014 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -451,7 +451,7 @@ public class BaseKnxDevice implements KnxDevice
 
 		// Firmware Revision
 		ios.setProperty(devObject, objectInstance, PropertyAccess.PID.FIRMWARE_REVISION, 1, 1,
-				fromWord(firmwareRev));
+				fromByte(firmwareRev));
 
 		// Hardware Type
 		final byte[] hwType = new byte[6];
