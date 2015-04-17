@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -55,7 +55,7 @@ import tuwien.auto.calimero.link.medium.TPSettings;
 import tuwien.auto.calimero.process.ProcessCommunicator;
 import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
-import tuwien.auto.calimero.server.ServerMain;
+import tuwien.auto.calimero.server.Launcher;
 
 /**
  * @author B. Malinowsky
@@ -69,7 +69,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	//private static int serviceMode = KNXNetworkLinkIP.TUNNELING;
 	private static int serviceMode = KNXNetworkLinkIP.ROUTING;
 
-	private ServerMain knxServer;
+	private Launcher knxServer;
 
 	//private BaseKnxDevice dev2;
 	private final IndividualAddress addr = new IndividualAddress(1, 1, 1);
@@ -158,7 +158,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	{
 		super.setUp();
 
-		knxServer = new ServerMain(knxServerConfig);
+		knxServer = new Launcher(knxServerConfig);
 		final Thread t = new Thread(knxServer);
 		t.start();
 		Thread.sleep(1000);

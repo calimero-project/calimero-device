@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -339,7 +339,7 @@ public class BaseKnxDeviceTest extends TestCase
 				/*
 				 * (non-Javadoc)
 				 * @see
-				 * ServerMain.VirtualLink#addLinkListener(tuwien.auto.calimero.link.
+				 * Launcher.VirtualLink#addLinkListener(tuwien.auto.calimero.link.
 				 * NetworkLinkListener)
 				 */
 				public void addLinkListener(final NetworkLinkListener l)
@@ -350,7 +350,7 @@ public class BaseKnxDeviceTest extends TestCase
 				/*
 				 * (non-Javadoc)
 				 * @see
-				 * ServerMain.VirtualLink#removeLinkListener(tuwien.auto.calimero.link
+				 * Launcher.VirtualLink#removeLinkListener(tuwien.auto.calimero.link
 				 * .NetworkLinkListener)
 				 */
 				public void removeLinkListener(final NetworkLinkListener l)
@@ -360,7 +360,7 @@ public class BaseKnxDeviceTest extends TestCase
 
 				/*
 				 * (non-Javadoc)
-				 * @see ServerMain.VirtualLink#send(tuwien.auto.calimero.cemi.CEMILData,
+				 * @see Launcher.VirtualLink#send(tuwien.auto.calimero.cemi.CEMILData,
 				 * boolean)
 				 */
 				/**
