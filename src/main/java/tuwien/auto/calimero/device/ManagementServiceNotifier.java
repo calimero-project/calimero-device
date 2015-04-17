@@ -283,7 +283,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		asdu[1] = res[0];
 		asdu[2] = res[1];
 		asdu[3] = res[2];
-		final byte[] apdu = DataUnitBuilder.createCompactAPDU(RESTART, asdu);
+		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(RESTART, asdu);
 		send(respondTo, apdu, sr.getPriority());
 	}
 
@@ -459,7 +459,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			return;
 
 		final byte[] asdu = sr.getResult();
-		final byte[] apdu = DataUnitBuilder.createCompactAPDU(ADC_RESPONSE, asdu);
+		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(ADC_RESPONSE, asdu);
 		send(respondTo, apdu, sr.getPriority());
 	}
 
@@ -673,7 +673,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		for (int i = 0; i < bytesRead; ++i)
 			asdu[3 + i] = res[i];
 
-		final byte[] apdu = DataUnitBuilder.createCompactAPDU(MEMORY_RESPONSE, asdu);
+		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority());
 		return sr;
 	}
