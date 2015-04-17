@@ -418,7 +418,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private void onDoAWrite(final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 2, 6, "domain address write"))
+		if (!verifyLength(data.length, lengthDoA, lengthDoA, "domain address write"))
 			return;
 		final byte[] domain = DataUnitBuilder.copyOfRange(data, 0, lengthDoA);
 		/*final ServiceResult sr =*/ mgmtSvc.writeDomainAddress(domain);
@@ -523,8 +523,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private ServiceResult onPropertyWrite(final Destination d, final byte[] data)
 	{
-		// the max ASDU upper length should be 254 - (2 bytes APCI), right?
-		if (!verifyLength(data.length, 5, 252, "property-write"))
+		// the max ASDU upper length would be 254 - (2 bytes APCI)
+		if (!verifyLength(data.length, 5, getMaxApduLength() - 2, "property-write"))
 			return null;
 		final int objIndex = data[0] & 0xff;
 		final int pid = data[1] & 0xff;
