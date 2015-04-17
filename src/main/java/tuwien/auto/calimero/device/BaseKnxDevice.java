@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.Settings;
+import tuwien.auto.calimero.exception.KNXException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
@@ -83,6 +84,8 @@ public class BaseKnxDevice implements KnxDevice
 
 	private ProcessServiceNotifier procNotifier;
 	private ManagementServiceNotifier mgmtNotifier;
+
+	private static final String propDefinitionsResource = "properties.xml";
 
 	private InterfaceObjectServer ios = null;
 	// The object instance determines which instance of an object type is
@@ -325,6 +328,14 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		if (ios == null) {
 			ios = new InterfaceObjectServer(false);
+			// check property definitions for encoding support before we init basic properties
+			try {
+				ios.loadDefinitions(propDefinitionsResource);
+			}
+			catch (final KNXException e) {
+				// using the default resource ID, we cannot expect to always find the resource
+				logger.info("please load the Interface Object Server KNX property definitions");
+			}
 		}
 
 		// initialize interface device object properties
