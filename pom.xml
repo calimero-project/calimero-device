@@ -31,10 +31,5 @@
 			<artifactId>calimero-core</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>com.github.calimero</groupId>
-			<artifactId>calimero-server</artifactId>
-			<version>${project.version}</version>
-		</dependency>
 	</dependencies>
 </project>

@@ -49,6 +49,7 @@ import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.cemi.CEMIFactory;
 import tuwien.auto.calimero.cemi.CEMILData;
+import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.exception.KNXFormatException;
 import tuwien.auto.calimero.internal.EventListeners;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
@@ -57,7 +58,6 @@ import tuwien.auto.calimero.link.NetworkLinkListener;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.link.medium.TPSettings;
 import tuwien.auto.calimero.process.ProcessEvent;
-import tuwien.auto.calimero.server.KNXPropertyException;
 
 /**
  * @author B. Malinowsky

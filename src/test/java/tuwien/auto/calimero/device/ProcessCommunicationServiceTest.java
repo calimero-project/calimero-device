@@ -51,11 +51,9 @@ import tuwien.auto.calimero.exception.KNXTimeoutException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.KNXNetworkLinkIP;
-import tuwien.auto.calimero.link.medium.TPSettings;
 import tuwien.auto.calimero.process.ProcessCommunicator;
 import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
-import tuwien.auto.calimero.server.Launcher;
 
 /**
  * @author B. Malinowsky
@@ -69,7 +67,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	//private static int serviceMode = KNXNetworkLinkIP.TUNNELING;
 	private static int serviceMode = KNXNetworkLinkIP.ROUTING;
 
-	private Launcher knxServer;
+//	private Launcher knxServer;
 
 	//private BaseKnxDevice dev2;
 	private final IndividualAddress addr = new IndividualAddress(1, 1, 1);
@@ -158,15 +156,15 @@ public class ProcessCommunicationServiceTest extends TestCase
 	{
 		super.setUp();
 
-		knxServer = new Launcher(knxServerConfig);
-		final Thread t = new Thread(knxServer);
-		t.start();
-		Thread.sleep(1000);
-		//remoteHost = Util.getServer();
-		remoteHost = new InetSocketAddress("224.0.23.12", 0);
-		assertEquals(knxServer.getVirtualLinks().length, 1);
-		link = new KNXNetworkLinkIP(serviceMode, null, remoteHost, false,
-			TPSettings.TP1);
+//		knxServer = new Launcher(knxServerConfig);
+//		final Thread t = new Thread(knxServer);
+//		t.start();
+//		Thread.sleep(1000);
+//		//remoteHost = Util.getServer();
+//		remoteHost = new InetSocketAddress("224.0.23.12", 0);
+//		assertEquals(knxServer.getVirtualLinks().length, 1);
+//		link = new KNXNetworkLinkIP(serviceMode, null, remoteHost, false,
+//			TPSettings.TP1);
 
 		// XXX create KNX devices
 	}
@@ -176,7 +174,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 */
 	protected void tearDown() throws Exception
 	{
-		knxServer.quit();
+//		knxServer.quit();
 		link.close();
 		super.tearDown();
 	}

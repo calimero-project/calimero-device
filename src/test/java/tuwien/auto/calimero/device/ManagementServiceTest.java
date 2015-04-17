@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,9 +38,8 @@ package tuwien.auto.calimero.device;
 
 import junit.framework.TestCase;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.exception.KNXException;
-import tuwien.auto.calimero.server.InterfaceObjectServer;
-import tuwien.auto.calimero.server.knxnetip.KNXnetIPServer;
 
 /**
  * @author B. Malinowsky
@@ -48,7 +47,7 @@ import tuwien.auto.calimero.server.knxnetip.KNXnetIPServer;
 public class ManagementServiceTest extends TestCase
 {
 	private static final String knxServerConfig = "server-config.xml";
-	private KNXnetIPServer server;
+//	private KNXnetIPServer server;
 
 	public static class DefaultMgmtLogic implements ManagementService {
 
@@ -156,7 +155,8 @@ public class ManagementServiceTest extends TestCase
 
 	final ManagementService mgmtLogic = new DefaultMgmtLogic()
 	{
-		private final InterfaceObjectServer ios = server.getInterfaceObjectServer();
+		KnxDevice device; // XXX init
+		private final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		private final byte[] memory = new byte[100];
 
 		public ServiceResult writeProperty(final int objectIndex, final int pid,
