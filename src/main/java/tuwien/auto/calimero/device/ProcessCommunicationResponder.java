@@ -242,8 +242,6 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 				GROUP_RESPONSE, asdu) : DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
 
 		lnk.sendRequest(dst, priority, buf);
-//		if (logger.isTraceEnabled())
-//			logger.trace("group response to " + dst + " succeeded");
 	}
 
 	@Override

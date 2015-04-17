@@ -614,7 +614,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 		final byte[] memory = DataUnitBuilder.copyOfRange(data, 3, data.length);
 		if (memory.length != bytes)
-			logger.warn("ill-formed memory write");
+			logger.warn("ill-formed memory write: number field = {} but memory length = {}",
+					bytes, memory);
 		else {
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 			if (sr == null || sr.getResult() == null)
