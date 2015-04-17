@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2014 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -221,24 +221,25 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	/**
 	 * Writes the supplied application layer data to a group destination.
 	 * <p>
-	 * The data is interpreted as application layer service data and not further
-	 * formatted; therefore, is assumed to have the correct layout for the datapoint
-	 * associated with the destination group address.
+	 * The data is interpreted as application layer service data and not further formatted;
+	 * therefore, is assumed to have the correct layout for the datapoint associated with the
+	 * destination group address.
 	 *
 	 * @param dst group destination to write to
 	 * @param asdu application layer service data unit
-	 * @param compactApdu <true> to write a compact APDU, <false> to create a standard APDU
+	 * @param lengthOptimizedApdu <true> to use a length-optimized APDU, <false> to use a
+	 *        standard APDU
 	 * @throws KNXTimeoutException on a timeout during send
 	 * @throws KNXLinkClosedException if network link to KNX network is closed
 	 */
-	public void write(final GroupAddress dst, final byte[] asdu, final boolean compactApdu)
+	public void write(final GroupAddress dst, final byte[] asdu, final boolean lengthOptimizedApdu)
 		throws KNXTimeoutException, KNXLinkClosedException
 	{
 		if (detached)
 			throw new KNXIllegalStateException("process communicator detached");
 
-		final byte[] buf = compactApdu ? DataUnitBuilder.createCompactAPDU(GROUP_RESPONSE, asdu)
-				: DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
+		final byte[] buf = lengthOptimizedApdu ? DataUnitBuilder.createLengthOptimizedAPDU(
+				GROUP_RESPONSE, asdu) : DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
 
 		lnk.sendRequest(dst, priority, buf);
 //		if (logger.isTraceEnabled())
