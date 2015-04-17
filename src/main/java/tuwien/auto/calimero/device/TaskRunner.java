@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012 B. Malinowsky
+    Copyright (c) 2012, 2014 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ class TaskRunner extends Thread
 	public TaskRunner()
 	{
 		setDaemon(true);
-		setName("KNX device task runner");
+		setName("KNX device task");
 	}
 
 	/* (non-Javadoc)
