@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2014 B. Malinowsky
+    Copyright (c) 2012, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -113,23 +113,6 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private static final int defaultMaxApduLength = 15;
 	private boolean missingApduLength = false;
 
-	private int getMaxApduLength()
-	{
-		try {
-			final byte[] length = device.getInterfaceObjectServer().getProperty(
-					InterfaceObject.DEVICE_OBJECT, PID.MAX_APDULENGTH, 1, 1);
-			return length[0] << 8 | length[1];
-		}
-		catch (final KNXPropertyException e) {
-			if (!missingApduLength) {
-				missingApduLength = true;
-				logger.error("device has no maximum APDU length set (PID.MAX_APDULENGTH), using "
-						+ defaultMaxApduLength);
-			}
-			return defaultMaxApduLength;
-		}
-	}
-
 	private final BaseKnxDevice device;
 	private final TransportLayer tl;
 	private ManagementService mgmtSvc;
@@ -206,7 +189,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		if (tpdu.length > getMaxApduLength()) {
 			logger.error(sender + "->" + cemi.getDestination() + " "
 					+ DataUnitBuilder.decode(tpdu, cemi.getDestination())
-					+ " exceeds max APDU length of " + getMaxApduLength() + " - ignore");
+					+ " exceeds max. allowed APDU length of " + getMaxApduLength() + " - ignore");
 			return;
 		}
 
@@ -237,6 +220,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private void dispatchToService(final int svc, final byte[] data, final Destination respondTo)
 	{
+		logger.trace(DataUnitBuilder.decodeAPCI(svc));
 		if (svc == MEMORY_READ)
 			onMemoryRead(respondTo, data);
 		else if (svc == MEMORY_WRITE)
@@ -759,5 +743,31 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		catch (final KNXTimeoutException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private int getMaxApduLength()
+	{
+		try {
+			final byte[] length = device.getInterfaceObjectServer().getProperty(
+					InterfaceObject.DEVICE_OBJECT, PID.MAX_APDULENGTH, 1, 1);
+			return toUnsigned(length);
+		}
+		catch (final KNXPropertyException e) {
+			if (!missingApduLength) {
+				missingApduLength = true;
+				logger.error("device has no maximum APDU length set (PID.MAX_APDULENGTH), using "
+						+ defaultMaxApduLength);
+			}
+			return defaultMaxApduLength;
+		}
+	}
+
+	// for a max of (2^31)-1
+	private static int toUnsigned(final byte[] data)
+	{
+		if (data.length == 2)
+			return (data[0] & 0xff) << 8 | data[1] & 0xff;
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3]
+				& 0xff;
 	}
 };
