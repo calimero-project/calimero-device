@@ -45,15 +45,15 @@ import org.slf4j.Logger;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.Settings;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
+import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
+import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
-import tuwien.auto.calimero.server.InterfaceObject;
-import tuwien.auto.calimero.server.InterfaceObjectServer;
-import tuwien.auto.calimero.server.KNXPropertyException;
 
 /**
  * A skeleton implementation for a KNX device.

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2010, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,47 +34,67 @@
     version.
 */
 
-package tuwien.auto.calimero.device;
+package tuwien.auto.calimero.device.ios;
 
-import tuwien.auto.calimero.IndividualAddress;
-import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
-import tuwien.auto.calimero.link.KNXLinkClosedException;
-import tuwien.auto.calimero.link.KNXNetworkLink;
+import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 
-public interface KnxDevice
+/**
+ * Thrown on problems during access of a KNX property.
+ *
+ * @author B. Malinowsky
+ */
+public class KNXPropertyException extends KNXException
 {
-	/**
-	 * Returns the currently assigned device individual address or default individual address of
-	 * this device.
-	 * <p>
-	 *
-	 * @return the currently set device address
-	 */
-	IndividualAddress getAddress();
+	private static final long serialVersionUID = 1L;
+
+	private final int code;
 
 	/**
-	 * Sets the KNX network link over that this device will communicate.
-	 * <p>
-	 *
-	 * @param link the network link
-	 * @throws KNXLinkClosedException if the supplied link is closed
+	 * Constructs a new <code>KNXPropertyException</code> without a detail message, with status code
+	 * 0.
 	 */
-	void setDeviceLink(KNXNetworkLink link) throws KNXLinkClosedException;
+	public KNXPropertyException()
+	{
+		code = 0;
+	}
 
 	/**
-	 * Returns the KNX network link this device is attached to.
-	 * <p>
+	 * Constructs a new <code>KNXPropertyException</code> with the specified detail message, with
+	 * status code 0.
 	 *
-	 * @return the link
+	 * @param s the detail message
 	 */
-	KNXNetworkLink getDeviceLink();
+	public KNXPropertyException(final String s)
+	{
+		super(s);
+		code = 0;
+	}
 
 	/**
-	 * Returns the Interface Object Server (IOS) used for KNX property services and device
-	 * information.
+	 * Constructs a new <code>KNXPropertyException</code> with the specified detail message and a
+	 * status or error code indicating the problem during property access.
 	 * <p>
+	 * Within the library, for the status code one of the codes listed in CEMIDevMgmt.ErrorCodes is
+	 * used.
 	 *
-	 * @return the interface object server, or <code>null</code> if none is used
+	 * @param s the detail message
+	 * @param statusCode the status code for the problem
 	 */
-	InterfaceObjectServer getInterfaceObjectServer();
+	public KNXPropertyException(final String s, final int statusCode)
+	{
+		super(s + ", " + CEMIDevMgmt.getErrorMessage(statusCode));
+		code = statusCode;
+	}
+
+	/**
+	 * Returns the status code assigned to this exception. If this exception originates from within
+	 * the library, the status code is one of the codes listed in CEMIDevMgmt.ErrorCodes.
+	 *
+	 * @return status code as int
+	 */
+	public final int getStatusCode()
+	{
+		return code;
+	}
 }

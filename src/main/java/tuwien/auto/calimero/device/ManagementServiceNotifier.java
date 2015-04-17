@@ -48,6 +48,8 @@ import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.cemi.CEMILData;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
+import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
@@ -57,8 +59,6 @@ import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.mgmt.TransportListener;
-import tuwien.auto.calimero.server.InterfaceObject;
-import tuwien.auto.calimero.server.KNXPropertyException;
 
 /**
  * Listens to TL notifications, dispatches them to the appropriate management services, and answers

@@ -39,10 +39,10 @@ package tuwien.auto.calimero.device;
 import junit.framework.TestCase;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
+import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
+import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
-import tuwien.auto.calimero.server.InterfaceObject;
-import tuwien.auto.calimero.server.InterfaceObjectServer;
-import tuwien.auto.calimero.server.KNXPropertyException;
 import tuwien.auto.calimero.server.knxnetip.KNXnetIPServer;
 
 /**
@@ -160,7 +160,8 @@ public class ManagementServiceTest extends TestCase
 
 	final ManagementService mgmtLogic = new DefaultMgmtLogic()
 	{
-		private final InterfaceObjectServer ios = server.getInterfaceObjectServer();
+		KnxDevice device; // XXX init
+		private final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		private final byte[] memory = new byte[100];
 
 		public ServiceResult writeProperty(final int objectIndex, final int pid,
