@@ -245,7 +245,6 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 //			logger.trace("group response to " + dst + " succeeded");
 	}
 
-	@Override
 	public void write(final GroupAddress dst, final DPTXlator value) throws KNXException
 	{
 		write(dst, priority, value);
