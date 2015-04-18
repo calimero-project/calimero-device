@@ -227,8 +227,8 @@ public class BaseKnxDevice implements KnxDevice
 		procNotifier = null;
 		mgmtNotifier = null;
 		if (link != null) {
-			procNotifier = new ProcessServiceNotifier(this, link);
-			mgmtNotifier = new ManagementServiceNotifier(this, link);
+			procNotifier = new ProcessServiceNotifier(this);
+			mgmtNotifier = new ManagementServiceNotifier(this);
 		}
 	}
 
