@@ -136,6 +136,7 @@ public class BaseKnxDevice implements KnxDevice
 	 * <li>RF: 0x05</li>
 	 * </ul>
 	 *
+	 * @param name KNX device name, used for human readable device identification
 	 * @param device the device address, or the default individual address; if a device address is
 	 *        assigned, this address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to

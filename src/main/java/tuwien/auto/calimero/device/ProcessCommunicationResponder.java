@@ -227,8 +227,8 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	 *
 	 * @param dst group destination to write to
 	 * @param asdu application layer service data unit
-	 * @param lengthOptimizedApdu <true> to use a length-optimized APDU, <false> to use a
-	 *        standard APDU
+	 * @param lengthOptimizedApdu <code>true</code> to use a length-optimized APDU,
+	 *        <code>false</code> to use a standard APDU
 	 * @throws KNXTimeoutException on a timeout during send
 	 * @throws KNXLinkClosedException if network link to KNX network is closed
 	 */

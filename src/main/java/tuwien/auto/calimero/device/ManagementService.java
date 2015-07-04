@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2014 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -72,7 +72,6 @@ public interface ManagementService
 
 	/**
 	 * Invoked for an application layer property write service.
-	 * <p>
 	 *
 	 * @param objectIndex
 	 * @param propertyId
@@ -86,7 +85,6 @@ public interface ManagementService
 
 	/**
 	 * Invoked for an application layer property description read service.
-	 * <p>
 	 *
 	 * @param objectIndex
 	 * @param propertyId
@@ -109,7 +107,6 @@ public interface ManagementService
 
 	/**
 	 * Invoked for an application layer memory write service.
-	 * <p>
 	 *
 	 * @param startAddress
 	 * @param data

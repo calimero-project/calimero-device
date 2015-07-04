@@ -56,7 +56,7 @@ public class ServiceResult implements Runnable
 	final boolean compact;
 
 	/**
-	 * Creates a service result with no result data.<p>
+	 * Creates a service result with no result data.
 	 */
 	public ServiceResult()
 	{
@@ -66,7 +66,6 @@ public class ServiceResult implements Runnable
 
 	/**
 	 * Creates a service result holding the result data as byte array.
-	 * <p>
 	 *
 	 * @param result byte array containing the service result data, with
 	 *        <code>result.length</code> equal to the length as expected by the

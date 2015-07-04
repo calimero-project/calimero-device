@@ -137,11 +137,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 * 	t.setValue( ... provide your datapoint value );
 	 * } catch (KNXException e) {
 	 * 	// you might want to handle the case when no DPT translator available for this datapoint
-	 * }
+	 * }}
 	 * </pre>
 	 *
-	 * @param ofDp
-	 * @return
+	 * @param ofDp the datapoint whose value is requested
+	 * @return the created DPT translator for the requested datapoint
 	 * @throws KNXException
 	 */
 	// ??? maybe also make abstract so that users don't forget to implement it
