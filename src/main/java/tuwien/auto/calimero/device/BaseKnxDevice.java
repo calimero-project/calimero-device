@@ -43,8 +43,8 @@ import java.util.StringTokenizer;
 import org.slf4j.Logger;
 
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.Settings;
-import tuwien.auto.calimero.exception.KNXException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2014 B. Malinowsky
+    Copyright (c) 2011, 2015 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ package tuwien.auto.calimero.device;
 
 import junit.framework.TestCase;
 import tuwien.auto.calimero.IndividualAddress;
-import tuwien.auto.calimero.exception.KNXException;
+import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.server.InterfaceObject;
 import tuwien.auto.calimero.server.InterfaceObjectServer;
