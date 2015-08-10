@@ -52,6 +52,8 @@ import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.exception.KNXException;
 import tuwien.auto.calimero.exception.KNXIllegalArgumentException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
+import tuwien.auto.calimero.link.medium.PLSettings;
+import tuwien.auto.calimero.link.medium.RFSettings;
 import tuwien.auto.calimero.log.LogManager;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
@@ -74,8 +76,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private byte[] memory;
 
 	private final DatapointModel datapoints = new DatapointMap();
-	// TODO prob. remove: was used for visu device and old test cases
-//	private final Map<GroupAddress, String> state = new HashMap<GroupAddress, String>();
 
 	// domain can be 2 or 6 bytes, set in setDevice()
 	private byte[] domainAddress;
@@ -106,11 +106,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		domainAddress = new byte[0];
 		final int medium = device.getDeviceLink().getKNXMedium().getMedium();
 		if (medium == KNXMediumSettings.MEDIUM_PL110) {
-			domainAddress = new byte[2];
+			domainAddress = ((PLSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
 			mediumTimeFactor = T_MEDIUM_PL110;
 		}
-		else if (medium == KNXMediumSettings.MEDIUM_RF)
-			domainAddress = new byte[6];
+		else if (medium == KNXMediumSettings.MEDIUM_RF) {
+			domainAddress = ((RFSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
+		}
 		else if (medium == KNXMediumSettings.MEDIUM_TP1)
 			mediumTimeFactor = T_MEDIUM_TP1;
 	}
@@ -143,11 +144,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 * 	t.setValue( ... provide your datapoint value );
 	 * } catch (KNXException e) {
 	 * 	// you might want to handle the case when no DPT translator available for this datapoint
-	 * }
+	 * }}
 	 * </pre>
 	 *
-	 * @param ofDp
-	 * @return
+	 * @param ofDp the datapoint whose value is requested
+	 * @return the created DPT translator for the requested datapoint
 	 * @throws KNXException
 	 */
 	// ??? maybe also make abstract so that users don't forget to implement it
