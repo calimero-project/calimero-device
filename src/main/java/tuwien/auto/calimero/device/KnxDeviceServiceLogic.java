@@ -39,6 +39,7 @@ package tuwien.auto.calimero.device;
 import java.util.Arrays;
 
 import tuwien.auto.calimero.DataUnitBuilder;
+import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.datapoint.Datapoint;
@@ -84,11 +85,17 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private int mediumTimeFactor; // [ms]
 
 	// device descriptor type 0
-	// XXX expect descriptor during construction from KnxDevice (it's basically a constant there)
-	private static final byte[] dd0 = new byte[] { 5 << 4 | 7, 0 << 4 | 5 };
+	private final DeviceDescriptor dd;
 
 	public KnxDeviceServiceLogic()
-	{}
+	{
+		this(DeviceDescriptor.DD0.TYPE_5705);
+	}
+
+	public KnxDeviceServiceLogic(final DeviceDescriptor dd)
+	{
+		this.dd = dd;
+	}
 
 	public void setDevice(final KnxDevice device)
 	{
@@ -393,7 +400,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readDescriptor(final int type)
 	{
 		// by default, we only answer for descriptor type 0
-		return type == 0 ? new ServiceResult(dd0) : null;
+		return type == 0 ? new ServiceResult(dd.toByteArray()) : null;
 	}
 
 	public ServiceResult readADC(final int channel, final int consecutiveReads)
