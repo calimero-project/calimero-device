@@ -55,6 +55,8 @@ import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
+import tuwien.auto.calimero.link.medium.PLSettings;
+import tuwien.auto.calimero.link.medium.RFSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.process.ProcessEvent;
@@ -105,11 +107,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		domainAddress = new byte[0];
 		final int medium = device.getDeviceLink().getKNXMedium().getMedium();
 		if (medium == KNXMediumSettings.MEDIUM_PL110) {
-			domainAddress = new byte[2];
+			domainAddress = ((PLSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
 			mediumTimeFactor = T_MEDIUM_PL110;
 		}
-		else if (medium == KNXMediumSettings.MEDIUM_RF)
-			domainAddress = new byte[6];
+		else if (medium == KNXMediumSettings.MEDIUM_RF) {
+			domainAddress = ((RFSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
+		}
 		else if (medium == KNXMediumSettings.MEDIUM_TP1)
 			mediumTimeFactor = T_MEDIUM_TP1;
 	}
