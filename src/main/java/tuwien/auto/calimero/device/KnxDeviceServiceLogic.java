@@ -74,9 +74,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private static final int MEMORY_SIZE = 5000;
 	private byte[] memory;
 
-	private final DatapointModel datapoints = new DatapointMap();
-	// TODO prob. remove: was used for visu device and old test cases
-//	private final Map<GroupAddress, String> state = new HashMap<GroupAddress, String>();
+	private final DatapointModel<Datapoint> datapoints = new DatapointMap<>();
 
 	// domain can be 2 or 6 bytes, set in setDevice()
 	private byte[] domainAddress;
@@ -119,7 +117,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	/**
 	 * @return the configured datapoints
 	 */
-	public final DatapointModel getDatapointModel()
+	public final DatapointModel<Datapoint> getDatapointModel()
 	{
 		return datapoints;
 	}
