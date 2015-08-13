@@ -173,7 +173,7 @@ public class BaseKnxDeviceTest extends TestCase
 	protected void setUp() throws Exception
 	{
 		super.setUp();
-		dev = new BaseKnxDevice(addr, link, processLogic, mgmtLogic);
+		dev = new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
 	}
 
 	/* (non-Javadoc)
@@ -197,7 +197,7 @@ public class BaseKnxDeviceTest extends TestCase
 	public final void testKnxDevice() throws KNXLinkClosedException, KNXPropertyException
 	{
 		try {
-			dev = new BaseKnxDevice(addr, link, null, mgmtLogic);
+			dev = new BaseKnxDevice("test", addr, link, null, mgmtLogic);
 			fail("no process handler set");
 		}
 		catch (final Exception e) {
@@ -205,7 +205,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		try {
-			dev = new BaseKnxDevice(null, link, processLogic, mgmtLogic);
+			dev = new BaseKnxDevice("test", null, link, processLogic, mgmtLogic);
 			fail("no address set");
 		}
 		catch (final Exception e) {
@@ -213,7 +213,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		try {
-			dev = new BaseKnxDevice(addr, null, processLogic, mgmtLogic);
+			dev = new BaseKnxDevice("test", addr, null, processLogic, mgmtLogic);
 			fail("no link set");
 		}
 		catch (final Exception e) {
@@ -221,16 +221,16 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		// dev = new BaseKnxDevice(addr, link, procHandler, null);
-		dev = new BaseKnxDevice(addr, link, processLogic, mgmtLogic);
+		dev = new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
 	}
 
 	private final class MyKnxDevice extends BaseKnxDevice
 	{
-		MyKnxDevice(final IndividualAddress device, final KNXNetworkLink link,
-			final ProcessCommunicationService processService,
-			final ManagementService mgmtHandler) throws KNXLinkClosedException, KNXPropertyException
+		MyKnxDevice(final String name, final IndividualAddress device, final KNXNetworkLink link,
+			final ProcessCommunicationService processService, final ManagementService mgmtHandler)
+				throws KNXLinkClosedException, KNXPropertyException
 		{
-			super(device, link, processService, mgmtHandler);
+			super(name, device, link, processService, mgmtHandler);
 		}
 
 		void mySetAddress(final IndividualAddress address)
@@ -249,7 +249,7 @@ public class BaseKnxDeviceTest extends TestCase
 	 */
 	public final void testSetAddress() throws KNXLinkClosedException, KNXPropertyException
 	{
-		final MyKnxDevice dev2 = new MyKnxDevice(addr, link, processLogic, mgmtLogic);
+		final MyKnxDevice dev2 = new MyKnxDevice("test", addr, link, processLogic, mgmtLogic);
 
 		final IndividualAddress address = new IndividualAddress(4, 4, 4);
 		dev2.mySetAddress(address);
