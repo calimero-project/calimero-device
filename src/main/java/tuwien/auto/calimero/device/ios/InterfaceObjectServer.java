@@ -324,9 +324,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		listeners.remove(l);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.mgmt.PropertyAccess#getProperty(int, int, int, int)
-	 */
+	@Override
 	public byte[] getProperty(final int objectIndex, final int propertyId, final int start,
 		final int elements) throws KNXPropertyException
 	{
@@ -340,6 +338,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * removes all value elements of that property, with the current number of elements (as obtained
 	 * by {@link #getDescription(int, int)}) becoming 0.
 	 */
+	@Override
 	public void setProperty(final int objectIndex, final int propertyId, final int start,
 		final int elements, final byte[] data) throws KNXPropertyException
 	{
@@ -390,8 +389,9 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * @see tuwien.auto.calimero.mgmt.PropertyAccess
 	 * #setProperty(int, int, int, java.lang.String)
 	 */
+	@Override
 	public void setProperty(final int objIndex, final int propertyId, final int position,
-		final String value) throws KNXException
+		final String value) throws KNXException, InterruptedException
 	{
 		client.setProperty(objIndex, propertyId, position, value);
 	}
@@ -408,9 +408,11 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * @return a DPT translator containing the returned the element data
 	 * @throws KNXException on adapter errors while querying the property element or data type
 	 *         translation problems
+	 * @throws InterruptedException on thread interrupt
 	 */
+	@Override
 	public DPTXlator getPropertyTranslated(final int objIndex, final int pid, final int start,
-		final int elements) throws KNXException
+		final int elements) throws KNXException, InterruptedException
 	{
 		return client.getPropertyTranslated(objIndex, pid, start, elements);
 	}
@@ -521,9 +523,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		io.setDescription(set);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.mgmt.PropertyAccess#getDescription(int, int)
-	 */
+	@Override
 	public Description getDescription(final int objIndex, final int pid)
 		throws KNXPropertyException
 	{
@@ -534,17 +534,20 @@ public class InterfaceObjectServer implements PropertyAccess
 			// forward all KNXPropertyExceptions from our adapter
 			if (e instanceof KNXPropertyException)
 				throw (KNXPropertyException) e;
+			// XXX
 			// KNXException is currently thrown by PropertyClient.getObjectType,
 			// quite unnecessary to use that base type exception (maybe rework).
 			final KNXPropertyException pe = new KNXPropertyException(e.getMessage());
 			pe.setStackTrace(e.getStackTrace());
 			throw pe;
 		}
+		catch (final InterruptedException e) {
+			e.printStackTrace();
+			throw new KNXIllegalStateException("IOS adapter does not throw InterruptedException");
+		}
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.mgmt.PropertyAccess#getDescriptionByIndex(int, int)
-	 */
+	@Override
 	public Description getDescriptionByIndex(final int objIndex, final int propIndex)
 		throws KNXPropertyException
 	{
@@ -560,6 +563,10 @@ public class InterfaceObjectServer implements PropertyAccess
 			final KNXPropertyException pe = new KNXPropertyException(e.getMessage());
 			pe.setStackTrace(e.getStackTrace());
 			throw pe;
+		}
+		catch (final InterruptedException e) {
+			e.printStackTrace();
+			throw new KNXIllegalStateException("IOS adapter does not throw InterruptedException");
 		}
 	}
 
@@ -680,10 +687,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		IosAdapter()
 		{}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyAdapter
-		 * #setProperty(int, int, int, int, byte[])
-		 */
+		@Override
 		public void setProperty(final int objIndex, final int pid, final int start,
 			final int elements, final byte[] data) throws KNXPropertyException
 		{
@@ -698,9 +702,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					data);
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyAdapter#getProperty(int, int, int, int)
-		 */
+		@Override
 		public byte[] getProperty(final int objIndex, final int pid, final int start,
 			final int elements) throws KNXPropertyException
 		{
@@ -714,9 +716,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					elements);
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyAdapter#getDescription(int, int, int)
-		 */
+		@Override
 		public byte[] getDescription(final int objIndex, final int pid, final int propIndex)
 			throws KNXPropertyException
 		{
@@ -743,25 +743,19 @@ public class InterfaceObjectServer implements PropertyAccess
 					+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyAdapter#getName()
-		 */
+		@Override
 		public String getName()
 		{
 			return "Calimero IOS adapter";
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyAdapter#isOpen()
-		 */
+		@Override
 		public boolean isOpen()
 		{
 			return true;
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyAdapter#close()
-		 */
+		@Override
 		public void close()
 		{}
 
@@ -1073,29 +1067,20 @@ public class InterfaceObjectServer implements PropertyAccess
 			logger = l;
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyClient.ResourceHandler
-		 * #load(java.lang.String)
-		 */
+		@Override
 		public Collection<Property> load(final String resource) throws KNXException
 		{
 			return rh.load(resource);
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.mgmt.PropertyClient.ResourceHandler
-		 * #save(java.lang.String, java.util.Collection)
-		 */
+		@Override
 		public void save(final String resource, final Collection<Property> properties)
 			throws KNXException
 		{
 			rh.save(resource, properties);
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.server.InterfaceObjectServer.IOSResourceHandler
-		 * #loadInterfaceObjects(java.lang.String)
-		 */
+		@Override
 		public Collection<InterfaceObject> loadInterfaceObjects(final String resource)
 			throws KNXException
 		{
@@ -1129,10 +1114,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			}
 		}
 
-		/* (non-Javadoc)
-		 * @see tuwien.auto.calimero.server.InterfaceObjectServer.IOSResourceHandler
-		 * #saveInterfaceObjects(java.lang.String, java.util.Collection)
-		 */
+		@Override
 		public void saveInterfaceObjects(final String resource,
 			final Collection<InterfaceObject> objects) throws KNXException
 		{
@@ -1157,6 +1139,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			}
 		}
 
+		@Override
 		public void loadProperties(final String resource,
 			final Collection<Description> descriptions, final Collection<byte[]> values)
 			throws KNXException
@@ -1222,6 +1205,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			}
 		}
 
+		@Override
 		public void saveProperties(final String resource,
 			final Collection<Description> descriptions, final Collection<byte[]> values)
 			throws KNXException
