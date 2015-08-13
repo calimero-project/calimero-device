@@ -466,4 +466,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		logger.trace("management service " + DataUnitBuilder.decodeAPCI(svcType));
 		return null;
 	}
+
+	@Override
+	public boolean isVerifyModeEnabled()
+	{
+		return false;
+	}
 }
