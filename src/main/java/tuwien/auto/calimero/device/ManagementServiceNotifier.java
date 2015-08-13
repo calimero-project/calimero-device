@@ -184,7 +184,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		final CEMILData cemi = (CEMILData) fe.getFrame();
 		final IndividualAddress sender = cemi.getSource();
 
-		if (tpdu.length > getMaxApduLength()) {
+		if (tpdu.length - 1 > getMaxApduLength()) {
 			logger.error(sender + "->" + cemi.getDestination() + " "
 					+ DataUnitBuilder.decode(tpdu, cemi.getDestination())
 					+ " exceeds max. allowed APDU length of " + getMaxApduLength() + " - ignore");
