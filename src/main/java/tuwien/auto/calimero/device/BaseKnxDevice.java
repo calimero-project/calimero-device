@@ -135,6 +135,7 @@ public class BaseKnxDevice implements KnxDevice
 	 * <li>RF: 0x05</li>
 	 * </ul>
 	 *
+	 * @param name KNX device name, used for human readable naming or device identification
 	 * @param device the device address, or the default individual address; if a device address is
 	 *        assigned, this address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to
@@ -338,8 +339,8 @@ public class BaseKnxDevice implements KnxDevice
 		}
 
 		// initialize interface device object properties
-		ios.setProperty(devObject, objectInstance, PID.MAX_APDULENGTH, 1, 1, new byte[] { 0,
-			(byte) maxApduLength });
+		ios.setProperty(devObject, objectInstance, PID.MAX_APDULENGTH, 1, 1,
+				new byte[] { 0, (byte) maxApduLength });
 		final byte[] defDesc = new String("KNX Device").getBytes(Charset.forName("ISO-8859-1"));
 		ios.setProperty(devObject, objectInstance, PID.DESCRIPTION, 1, defDesc.length, defDesc);
 
@@ -350,8 +351,8 @@ public class BaseKnxDevice implements KnxDevice
 		}
 		catch (final NumberFormatException e) {}
 		final int ver = Integer.parseInt(sver[0]) << 12 | Integer.parseInt(sver[1]) << 6 | last;
-		ios.setProperty(devObject, objectInstance, PID.VERSION, 1, 1, new byte[] {
-			(byte) (ver >>> 8), (byte) (ver & 0xff) });
+		ios.setProperty(devObject, objectInstance, PID.VERSION, 1, 1,
+				new byte[] { (byte) (ver >>> 8), (byte) (ver & 0xff) });
 
 		// revision counting is not aligned with library version for now
 		ios.setProperty(devObject, objectInstance, PID.FIRMWARE_REVISION, 1, 1, new byte[] { 1 });
@@ -386,7 +387,8 @@ public class BaseKnxDevice implements KnxDevice
 
 		// a device should set PID_MAX_APDULENGTH (Chapter 3/5/1 Resources)
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)
-		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, true, 0, 10, 0, 0), true);
+		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, true, 0, 10, 0, 0),
+				true);
 		ios.setProperty(devObject, objectInstance, PID.MAX_APDULENGTH, 1, 1,
 				fromWord(maxApduLength));
 	}
@@ -397,7 +399,6 @@ public class BaseKnxDevice implements KnxDevice
 
 	private void addDeviceInfo() throws KNXPropertyException
 	{
-		final int appProgamObject = InterfaceObject.APPLICATIONPROGRAM_OBJECT;
 
 		// in devices without PEI, value is 0
 		// PEI type 1: Illegal adapter
@@ -427,7 +428,8 @@ public class BaseKnxDevice implements KnxDevice
 				fromByte(peiType));
 
 		// application program object
-		ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
+		final int appProgamObject = InterfaceObject.APPLICATIONPROGRAM_OBJECT;
+		ios.addInterfaceObject(appProgamObject);
 
 		// Required PEI Type (Application Program Object)
 		ios.setProperty(appProgamObject, objectInstance, PropertyAccess.PID.PEI_TYPE, 1, 1,
@@ -456,8 +458,8 @@ public class BaseKnxDevice implements KnxDevice
 		setMemory(0x60, programmingMode ? 1 : 0);
 
 		// Run State (Application Program Object)
-		ios.setProperty(appProgamObject, objectInstance, PropertyAccess.PID.RUN_STATE_CONTROL, 1,
-				1, fromWord(runState));
+		ios.setProperty(appProgamObject, objectInstance, PropertyAccess.PID.RUN_STATE_CONTROL, 1, 1,
+				fromWord(runState));
 
 		// Firmware Revision
 		ios.setProperty(devObject, objectInstance, PropertyAccess.PID.FIRMWARE_REVISION, 1, 1,
