@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import junit.framework.TestCase;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.Util;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.StateDP;
 import tuwien.auto.calimero.dptxlator.DPTXlator8BitUnsigned;
@@ -51,6 +52,9 @@ import tuwien.auto.calimero.exception.KNXTimeoutException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.KNXNetworkLinkIP;
+import tuwien.auto.calimero.link.medium.KnxIPSettings;
+import tuwien.auto.calimero.link.medium.TPSettings;
+import tuwien.auto.calimero.process.ProcessCommunicationBase;
 import tuwien.auto.calimero.process.ProcessCommunicator;
 import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
@@ -60,42 +64,36 @@ import tuwien.auto.calimero.process.ProcessEvent;
  */
 public class ProcessCommunicationServiceTest extends TestCase
 {
-	private static final String knxServerConfig = "server-config.xml";
 	private InetSocketAddress remoteHost;
 
-	// adjust to what is used in server-config
-	//private static int serviceMode = KNXNetworkLinkIP.TUNNELING;
+//	private static int serviceMode = KNXNetworkLinkIP.TUNNELING;
 	private static int serviceMode = KNXNetworkLinkIP.ROUTING;
 
-//	private Launcher knxServer;
-
-	//private BaseKnxDevice dev2;
-	private final IndividualAddress addr = new IndividualAddress(1, 1, 1);
+	// client link to read/write values to a KNX device
 	private KNXNetworkLink link;
 
-	private final Datapoint dp = new StateDP(new GroupAddress(1, 0, 0), "Switch", 0,
-		DPTXlatorBoolean.DPT_SWITCH.getID());
-	private final Datapoint dp2 = new StateDP(new GroupAddress(1, 0, 0), "Value", 0,
-		DPTXlator8BitUnsigned.DPT_SCALING.getID());
+	private final Datapoint dp = new StateDP(new GroupAddress(1, 1, 1), "Switch", 0,
+			DPTXlatorBoolean.DPT_SWITCH.getID());
+	private final Datapoint dp2 = new StateDP(new GroupAddress(1, 1, 2), "Value", 0,
+			DPTXlator8BitUnsigned.DPT_SCALING.getID());
 
-	private boolean dpState = false;
-	private final int dp2State = 30;
+	private boolean dpState = true;
+	private int dp2State = 30;
 
 	// test Runnable return in ServiceResult
-	private final ProcessCommunicationService processLogicRunnable = new ProcessCommunicationService()
-	{
+	private final ProcessCommunicationService processLogicRunnable = new ProcessCommunicationService() {
 		public ServiceResult groupReadRequest(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp.getMainAddress()))
-				return new ServiceResult()
-				{
+				return new ServiceResult() {
 					public void run()
 					{
 						try {
-							System.out.println("handleGroupReadRequest: generating service result");
-							dpState ^= true;
-							((ProcessCommunicator) e.getSource()).write(
-								dp.getMainAddress(), dpState);
+							System.out.println(
+									"Runnable groupReadRequest: service result value " + dpState);
+							final ProcessCommunicationBase responder = new ProcessCommunicationResponder(
+									device1.getDeviceLink());
+							responder.write(dp.getMainAddress(), dpState);
 						}
 						catch (final KNXTimeoutException e) {
 							e.printStackTrace();
@@ -109,21 +107,33 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 
 		public void groupWrite(final ProcessEvent e)
-		{}
+		{
+			if (e.getDestination().equals(dp.getMainAddress())) {
+				try {
+					final DPTXlatorBoolean t = new DPTXlatorBoolean(dp.getDPT());
+					t.setData(e.getASDU());
+					dpState = t.getValueBoolean();
+					System.out.println("group write value = " + dpState);
+				}
+				catch (final KNXFormatException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		}
 
 		public void groupResponse(final ProcessEvent e)
 		{}
 	};
 
 	// test return data byte[] in ServiceResult
-	private final ProcessCommunicationService processLogic = new ProcessCommunicationService()
-	{
+	private final ProcessCommunicationService processLogic = new ProcessCommunicationService() {
 		public ServiceResult groupReadRequest(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp2.getMainAddress())) {
-				DPTXlator8BitUnsigned x;
 				try {
-					x = new DPTXlator8BitUnsigned(dp2.getDPT());
+					System.out.println("groupReadRequest: service result value =" + dp2State);
+					final DPTXlator8BitUnsigned x = new DPTXlator8BitUnsigned(dp2.getDPT());
 					x.setValue(dp2State);
 					return new ServiceResult(x.getData());
 				}
@@ -135,11 +145,27 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 
 		public void groupWrite(final ProcessEvent e)
-		{}
+		{
+			if (e.getDestination().equals(dp2.getMainAddress())) {
+				try {
+					final DPTXlator8BitUnsigned t = new DPTXlator8BitUnsigned(dp2.getDPT());
+					t.setData(e.getASDU());
+					dp2State = t.getValueUnsigned();
+					System.out.println("group write value = " + dp2State);
+				}
+				catch (final KNXFormatException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+		}
 
 		public void groupResponse(final ProcessEvent e)
 		{}
 	};
+
+	private BaseKnxDevice device1;
+	private BaseKnxDevice device2;
 
 	/**
 	 * @param name
@@ -156,17 +182,26 @@ public class ProcessCommunicationServiceTest extends TestCase
 	{
 		super.setUp();
 
-//		knxServer = new Launcher(knxServerConfig);
-//		final Thread t = new Thread(knxServer);
-//		t.start();
-//		Thread.sleep(1000);
-//		//remoteHost = Util.getServer();
-//		remoteHost = new InetSocketAddress("224.0.23.12", 0);
-//		assertEquals(knxServer.getVirtualLinks().length, 1);
-//		link = new KNXNetworkLinkIP(serviceMode, null, remoteHost, false,
-//			TPSettings.TP1);
+		final IndividualAddress ia1 = new IndividualAddress("1.1.1");
+		final IndividualAddress ia2 = new IndividualAddress("1.1.2");
+		final KNXNetworkLink deviceLink1 = new KNXNetworkLinkIP(null, null, new KnxIPSettings(ia1));
+		device1 = new BaseKnxDevice(ia1.toString(), ia1, deviceLink1) {
+			{
+				threadingPolicy = INCOMING_EVENTS_THREADED;
+			}
+		};
+		final KNXNetworkLink deviceLink2 = new KNXNetworkLinkIP(null, null, new KnxIPSettings(ia2));
+		device2 = new BaseKnxDevice(ia2.toString(), ia2, deviceLink2);
 
-		// XXX create KNX devices
+		device1.setServiceHandler(processLogicRunnable, null);
+		device2.setServiceHandler(processLogic, null);
+
+		// client link
+		if (serviceMode == KNXNetworkLinkIP.TUNNELING)
+			remoteHost = Util.getServer();
+		else
+			remoteHost = new InetSocketAddress("224.0.23.12", 0);
+		link = new KNXNetworkLinkIP(serviceMode, null, remoteHost, false, TPSettings.TP1);
 	}
 
 	/* (non-Javadoc)
@@ -174,23 +209,20 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 */
 	protected void tearDown() throws Exception
 	{
-//		knxServer.quit();
 		link.close();
 		super.tearDown();
 	}
 
 	/**
 	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupReadRequest(
-	 * tuwien.auto.calimero.process.ProcessEvent)}.
+	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupReadRequest(ProcessEvent)}
+	 * .
 	 *
 	 * @throws InterruptedException
 	 * @throws KNXException
 	 */
-	public final void testGroupReadRequest() throws KNXException, InterruptedException
+	public final void testGroupReadRequestRunnable() throws KNXException, InterruptedException
 	{
-		// TODO for now, works only with routing turned off on server
-
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 		String s = pc.read(dp);
 		System.out.println(s);
@@ -198,12 +230,70 @@ public class ProcessCommunicationServiceTest extends TestCase
 
 		s = pc.read(dp);
 		System.out.println(s);
-		// this is on since the server network buffer returns last value
 		assertEquals(s, "on");
 
 		s = pc.read(dp);
 		System.out.println(s);
+		assertEquals(s, "on");
+	}
+
+	/**
+	 * Test method for
+	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupReadRequest(ProcessEvent)}
+	 * .
+	 *
+	 * @throws InterruptedException
+	 * @throws KNXException
+	 */
+	public final void testGroupReadRequest() throws KNXException, InterruptedException
+	{
+		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
+
+		String s = pc.read(dp2);
+		assertEquals(s, "30 %");
+
+		s = pc.read(dp2);
+		assertEquals(s, "30 %");
+	}
+
+	/**
+	 * Test method for
+	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
+	 *
+	 * @throws InterruptedException
+	 * @throws KNXException
+	 */
+	public final void testGroupWriteRunnable() throws KNXException, InterruptedException
+	{
+		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
+		pc.write(dp, "on");
+		String s = pc.read(dp);
 		// this is on since the server network buffer returns last value
 		assertEquals(s, "on");
+
+		pc.write(dp, "off");
+		s = pc.read(dp);
+		System.out.println(s);
+		assertEquals(s, "off");
+	}
+
+	/**
+	 * Test method for
+	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
+	 *
+	 * @throws InterruptedException
+	 * @throws KNXException
+	 */
+	public final void testGroupWrite() throws KNXException, InterruptedException
+	{
+		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
+
+		pc.write(dp2, "40");
+		String s = pc.read(dp2);
+		assertEquals(s, "40 %");
+
+		pc.write(dp2, "30");
+		s = pc.read(dp2);
+		assertEquals(s, "30 %");
 	}
 }

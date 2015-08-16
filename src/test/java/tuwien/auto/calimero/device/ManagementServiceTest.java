@@ -38,8 +38,11 @@ package tuwien.auto.calimero.device;
 
 import junit.framework.TestCase;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
+import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.exception.KNXException;
+import tuwien.auto.calimero.mgmt.PropertyAccess;
 
 /**
  * @author B. Malinowsky
@@ -47,7 +50,6 @@ import tuwien.auto.calimero.exception.KNXException;
 public class ManagementServiceTest extends TestCase
 {
 	private static final String knxServerConfig = "server-config.xml";
-//	private KNXnetIPServer server;
 
 	public static class DefaultMgmtLogic implements ManagementService {
 
@@ -193,6 +195,16 @@ public class ManagementServiceTest extends TestCase
 				// mask type (8 bit): Medium Type (4 bit), Firmware Type (4 bit)
 				// firmware version (8 bit): version (4 bit), sub code (4 bit)
 				descriptor = new byte[2];
+
+				final byte[] mask = null;// ios.getProperty(InterfaceObject.DEVICE_OBJECT,
+											// 1, PropertyAccess.PID., 1, 1);
+				try {
+					final byte[] firmware = ios.getProperty(InterfaceObject.DEVICE_OBJECT, 1,
+							PropertyAccess.PID.FIRMWARE_REVISION, 1, 1);
+				}
+				catch (final KNXPropertyException e) {
+					e.printStackTrace();
+				}
 			}
 			else if (type == 2) {
 				// application manufacturer (16 bit) | device type (16 bit) | version (8
