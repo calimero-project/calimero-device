@@ -187,6 +187,41 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	/**
+	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument. The device
+	 * individual address (see {@link IndividualAddress}) can either be a configured subnetwork
+	 * unique device address, or the default individual address if no address was assigned to the
+	 * device.<br>
+	 * The default individual device address consists of a medium dependent default subnetwork
+	 * address and the device address for unregistered devices. Unregistered devices are identified
+	 * by using the device address 0xff, a value reserved for this purpose.<br>
+	 * <br>
+	 * The subnetwork address part describes the individual address <i>area</i> and <i>line</i>. The
+	 * defined default subnetwork address by medium is, listed as "Medium" : "Subnetwork address":
+	 * <ul>
+	 * <li>TP 0: 0x01</li>
+	 * <li>TP 1: 0x02</li>
+	 * <li>PL 132: 0x03</li>
+	 * <li>PL 110: 0x04</li>
+	 * <li>RF: 0x05</li>
+	 * </ul>
+	 *
+	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param device the device address, or the default individual address; if a device address is
+	 *        assigned, this address shall be unique in the subnetwork the device resides
+	 * @param link the KNX network link this device is attached to
+	 * @param logic KNX device service logic
+	 * @throws KNXLinkClosedException on closed network link
+	 * @throws KNXPropertyException on error initializing the device properties
+	 */
+	public BaseKnxDevice(final String name, final IndividualAddress device,
+		final KNXNetworkLink link, final KnxDeviceServiceLogic logic)
+			throws KNXLinkClosedException, KNXPropertyException
+	{
+		this(name, device, link, logic, logic);
+		logic.setDevice(this);
+	}
+
+	/**
 	 * Assigns a new KNX individual address to this device.
 	 * <p>
 	 * This method set the new address, and does <i>not</i> perform any other management or
