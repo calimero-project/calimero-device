@@ -43,7 +43,6 @@ import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
-import tuwien.auto.calimero.server.knxnetip.KNXnetIPServer;
 
 /**
  * @author B. Malinowsky
@@ -51,7 +50,6 @@ import tuwien.auto.calimero.server.knxnetip.KNXnetIPServer;
 public class ManagementServiceTest extends TestCase
 {
 	private static final String knxServerConfig = "server-config.xml";
-	private KNXnetIPServer server;
 
 	public static class DefaultMgmtLogic implements ManagementService {
 

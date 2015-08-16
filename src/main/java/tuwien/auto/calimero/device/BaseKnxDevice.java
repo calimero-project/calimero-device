@@ -86,7 +86,7 @@ public class BaseKnxDevice implements KnxDevice
 	// service event threading
 	static final int INCOMING_EVENTS_THREADED = 1;
 	static final int OUTGOING_EVENTS_THREADED = 2;
-	private final int threadingPolicy;
+	int threadingPolicy;
 
 	// proc. & mgmt communication service tasks are processed as follows:
 	//  *) producer / consumer pattern
