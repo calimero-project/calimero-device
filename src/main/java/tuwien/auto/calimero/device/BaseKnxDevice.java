@@ -55,12 +55,20 @@ import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 
 /**
- * A skeleton implementation for a KNX device.
+ * Implementation of a KNX device for common device tasks.
+ * <p>
+ * This type can either be used directly, with the device logic for process communication and/or
+ * management services supplied during construction. Or, extended by a subtype which implements the
+ * corresponding service interfaces ({@link ProcessCommunicationService}, {@link ManagementService}
+ * ).
  * <p>
  * Notes for working with KNX devices: a KNX device can change its individual address. Therefore, do
  * not use the address as identifier.
  *
  * @author B. Malinowsky
+ * @see KnxDeviceServiceLogic
+ * @see ProcessCommunicationService
+ * @see ManagementService
  */
 public class BaseKnxDevice implements KnxDevice
 {
@@ -69,8 +77,6 @@ public class BaseKnxDevice implements KnxDevice
 
 	private final String name;
 	private IndividualAddress self;
-
-	//private ProcessCommunicator recv;
 
 	private final LogService logger;
 
@@ -224,7 +230,7 @@ public class BaseKnxDevice implements KnxDevice
 	/**
 	 * Assigns a new KNX individual address to this device.
 	 * <p>
-	 * This method set the new address, and does <i>not</i> perform any other management or
+	 * This method sets the new address, and does <i>not</i> perform any other management or
 	 * configuration tasks, e.g., ensuring a subnetwork unique device address, or publish the new
 	 * address on the network.
 	 *
@@ -340,7 +346,7 @@ public class BaseKnxDevice implements KnxDevice
 
 	private void init(final IndividualAddress device, final KNXNetworkLink link,
 		final ProcessCommunicationService process, final ManagementService mgmt)
-		throws KNXLinkClosedException, KNXPropertyException
+			throws KNXLinkClosedException, KNXPropertyException
 	{
 		// if we throw here for processService == null or mgmtService == null,
 		// subclasses always have to supply handlers but cannot supply 'this' if the handlers are
@@ -449,11 +455,11 @@ public class BaseKnxDevice implements KnxDevice
 
 		final int[] RunStateEnum = {
 				0, // Halted or not loaded
-				1, // Running
-				2, // Ready for being executed
-				3, // Terminated (app only starts again after restart/device reset)
-				4, // Starting, required for apps with >2 s startup time
-				5, // Shutting down
+			1, // Running
+			2, // Ready for being executed
+			3, // Terminated (app only starts again after restart/device reset)
+			4, // Starting, required for apps with >2 s startup time
+			5, // Shutting down
 		};
 		// TODO format is usage dependent: 1 byte read / 10 bytes write
 		final int runState = RunStateEnum[1];

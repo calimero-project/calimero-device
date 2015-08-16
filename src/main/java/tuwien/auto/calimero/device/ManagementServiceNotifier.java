@@ -62,7 +62,6 @@ import tuwien.auto.calimero.mgmt.TransportListener;
 /**
  * Listens to TL notifications, dispatches them to the appropriate management services, and answers
  * back to the sender using the service results.
- * <p>
  *
  * @author B. Malinowsky
  */
