@@ -179,16 +179,6 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		write(dst, priority, t);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#write
-	 * (tuwien.auto.calimero.GroupAddress, float)
-	 */
-	public void write(final GroupAddress dst, final float value) throws KNXTimeoutException,
-		KNXFormatException, KNXLinkClosedException
-	{
-		throw new KNXIllegalStateException("don't use this method");
-	}
-
 	public void write(final GroupAddress dst, final float value, final boolean use4ByteFloat)
 		throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException
 	{
