@@ -36,8 +36,6 @@
 
 package tuwien.auto.calimero.device;
 
-import java.util.EventListener;
-
 import org.slf4j.Logger;
 
 import tuwien.auto.calimero.DataUnitBuilder;
@@ -101,7 +99,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 			throw new KNXLinkClosedException();
 		lnk = link;
 		logger = LogService.getLogger("process " + link.getName());
-		listeners = new EventListeners<>(ProcessListener.class, logger);
+		listeners = new EventListeners<>(logger);
 	}
 
 	/* (non-Javadoc)
@@ -283,17 +281,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	private void fireDetached()
 	{
 		final DetachEvent e = new DetachEvent(this);
-		final EventListener[] el = listeners.listeners();
-		for (int i = 0; i < el.length; i++) {
-			final ProcessListener l = (ProcessListener) el[i];
-			try {
-				l.detached(e);
-			}
-			catch (final RuntimeException rte) {
-				removeProcessListener(l);
-				logger.error("removed event listener", rte);
-			}
-		}
+		listeners.fire(l -> l.detached(e));
 	}
 
 	// createGroupAPDU and extractGroupASDU helper would actually better fit
