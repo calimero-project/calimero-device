@@ -37,8 +37,16 @@
 package tuwien.auto.calimero.device;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.EventObject;
+import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 
@@ -80,7 +88,22 @@ public class BaseKnxDevice implements KnxDevice
 	static final int OUTGOING_EVENTS_THREADED = 2;
 	private final int threadingPolicy;
 
-	private TaskRunner taskRunner;
+	// proc. & mgmt communication service tasks are processed as follows:
+	//  *) producer / consumer pattern
+	//  *) in-order task processing per producer
+	//  *) sequential task processing per producer
+
+	private static final ThreadFactory factory = Executors.defaultThreadFactory();
+	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 10,
+			TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), (r) -> {
+				final Thread t = factory.newThread(r);
+				t.setName("Calimero Device Task (" + t.getName() + ")");
+				t.setDaemon(true); // on shutdown, we won't execute any remaining tasks
+				return t;
+			});
+	private boolean taskSubmitted;
+	// local queue if a task is currently submitted to our executor service
+	private final List<Runnable> tasks = new ArrayList<>(5);
 
 	private ProcessServiceNotifier procNotifier;
 	private ManagementServiceNotifier mgmtNotifier;
@@ -211,15 +234,6 @@ public class BaseKnxDevice implements KnxDevice
 		return self;
 	}
 
-	/**
-	 * @return the service thread currently set for this device, or a worker thread that should be
-	 *         used to work on a task
-	 */
-	public TaskRunner getServiceThread()
-	{
-		return taskRunner;
-	}
-
 	/* (non-Javadoc)
 	 * @see tuwien.auto.calimero.device.KnxDevice#setDeviceLink(tuwien.auto.calimero.link.KNXNetworkLink)
 	 */
@@ -250,6 +264,15 @@ public class BaseKnxDevice implements KnxDevice
 		return ios;
 	}
 
+	/**
+	 * @return the task executor providing the threads to run the process communication and
+	 *         management services
+	 */
+	public ExecutorService getTaskExecutor()
+	{
+		return executor;
+	}
+
 	public String toString()
 	{
 		return name + " " + self;
@@ -278,13 +301,15 @@ public class BaseKnxDevice implements KnxDevice
 	void dispatch(final ServiceNotifier sn, final EventObject e)
 	{
 		if (threadingPolicy == INCOMING_EVENTS_THREADED) {
-			runTask(new Runnable() {
-				public void run()
-				{
+			submitTask(() -> {
+				try {
 					final ServiceResult sr = sn.dispatch(e);
 					// mgmt svc notifier always returns null, so don't check here for now
 					//if (sr != null)
 					sn.response(e, sr);
+				}
+				finally {
+					taskDone();
 				}
 			});
 		}
@@ -294,11 +319,13 @@ public class BaseKnxDevice implements KnxDevice
 			final ServiceResult sr = sn.dispatch(e);
 			// ... because of this, allow null for mgmt svc notifier
 			if (sn instanceof ManagementServiceNotifier || sr != null) {
-				runTask(new Runnable() {
-					public void run()
-					{
+				submitTask(() -> {
+					try {
 						sn.response(e, sr);
-					};
+					}
+					finally {
+						taskDone();
+					}
 				});
 			}
 		}
@@ -320,9 +347,6 @@ public class BaseKnxDevice implements KnxDevice
 
 		initKnxProperties();
 		addDeviceInfo();
-
-		taskRunner = new TaskRunner();
-		taskRunner.start();
 	}
 
 	// taken from KNX server
@@ -489,10 +513,26 @@ public class BaseKnxDevice implements KnxDevice
 				applicationVersion);
 	}
 
-	private void runTask(final Runnable task)
+	private void submitTask(final Runnable task)
 	{
-		final TaskRunner t = getServiceThread();
-		t.runTask(task);
+		synchronized (tasks) {
+			if (taskSubmitted)
+				tasks.add(task);
+			else {
+				taskSubmitted = true;
+				executor.submit(task);
+			}
+		}
+	}
+
+	private void taskDone()
+	{
+		synchronized (tasks) {
+			if (tasks.isEmpty())
+				taskSubmitted = false;
+			else
+				executor.submit(tasks.remove(0));
+		}
 	}
 
 	private void setMemory(final int i, final int j)
