@@ -376,7 +376,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 		final byte[] asdu = new byte[0];
 		final byte[] apdu = DataUnitBuilder.createAPDU(IND_ADDR_RESPONSE, asdu);
-		send(respondTo, apdu, sr.getPriority());
+		sendBroadcast(false, apdu, Priority.SYSTEM);
 	}
 
 	private void onDoARead(final Destination respondTo, final byte[] data)
