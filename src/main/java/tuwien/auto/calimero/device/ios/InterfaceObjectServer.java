@@ -65,13 +65,11 @@ import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.mgmt.PropertyClient.ResourceHandler;
-import tuwien.auto.calimero.xml.Attribute;
-import tuwien.auto.calimero.xml.Element;
-import tuwien.auto.calimero.xml.EntityResolver;
 import tuwien.auto.calimero.xml.KNXMLException;
-import tuwien.auto.calimero.xml.XMLFactory;
-import tuwien.auto.calimero.xml.XMLReader;
-import tuwien.auto.calimero.xml.XMLWriter;
+import tuwien.auto.calimero.xml.XmlInputFactory;
+import tuwien.auto.calimero.xml.XmlOutputFactory;
+import tuwien.auto.calimero.xml.XmlReader;
+import tuwien.auto.calimero.xml.XmlWriter;
 
 /**
  * An interface object server holds {@link InterfaceObject}s and offers property services for the
@@ -81,8 +79,7 @@ import tuwien.auto.calimero.xml.XMLWriter;
  * property access.<br>
  * The interface server provides the {@link IosResourceHandler} to load and save interface object
  * server information from and to a resource. The default resource handler implementation uses an
- * xml format layout. The resource identifier for an xml resource is resolved by
- * {@link EntityResolver}, which accepts common URI specifications.
+ * xml format layout.
  * <p>
  * A server instance can maintain KNX property definitions. Such property definitions are used to
  * fill in default values for property descriptions and validation purposes on property access.
@@ -489,7 +486,8 @@ public class InterfaceObjectServer implements PropertyAccess
 
 		if (d.getMaxElements() < d.getCurrentElements()) {
 			if (!allowCorrections)
-				throw new KNXIllegalArgumentException("maximum elements less than current elements");
+				throw new KNXIllegalArgumentException(
+						"maximum elements less than current elements");
 		}
 
 		if (d.getPDT() == 0 && allowCorrections) {
@@ -523,8 +521,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	}
 
 	@Override
-	public Description getDescription(final int objIndex, final int pid)
-		throws KNXPropertyException
+	public Description getDescription(final int objIndex, final int pid) throws KNXPropertyException
 	{
 		try {
 			return client.getDescription(objIndex, pid);
@@ -602,14 +599,14 @@ public class InterfaceObjectServer implements PropertyAccess
 		final int objectType = io.getType();
 		final int index = io.getIndex();
 		// add object type property to the interface object
-		io.values.put(new PropertyKey(objectType, PID.OBJECT_TYPE), new byte[] { 0, 1,
-			(byte) (objectType >> 8), (byte) objectType });
+		io.values.put(new PropertyKey(objectType, PID.OBJECT_TYPE),
+				new byte[] { 0, 1, (byte) (objectType >> 8), (byte) objectType });
 		if (createDescription)
 			adapter.createNewDescription(index, PID.OBJECT_TYPE);
 
 		// AN104: global property PID.OBJECT_INDEX holds index of the if-object
-		io.values.put(new PropertyKey(objectType, PID.OBJECT_INDEX), new byte[] { 0, 1,
-			(byte) (index >> 8), (byte) index });
+		io.values.put(new PropertyKey(objectType, PID.OBJECT_INDEX),
+				new byte[] { 0, 1, (byte) (index >> 8), (byte) index });
 		if (createDescription)
 			adapter.createNewDescription(index, PID.OBJECT_INDEX);
 	}
@@ -641,8 +638,8 @@ public class InterfaceObjectServer implements PropertyAccess
 					return io;
 			}
 		}
-		throw new KNXIllegalArgumentException("interface object index " + objIndex
-				+ " past last interface object");
+		throw new KNXIllegalArgumentException(
+				"interface object index " + objIndex + " past last interface object");
 	}
 
 	private InterfaceObject findByObjectType(final int objectType, final int objectInstance)
@@ -666,8 +663,8 @@ public class InterfaceObjectServer implements PropertyAccess
 			return data[0] & 0xff;
 		if (data.length == 2)
 			return (data[0] & 0xff) << 8 | data[1] & 0xff;
-		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3]
-				& 0xff;
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8
+				| data[3] & 0xff;
 	}
 
 	// Adapter only throws KNXPropertyException on get/set property/desc
@@ -685,7 +682,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 		public void setProperty(final int objectType, final int objectInstance,
 			final int propertyId, final int start, final int elements, final byte[] data)
-			throws KNXPropertyException
+				throws KNXPropertyException
 		{
 			setProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements,
 					data);
@@ -724,8 +721,8 @@ public class InterfaceObjectServer implements PropertyAccess
 				}
 				catch (final KNXPropertyException e) {}
 				return new Description(objIndex, d.getObjectType(), d.getPID(), d.getPropIndex(),
-						d.getPDT(), d.isWriteEnabled(), elems, d.getMaxElements(),
-						d.getReadLevel(), d.getWriteLevel()).toByteArray();
+						d.getPDT(), d.isWriteEnabled(), elems, d.getMaxElements(), d.getReadLevel(),
+						d.getWriteLevel()).toByteArray();
 			}
 			throw new KNXPropertyException("no description found for "
 					+ PropertyClient.getObjectTypeName(io.getType()) + " (" + io.getType() + ")"
@@ -813,8 +810,9 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (typeSize == 0)
 				typeSize = data.length / elements;
 			else if (typeSize != data.length / elements)
-				throw new KNXPropertyException("property type size is " + typeSize + ", not "
-						+ data.length / elements, CEMIDevMgmt.ErrorCodes.TYPE_CONFLICT);
+				throw new KNXPropertyException(
+						"property type size is " + typeSize + ", not " + data.length / elements,
+						CEMIDevMgmt.ErrorCodes.TYPE_CONFLICT);
 
 			// I dynamically increase the value array if the new element size exceeds
 			// the current element size, and adjust the current element number
@@ -824,8 +822,9 @@ public class InterfaceObjectServer implements PropertyAccess
 				// max elements of 100 randomly chosen in absence of a user setting
 				final int maxElements = d == null ? 100 : d.getMaxElements();
 				if (size > maxElements)
-					throw new KNXPropertyException("property values index range [" + start + "..."
-							+ size + "] exceeds " + maxElements + " maximum elements",
+					throw new KNXPropertyException(
+							"property values index range [" + start + "..." + size + "] exceeds "
+									+ maxElements + " maximum elements",
 							CEMIDevMgmt.ErrorCodes.PROP_INDEX_RANGE_ERROR);
 				// create resized array
 				final byte[] resize = new byte[2 + size * typeSize];
@@ -853,8 +852,9 @@ public class InterfaceObjectServer implements PropertyAccess
 
 			if (start == 0) {
 				if (elements > 1)
-					throw new KNXPropertyException("current number of elements consists "
-							+ "of 1 element only", CEMIDevMgmt.ErrorCodes.UNSPECIFIED_ERROR);
+					throw new KNXPropertyException(
+							"current number of elements consists " + "of 1 element only",
+							CEMIDevMgmt.ErrorCodes.UNSPECIFIED_ERROR);
 
 				if (values != null)
 					return new byte[] { values[0], values[1] };
@@ -873,8 +873,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			final int currElems = (values[0] & 0xff) << 8 | values[1] & 0xff;
 			final int size = start + elements - 1;
 			if (currElems < size)
-				throw new KNXPropertyException(
-						"requested elements exceed past last property value",
+				throw new KNXPropertyException("requested elements exceed past last property value",
 						CEMIDevMgmt.ErrorCodes.PROP_INDEX_RANGE_ERROR);
 			final int typeSize = (values.length - 2) / currElems;
 			final byte[] data = new byte[elements * typeSize];
@@ -901,12 +900,12 @@ public class InterfaceObjectServer implements PropertyAccess
 				}
 				catch (final KNXPropertyException e) {}
 				return new Description(io.getIndex(), d.getObjectType(), d.getPID(),
-						d.getPropIndex(), d.getPDT(), d.isWriteEnabled(), elems,
-						d.getMaxElements(), d.getReadLevel(), d.getWriteLevel()).toByteArray();
+						d.getPropIndex(), d.getPDT(), d.isWriteEnabled(), elems, d.getMaxElements(),
+						d.getReadLevel(), d.getWriteLevel()).toByteArray();
 			}
-			throw new KNXPropertyException("no description found for "
-					+ PropertyClient.getObjectTypeName(io.getType())
-					+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
+			throw new KNXPropertyException(
+					"no description found for " + PropertyClient.getObjectTypeName(io.getType())
+							+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
 		}
 
 		private Description createNewDescription(final int objIndex, final int pid)
@@ -985,8 +984,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		 * @param ifObjects a collection of interface objects, type {@link InterfaceObject}, to save
 		 * @throws KNXException on errors accessing the resource, or saving the data
 		 */
-		void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects)
-			throws KNXException;
+		void saveInterfaceObjects(final String resource,
+			final Collection<InterfaceObject> ifObjects) throws KNXException;
 
 		/**
 		 * Reads KNX property data from a resource identified by <code>resource</code>, and loads
@@ -1046,8 +1045,8 @@ public class InterfaceObjectServer implements PropertyAccess
 
 		private ResourceHandler rh;
 
-		private XMLReader r;
-		private XMLWriter w;
+		private XmlReader r;
+		private XmlWriter w;
 
 		private final Logger logger;
 
@@ -1057,40 +1056,53 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 
 		@Override
-		public Collection<Property> load(final String resource) throws KNXException
+		public Collection<Property> load(final String resource) throws KNXMLException
 		{
 			return rh.load(resource);
 		}
 
 		@Override
+		public Collection<Property> load(final XmlReader reader) throws KNXMLException
+		{
+			return rh.load(reader);
+		}
+
+		@Override
 		public void save(final String resource, final Collection<Property> properties)
-			throws KNXException
+			throws KNXMLException
 		{
 			rh.save(resource, properties);
+		}
+
+		@Override
+		public void save(final XmlWriter writer, final Collection<Property> definitions)
+			throws KNXMLException
+		{
+			rh.save(writer, definitions);
 		}
 
 		@Override
 		public Collection<InterfaceObject> loadInterfaceObjects(final String resource)
 			throws KNXException
 		{
-			r = XMLFactory.getInstance().createXMLReader(resource);
+			r = XmlInputFactory.newInstance().createXMLReader(resource);
 			final List<InterfaceObject> list = new ArrayList<>();
 			try {
-				if (r.read() != XMLReader.START_TAG || !r.getCurrent().getName().equals(TAG_IOS))
+				if (r.nextTag() != XmlReader.START_ELEMENT || !r.getLocalName().equals(TAG_IOS))
 					throw new KNXMLException("no interface objects");
-				while (r.read() != XMLReader.END_DOC) {
-					final Element e = r.getCurrent();
-					if (r.getPosition() == XMLReader.START_TAG) {
-						if (e.getName().equals(TAG_OBJECT)) {
+				while (r.next() != XmlReader.END_DOCUMENT) {
+					if (r.getEventType() == XmlReader.START_ELEMENT) {
+						if (r.getLocalName().equals(TAG_OBJECT)) {
 							// on no type attribute, toInt() throws, that's ok
-							final int type = toInt(e.getAttribute(ATTR_OBJECTTYPE));
-							final int index = toInt(e.getAttribute(ATTR_INDEX));
+							final int type = toInt(r.getAttributeValue(null, ATTR_OBJECTTYPE));
+							final int index = toInt(r.getAttributeValue(null, ATTR_INDEX));
 							final InterfaceObject io = new InterfaceObject(type, index);
 							list.add(io);
 							io.load(this, resource);
 						}
 					}
-					else if (r.getPosition() == XMLReader.END_TAG && e.getName().equals(TAG_IOS))
+					else if (r.getEventType() == XmlReader.END_ELEMENT
+							&& r.getLocalName().equals(TAG_IOS))
 						break;
 				}
 				return list;
@@ -1107,20 +1119,19 @@ public class InterfaceObjectServer implements PropertyAccess
 		public void saveInterfaceObjects(final String resource,
 			final Collection<InterfaceObject> objects) throws KNXException
 		{
-			w = XMLFactory.getInstance().createXMLWriter(resource);
+			w = XmlOutputFactory.newInstance().createXMLWriter(resource);
 			try {
-				w.writeDeclaration(true, "UTF-8");
-				w.writeComment("Calimero 2 " + Settings.getLibraryVersion()
+				w.writeStartDocument("UTF-8", "1.0");
+				w.writeComment("Calimero v" + Settings.getLibraryVersion()
 						+ " interface objects, saved on " + new Date().toString());
-				w.writeElement(TAG_IOS, null, null);
+				w.writeStartElement(TAG_IOS);
 				for (final Iterator<InterfaceObject> i = objects.iterator(); i.hasNext();) {
 					final InterfaceObject io = i.next();
-					final List<Attribute> att = new ArrayList<>();
-					att.add(new Attribute(ATTR_OBJECTTYPE, Integer.toString(io.getType())));
-					att.add(new Attribute(ATTR_INDEX, Integer.toString(io.getIndex())));
-					w.writeElement(TAG_OBJECT, att, null);
+					w.writeStartElement(TAG_OBJECT);
+					w.writeAttribute(ATTR_OBJECTTYPE, Integer.toString(io.getType()));
+					w.writeAttribute(ATTR_INDEX, Integer.toString(io.getIndex()));
 					io.save(this, resource);
-					w.endElement();
+					w.writeEndElement();
 				}
 			}
 			finally {
@@ -1131,14 +1142,14 @@ public class InterfaceObjectServer implements PropertyAccess
 		@Override
 		public void loadProperties(final String resource,
 			final Collection<Description> descriptions, final Collection<byte[]> values)
-			throws KNXException
+				throws KNXException
 		{
 			try {
 				int type = 0;
 				int oi = 0;
-				if (r.getCurrent().getName().equals(TAG_OBJECT)) {
-					type = toInt(r.getCurrent().getAttribute(ATTR_OBJECTTYPE));
-					oi = toInt(r.getCurrent().getAttribute(ATTR_INDEX));
+				if (r.getLocalName().equals(TAG_OBJECT)) {
+					type = toInt(r.getAttributeValue(null, ATTR_OBJECTTYPE));
+					oi = toInt(r.getAttributeValue(null, ATTR_INDEX));
 				}
 				// For every added property description, one property element value is
 				// required; this toggle bit makes sure we keep aligned in case a xml
@@ -1147,21 +1158,20 @@ public class InterfaceObjectServer implements PropertyAccess
 				boolean valueExpected = false;
 				final byte[] emptyValue = new byte[0];
 
-				while (r.read() != XMLReader.END_DOC) {
-					final Element e = r.getCurrent();
-					if (r.getPosition() == XMLReader.START_TAG) {
-						if (e.getName().equals(TAG_PROPERTY)) {
-							final int index = toInt(e.getAttribute(ATTR_INDEX));
-							final int elems = toInt(e.getAttribute(ATTR_ELEMS));
-							final int maxElems = toInt(e.getAttribute(ATTR_MAXELEMS));
-							final int rw = parseRW(e.getAttribute(ATTR_RW));
+				while (r.next() != XmlReader.END_DOCUMENT) {
+					if (r.getEventType() == XmlReader.START_ELEMENT) {
+						if (r.getLocalName().equals(TAG_PROPERTY)) {
+							final int index = toInt(r.getAttributeValue(null, ATTR_INDEX));
+							final int elems = toInt(r.getAttributeValue(null, ATTR_ELEMS));
+							final int maxElems = toInt(r.getAttributeValue(null, ATTR_MAXELEMS));
+							final int rw = parseRW(r.getAttributeValue(null, ATTR_RW));
 							final int rLevel = rw >> 8;
 							final int wLevel = rw & 0xff;
 							final Description d = new Description(oi, type,
-									toInt(e.getAttribute(ATTR_PID)), index,
-									toInt(e.getAttribute(ATTR_PDT)),
-									toInt(e.getAttribute(ATTR_WRITE)) == 1, elems, maxElems,
-									rLevel, wLevel);
+									toInt(r.getAttributeValue(null, ATTR_PID)), index,
+									toInt(r.getAttributeValue(null, ATTR_PDT)),
+									toInt(r.getAttributeValue(null, ATTR_WRITE)) == 1, elems,
+									maxElems, rLevel, wLevel);
 							descriptions.add(d);
 							if (valueExpected)
 								values.add(emptyValue);
@@ -1169,9 +1179,9 @@ public class InterfaceObjectServer implements PropertyAccess
 							if (logger.isTraceEnabled())
 								logger.trace(d.toString());
 						}
-						else if (e.getName().equals(TAG_DATA)) {
-							r.complete(e);
-							final String s = e.getCharacterData();
+						else if (r.getLocalName().equals(TAG_DATA)) {
+//							r.complete(e);
+							final String s = r.getElementText();
 							if (logger.isTraceEnabled())
 								logger.trace(s);
 							final int odd = s.length() % 2;
@@ -1185,7 +1195,8 @@ public class InterfaceObjectServer implements PropertyAccess
 							valueExpected = false;
 						}
 					}
-					else if (r.getPosition() == XMLReader.END_TAG && e.getName().equals(TAG_OBJECT))
+					else if (r.getEventType() == XmlReader.END_ELEMENT
+							&& r.getLocalName().equals(TAG_OBJECT))
 						break;
 				}
 			}
@@ -1197,7 +1208,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		@Override
 		public void saveProperties(final String resource,
 			final Collection<Description> descriptions, final Collection<byte[]> values)
-			throws KNXException
+				throws KNXException
 		{
 			if (values.size() < descriptions.size())
 				throw new KNXIllegalArgumentException("values size " + values.size()
@@ -1206,28 +1217,27 @@ public class InterfaceObjectServer implements PropertyAccess
 			for (final Iterator<Description> i = descriptions.iterator(); i.hasNext();) {
 				final Description d = i.next();
 				final byte[] data = k.next();
-				final List<Attribute> att = new ArrayList<>();
-				att.add(new Attribute(ATTR_INDEX, Integer.toString(d.getPropIndex())));
-				att.add(new Attribute(ATTR_PID, Integer.toString(d.getPID())));
-				att.add(new Attribute(ATTR_PDT, d.getPDT() == -1 ? "<tbd>" : Integer.toString(d
-						.getPDT())));
-				att.add(new Attribute(ATTR_ELEMS, Integer.toString(d.getCurrentElements())));
-				att.add(new Attribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements())));
-				att.add(new Attribute(ATTR_RW, Integer.toString(d.getReadLevel()) + "/"
-						+ Integer.toString(d.getWriteLevel())));
-				att.add(new Attribute(ATTR_WRITE, d.isWriteEnabled() ? "1" : "0"));
-				w.writeElement(TAG_PROPERTY, att, null);
-				w.writeElement(TAG_DATA, null, DataUnitBuilder.toHex(data, ""));
-				w.endElement();
-				w.endElement();
+				w.writeStartElement(TAG_PROPERTY);
+				w.writeAttribute(ATTR_INDEX, Integer.toString(d.getPropIndex()));
+				w.writeAttribute(ATTR_PID, Integer.toString(d.getPID()));
+				w.writeAttribute(ATTR_PDT,
+						d.getPDT() == -1 ? "<tbd>" : Integer.toString(d.getPDT()));
+				w.writeAttribute(ATTR_ELEMS, Integer.toString(d.getCurrentElements()));
+				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements()));
+				w.writeAttribute(ATTR_RW, Integer.toString(d.getReadLevel()) + "/"
+						+ Integer.toString(d.getWriteLevel()));
+				w.writeAttribute(ATTR_WRITE, d.isWriteEnabled() ? "1" : "0");
+				w.writeStartElement(TAG_DATA, null, DataUnitBuilder.toHex(data, ""));
+				w.writeEndElement();
+				w.writeEndElement();
 			}
 			while (k.hasNext()) {
 				final byte[] data = k.next();
-				final List<Attribute> att = new ArrayList<>();
-				w.writeElement(TAG_PROPERTY, att, null);
-				w.writeElement(TAG_DATA, null, DataUnitBuilder.toHex(data, ""));
-				w.endElement();
-				w.endElement();
+				w.writeStartElement(TAG_PROPERTY);
+				w.writeStartElement(TAG_DATA);
+				w.writeCharacters(DataUnitBuilder.toHex(data, ""));
+				w.writeEndElement();
+				w.writeEndElement();
 			}
 		}
 
