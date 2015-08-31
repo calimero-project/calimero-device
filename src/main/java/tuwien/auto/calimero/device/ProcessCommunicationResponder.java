@@ -96,53 +96,40 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	public ProcessCommunicationResponder(final KNXNetworkLink link) throws KNXLinkClosedException
 	{
 		if (!link.isOpen())
-			throw new KNXLinkClosedException();
+			throw new KNXLinkClosedException(
+					"cannot initialize process communication using closed link " + link.getName());
 		lnk = link;
 		logger = LogService.getLogger("process " + link.getName());
 		listeners = new EventListeners<>(logger);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#setPriority
-	 * (tuwien.auto.calimero.Priority)
-	 */
+	@Override
 	public void setPriority(final Priority p)
 	{
 		priority = p;
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#getPriority()
-	 */
+	@Override
 	public Priority getPriority()
 	{
 		return priority;
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#addProcessListener
-	 * (tuwien.auto.calimero.process.ProcessListener)
-	 */
+	@Override
 	public void addProcessListener(final ProcessListener l)
 	{
 		listeners.add(l);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#removeProcessListener
-	 * (tuwien.auto.calimero.process.ProcessListener)
-	 */
+	@Override
 	public void removeProcessListener(final ProcessListener l)
 	{
 		listeners.remove(l);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#write
-	 * (tuwien.auto.calimero.GroupAddress, boolean)
-	 */
-	public void write(final GroupAddress dst, final boolean value) throws KNXTimeoutException,
-		KNXLinkClosedException
+	@Override
+	public void write(final GroupAddress dst, final boolean value)
+		throws KNXTimeoutException, KNXLinkClosedException
 	{
 		try {
 			final DPTXlatorBoolean t = new DPTXlatorBoolean(DPTXlatorBoolean.DPT_BOOL);
@@ -152,10 +139,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		catch (final KNXFormatException ignore) {}
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#write
-	 * (tuwien.auto.calimero.GroupAddress, int, java.lang.String)
-	 */
+	@Override
 	public void write(final GroupAddress dst, final int value, final String scale)
 		throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException
 	{
@@ -164,19 +148,17 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		write(dst, priority, t);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#write
-	 * (tuwien.auto.calimero.GroupAddress, boolean, byte)
-	 */
+	@Override
 	public void write(final GroupAddress dst, final boolean control, final int stepcode)
 		throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException
 	{
 		final DPTXlator3BitControlled t = new DPTXlator3BitControlled(
-			DPTXlator3BitControlled.DPT_CONTROL_DIMMING);
+				DPTXlator3BitControlled.DPT_CONTROL_DIMMING);
 		t.setValue(control, stepcode);
 		write(dst, priority, t);
 	}
 
+	@Override
 	public void write(final GroupAddress dst, final float value, final boolean use4ByteFloat)
 		throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException
 	{
@@ -194,10 +176,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#write
-	 * (tuwien.auto.calimero.GroupAddress, java.lang.String)
-	 */
+	@Override
 	public void write(final GroupAddress dst, final String value)
 		throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException
 	{
@@ -226,8 +205,9 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		if (detached)
 			throw new KNXIllegalStateException("process communicator detached");
 
-		final byte[] buf = lengthOptimizedApdu ? DataUnitBuilder.createLengthOptimizedAPDU(
-				GROUP_RESPONSE, asdu) : DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
+		final byte[] buf = lengthOptimizedApdu
+				? DataUnitBuilder.createLengthOptimizedAPDU(GROUP_RESPONSE, asdu)
+				: DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
 
 		lnk.sendRequest(dst, priority, buf);
 	}
@@ -238,21 +218,15 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		write(dst, priority, value);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#write
-	 * (tuwien.auto.calimero.datapoint.Datapoint, java.lang.String)
-	 */
+	@Override
 	public void write(final Datapoint dp, final String value) throws KNXException
 	{
-		final DPTXlator t = TranslatorTypes.createTranslator(dp.getMainNumber(),
-			dp.getDPT());
+		final DPTXlator t = TranslatorTypes.createTranslator(dp.getMainNumber(), dp.getDPT());
 		t.setValue(value);
 		write(dp.getMainAddress(), dp.getPriority(), t);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.process.ProcessCommunicator#detach()
-	 */
+	@Override
 	public KNXNetworkLink detach()
 	{
 		synchronized (this) {
@@ -274,8 +248,6 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		if (detached)
 			throw new KNXIllegalStateException("process communicator detached");
 		lnk.sendRequest(dst, p, createGroupAPDU(GROUP_RESPONSE, t));
-//		if (logger.isTraceEnabled())
-//			logger.trace("group response to " + dst + " succeeded");
 	}
 
 	private void fireDetached()
@@ -288,13 +260,13 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	// into to DataUnitBuilder, but moved here to avoid DPT dependencies
 
 	/**
-	 * Creates a group service application layer protocol data unit containing all items
-	 * of a DPT translator.
+	 * Creates a group service application layer protocol data unit containing all items of a DPT
+	 * translator.
 	 * <p>
-	 * The transport layer bits in the first byte (TL / AL control field) are set 0. The
-	 * maximum length used for the ASDU is not checked.<br>
-	 * For DPTs occupying &lt;= 6 bits in length the optimized (compact) group write /
-	 * response format layout is used.
+	 * The transport layer bits in the first byte (TL / AL control field) are set 0. The maximum
+	 * length used for the ASDU is not checked.<br>
+	 * For DPTs occupying &lt;= 6 bits in length the optimized (compact) group write / response
+	 * format layout is used.
 	 *
 	 * @param service application layer group service code
 	 * @param t DPT translator with items to put into ASDU

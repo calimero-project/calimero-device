@@ -146,21 +146,18 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	/**
-	 * Creates a new KNX device.
+	 * Creates a new KNX device, requiring subtypes to initialize the service logic during
+	 * construction.
 	 * <p>
-	 * The device individual address (see {@link IndividualAddress}) can either be a configured
-	 * subnetwork unique device address, or the default individual address if no address was
-	 * assigned to the device.<br>
-	 * The default individual device address consists of a medium dependent default subnetwork
-	 * address and the device address for unregistered devices. Unregistered devices are identified
-	 * by using the device address 0xff, a value reserved for this purpose.<br>
-	 * <br>
-	 * The subnetwork address part describes the individual address <i>area</i> and <i>line</i>. The
-	 * defined default subnetwork address by medium is, listed as "Medium" : "Subnetwork address":
+	 * The device address is either a configured subnetwork unique device address, or the default
+	 * individual address if no address was assigned to the device yet. The default individual
+	 * device address consists of a medium dependent default subnetwork address and the device
+	 * address for unregistered devices. Unregistered devices are identified by using the device
+	 * address 0xff, a value reserved for this purpose. The subnetwork address part describes the
+	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is
+	 * as follows, listed as <i>Medium</i>: <i>Subnetwork address</i>:
 	 * <ul>
-	 * <li>TP 0: 0x01</li>
 	 * <li>TP 1: 0x02</li>
-	 * <li>PL 132: 0x03</li>
 	 * <li>PL 110: 0x04</li>
 	 * <li>RF: 0x05</li>
 	 * </ul>
@@ -172,7 +169,7 @@ public class BaseKnxDevice implements KnxDevice
 	 * @throws KNXLinkClosedException
 	 * @throws KNXPropertyException
 	 */
-	public BaseKnxDevice(final String name, final IndividualAddress device,
+	protected BaseKnxDevice(final String name, final IndividualAddress device,
 		final KNXNetworkLink link) throws KNXLinkClosedException, KNXPropertyException
 	{
 		this(name);
@@ -182,19 +179,15 @@ public class BaseKnxDevice implements KnxDevice
 	/**
 	 * Creates a new KNX device.
 	 * <p>
-	 * The device individual address (see {@link IndividualAddress}) can either be a configured
-	 * subnetwork unique device address, or the default individual address if no address was
-	 * assigned to the device.<br>
-	 * The default individual device address consists of a medium dependent default subnetwork
-	 * address and the device address for unregistered devices. Unregistered devices are identified
-	 * by using the device address 0xff, a value reserved for this purpose.<br>
-	 * <br>
-	 * The subnetwork address part describes the individual address <i>area</i> and <i>line</i>. The
-	 * defined default subnetwork address by medium is, listed as "Medium" : "Subnetwork address":
+	 * The device address is either a configured subnetwork unique device address, or the default
+	 * individual address if no address was assigned to the device yet. The default individual
+	 * device address consists of a medium dependent default subnetwork address and the device
+	 * address for unregistered devices. Unregistered devices are identified by using the device
+	 * address 0xff, a value reserved for this purpose. The subnetwork address part describes the
+	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is
+	 * as follows, listed as <i>Medium</i>: <i>Subnetwork address</i>:
 	 * <ul>
-	 * <li>TP 0: 0x01</li>
 	 * <li>TP 1: 0x02</li>
-	 * <li>PL 132: 0x03</li>
 	 * <li>PL 110: 0x04</li>
 	 * <li>RF: 0x05</li>
 	 * </ul>
@@ -217,20 +210,17 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	/**
-	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument. The device
-	 * individual address (see {@link IndividualAddress}) can either be a configured subnetwork
-	 * unique device address, or the default individual address if no address was assigned to the
-	 * device.<br>
-	 * The default individual device address consists of a medium dependent default subnetwork
-	 * address and the device address for unregistered devices. Unregistered devices are identified
-	 * by using the device address 0xff, a value reserved for this purpose.<br>
-	 * <br>
-	 * The subnetwork address part describes the individual address <i>area</i> and <i>line</i>. The
-	 * defined default subnetwork address by medium is, listed as "Medium" : "Subnetwork address":
+	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument.
+	 * <p>
+	 * The device address is either a configured subnetwork unique device address, or the default
+	 * individual address if no address was assigned to the device yet. The default individual
+	 * device address consists of a medium dependent default subnetwork address and the device
+	 * address for unregistered devices. Unregistered devices are identified by using the device
+	 * address 0xff, a value reserved for this purpose. The subnetwork address part describes the
+	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is
+	 * as follows, listed as <i>Medium</i>: <i>Subnetwork address</i>:
 	 * <ul>
-	 * <li>TP 0: 0x01</li>
 	 * <li>TP 1: 0x02</li>
-	 * <li>PL 132: 0x03</li>
 	 * <li>PL 110: 0x04</li>
 	 * <li>RF: 0x05</li>
 	 * </ul>
@@ -267,17 +257,13 @@ public class BaseKnxDevice implements KnxDevice
 		self = address;
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.device.KnxDevice#getAddress()
-	 */
+	@Override
 	public final synchronized IndividualAddress getAddress()
 	{
 		return self;
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.device.KnxDevice#setDeviceLink(tuwien.auto.calimero.link.KNXNetworkLink)
-	 */
+	@Override
 	public synchronized void setDeviceLink(final KNXNetworkLink link) throws KNXLinkClosedException
 	{
 		this.link = link;
@@ -289,17 +275,13 @@ public class BaseKnxDevice implements KnxDevice
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.device.KnxDevice#getDeviceLink()
-	 */
+	@Override
 	public final synchronized KNXNetworkLink getDeviceLink()
 	{
 		return link;
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.device.KnxDevice#getInterfaceObjectServer()
-	 */
+	@Override
 	public final InterfaceObjectServer getInterfaceObjectServer()
 	{
 		return ios;
@@ -314,6 +296,7 @@ public class BaseKnxDevice implements KnxDevice
 		return executor;
 	}
 
+	@Override
 	public String toString()
 	{
 		return name + " " + self;
