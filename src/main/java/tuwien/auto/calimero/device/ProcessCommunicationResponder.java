@@ -174,7 +174,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException
 	{
 		final DPTXlator3BitControlled t = new DPTXlator3BitControlled(
-			DPTXlator3BitControlled.DPT_CONTROL_DIMMING);
+				DPTXlator3BitControlled.DPT_CONTROL_DIMMING);
 		t.setValue(control, stepcode);
 		write(dst, priority, t);
 	}
@@ -227,8 +227,8 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	 *
 	 * @param dst group destination to write to
 	 * @param asdu application layer service data unit
-	 * @param lengthOptimizedApdu <true> to use a length-optimized APDU, <false> to use a
-	 *        standard APDU
+	 * @param lengthOptimizedApdu <code>true</code> to use a length-optimized APDU,
+	 *        <code>false</code> to use a standard APDU
 	 * @throws KNXTimeoutException on a timeout during send
 	 * @throws KNXLinkClosedException if network link to KNX network is closed
 	 */
@@ -238,12 +238,11 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		if (detached)
 			throw new KNXIllegalStateException("process communicator detached");
 
-		final byte[] buf = lengthOptimizedApdu ? DataUnitBuilder.createLengthOptimizedAPDU(
-				GROUP_RESPONSE, asdu) : DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
+		final byte[] buf = lengthOptimizedApdu
+				? DataUnitBuilder.createLengthOptimizedAPDU(GROUP_RESPONSE, asdu)
+				: DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
 
 		lnk.sendRequest(dst, priority, buf);
-//		if (logger.isTraceEnabled())
-//			logger.trace("group response to " + dst + " succeeded");
 	}
 
 	public void write(final GroupAddress dst, final DPTXlator value) throws KNXException
@@ -257,8 +256,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	 */
 	public void write(final Datapoint dp, final String value) throws KNXException
 	{
-		final DPTXlator t = TranslatorTypes.createTranslator(dp.getMainNumber(),
-			dp.getDPT());
+		final DPTXlator t = TranslatorTypes.createTranslator(dp.getMainNumber(), dp.getDPT());
 		t.setValue(value);
 		write(dp.getMainAddress(), dp.getPriority(), t);
 	}
@@ -287,8 +285,6 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		if (detached)
 			throw new KNXIllegalStateException("process communicator detached");
 		lnk.sendRequest(dst, p, createGroupAPDU(GROUP_RESPONSE, t));
-//		if (logger.isTraceEnabled())
-//			logger.trace("group response to " + dst + " succeeded");
 	}
 
 	private void fireDetached()
@@ -311,13 +307,13 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	// into to DataUnitBuilder, but moved here to avoid DPT dependencies
 
 	/**
-	 * Creates a group service application layer protocol data unit containing all items
-	 * of a DPT translator.
+	 * Creates a group service application layer protocol data unit containing all items of a DPT
+	 * translator.
 	 * <p>
-	 * The transport layer bits in the first byte (TL / AL control field) are set 0. The
-	 * maximum length used for the ASDU is not checked.<br>
-	 * For DPTs occupying &lt;= 6 bits in length the optimized (compact) group write /
-	 * response format layout is used.
+	 * The transport layer bits in the first byte (TL / AL control field) are set 0. The maximum
+	 * length used for the ASDU is not checked.<br>
+	 * For DPTs occupying &lt;= 6 bits in length the optimized (compact) group write / response
+	 * format layout is used.
 	 *
 	 * @param service application layer group service code
 	 * @param t DPT translator with items to put into ASDU

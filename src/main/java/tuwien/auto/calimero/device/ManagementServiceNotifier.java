@@ -106,7 +106,6 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private static final int RESTART = 0x0380;
 
-
 	private static final int defaultMaxApduLength = 15;
 	private boolean missingApduLength = false;
 
@@ -119,8 +118,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private final int lengthDoA;
 
 	// pre-condition: device != null, link != null
-	ManagementServiceNotifier(final BaseKnxDevice device)
-		throws KNXLinkClosedException
+	ManagementServiceNotifier(final BaseKnxDevice device) throws KNXLinkClosedException
 	{
 		this.device = device;
 		tl = new TransportLayerImpl(device.getDeviceLink(), true);
@@ -240,7 +238,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			onIndAddrWrite(respondTo, data);
 		else if (svc == IND_ADDR_SN_READ)
 			onIndAddrSnRead(respondTo, data);
-		else if (svc== IND_ADDR_SN_WRITE)
+		else if (svc == IND_ADDR_SN_WRITE)
 			onIndAddrSnWrite(respondTo, data);
 		else if (svc == DOA_READ)
 			onDoARead(respondTo, data);
@@ -250,7 +248,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			onDoAWrite(respondTo, data);
 		else if (svc == KEY_WRITE)
 			onKeyWrite(respondTo, data);
-		else if (svc== RESTART)
+		else if (svc == RESTART)
 			onRestart(respondTo, data);
 		else
 			onManagement(svc, respondTo, data);
@@ -531,8 +529,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 		final byte[] propertyData = DataUnitBuilder.copyOfRange(data, 4, data.length);
 
-		final ServiceResult sr = mgmtSvc.writeProperty(objIndex, pid, start,
-			elements, propertyData);
+		final ServiceResult sr = mgmtSvc.writeProperty(objIndex, pid, start, elements,
+				propertyData);
 		if (sr == null || sr.getResult() == null)
 			return sr;
 		final byte[] res = sr.getResult();
@@ -611,7 +609,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 		final byte[] memory = DataUnitBuilder.copyOfRange(data, 3, data.length);
 		if (memory.length != bytes)
-			logger.warn("ill-formed memory write");
+			logger.warn("ill-formed memory write: number field = " + bytes + " but memory length = "
+					+ memory);
 		else {
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 			if (sr == null || sr.getResult() == null)
@@ -688,10 +687,11 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		final String svcType)
 	{
 		if (length < minExpected)
-			logger.error(svcType + " SDU of length " + length + " too short, expected "
-					+ minExpected);
+			logger.error(
+					svcType + " SDU of length " + length + " too short, expected " + minExpected);
 		else if (length > maxExpected)
-			logger.error(svcType + " SDU of length " + length + " too long, maximum " + maxExpected);
+			logger.error(
+					svcType + " SDU of length " + length + " too long, maximum " + maxExpected);
 		return length >= minExpected && length <= maxExpected;
 	}
 
@@ -708,10 +708,10 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private void sendBroadcast(final boolean system, final byte[] apdu, final Priority p)
 	{
 		final String type = system ? "system" : "domain";
-		logger.trace(this.device.getAddress() + "->[" + type + " broadcast]" + " respond with "
+		logger.trace(device.getAddress() + "->[" + type + " broadcast]" + " respond with "
 				+ DataUnitBuilder.toHex(apdu, " "));
 		try {
-				tl.broadcast(system, p, apdu);
+			tl.broadcast(system, p, apdu);
 		}
 		catch (final KNXLinkClosedException e) {
 			e.printStackTrace();
@@ -723,7 +723,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private void send(final Destination respondTo, final byte[] apdu, final Priority p)
 	{
-		logger.trace(this.device.getAddress() + "->" + respondTo.getAddress() + " respond with "
+		logger.trace(device.getAddress() + "->" + respondTo.getAddress() + " respond with "
 				+ DataUnitBuilder.toHex(apdu, " "));
 		try {
 			if (respondTo.isConnectionOriented())
@@ -745,8 +745,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private int getMaxApduLength()
 	{
 		try {
-			final byte[] length = device.getInterfaceObjectServer().getProperty(
-					InterfaceObject.DEVICE_OBJECT, PID.MAX_APDULENGTH, 1, 1);
+			final byte[] length = device.getInterfaceObjectServer()
+					.getProperty(InterfaceObject.DEVICE_OBJECT, PID.MAX_APDULENGTH, 1, 1);
 			return toUnsigned(length);
 		}
 		catch (final KNXPropertyException e) {
@@ -764,7 +764,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	{
 		if (data.length == 2)
 			return (data[0] & 0xff) << 8 | data[1] & 0xff;
-		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3]
-				& 0xff;
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8
+				| data[3] & 0xff;
 	}
 };
