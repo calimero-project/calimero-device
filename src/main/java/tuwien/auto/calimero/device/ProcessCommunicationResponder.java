@@ -97,7 +97,8 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	public ProcessCommunicationResponder(final KNXNetworkLink link) throws KNXLinkClosedException
 	{
 		if (!link.isOpen())
-			throw new KNXLinkClosedException();
+			throw new KNXLinkClosedException(
+					"cannot initialize process communication using closed link " + link.getName());
 		lnk = link;
 		logger = LogManager.getManager().getLogService("process " + link.getName());
 		listeners = new EventListeners(logger);
