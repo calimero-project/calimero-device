@@ -62,6 +62,7 @@ import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.xml.KNXMLException;
 
 /**
  * Implementation of a KNX device for common device tasks.
@@ -382,7 +383,7 @@ public class BaseKnxDevice implements KnxDevice
 			try {
 				ios.loadDefinitions(propDefinitionsResource);
 			}
-			catch (final KNXException e) {
+			catch (final KNXException | KNXMLException e) {
 				// using the default resource ID, we cannot expect to always find the resource
 				logger.info("please load the Interface Object Server KNX property definitions");
 			}
