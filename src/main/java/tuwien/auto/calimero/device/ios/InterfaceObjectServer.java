@@ -65,6 +65,7 @@ import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.mgmt.PropertyClient.ResourceHandler;
+import tuwien.auto.calimero.mgmt.PropertyClient.XmlPropertyDefinitions;
 import tuwien.auto.calimero.xml.KNXMLException;
 import tuwien.auto.calimero.xml.XmlInputFactory;
 import tuwien.auto.calimero.xml.XmlOutputFactory;
@@ -176,7 +177,8 @@ public class InterfaceObjectServer implements PropertyAccess
 	 */
 	public synchronized void loadDefinitions(final String resource) throws KNXException
 	{
-		client.addDefinitions(PropertyClient.loadDefinitions(resource, rh));
+		final ResourceHandler handler = rh != null ? rh : new XmlPropertyDefinitions();
+		client.addDefinitions(handler.load(resource));
 	}
 
 	/**
