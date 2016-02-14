@@ -132,33 +132,25 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 //	}
 
 	/**
-	 * This default implementation creates the DPT translator for the requested datapoint without
-	 * modifying any translator data; override this method to set the requested datapoint value. A
-	 * subtype might implement this method as follows:
+	 * Implement this method to provide a requested datapoint value. A subtype might implement this method as follows:
 	 *
 	 * <pre>
 	 * {@code
 	 * try {
-	 * 	final DPTXlator t = super.requestDatapointValue(dp);
+	 * 	final DPTXlator t = TranslatorTypes.createTranslator(0, ofDp.getDPT());
 	 * 	// set the data or value, e.g.:
 	 * 	t.setValue( ... provide your datapoint value );
-	 * } catch (KNXException e) {
-	 * 	// you might want to handle the case when no DPT translator available for this datapoint
+	 * 	return t;
+	 * } catch (final KNXException e) {
+	 * 	// you might want to handle the case when no DPT translator is available for this datapoint
 	 * }}
 	 * </pre>
 	 *
 	 * @param ofDp the datapoint whose value is requested
 	 * @return the created DPT translator for the requested datapoint
-	 * @throws KNXException
+	 * @throws KNXException if the datapoint value cannot be provided
 	 */
-	// ??? maybe also make abstract so that users don't forget to implement it
-	public DPTXlator requestDatapointValue(final Datapoint ofDp) throws KNXException
-	{
-		final DPTXlator t = TranslatorTypes.createTranslator(0, ofDp.getDPT());
-//		t.setValue(state.get(dp.getMainAddress()));
-//		logger.warn("value request for datapoint {}, but no value provided", dp.getMainAddress());
-		return t;
-	}
+	public abstract DPTXlator requestDatapointValue(final Datapoint ofDp) throws KNXException;
 
 	/**
 	 * Returns the device memory this KNX device should use for any memory-related operations, e.g.,
@@ -345,7 +337,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (device instanceof BaseKnxDevice) {
 			((BaseKnxDevice) device).setAddress(newAddress);
 		}
-		logger.info("set new device address {} (old {})", newAddress, old);
+		logger.info("set new device address " + newAddress + " (old " + old + ")");
 		return null;
 	}
 
