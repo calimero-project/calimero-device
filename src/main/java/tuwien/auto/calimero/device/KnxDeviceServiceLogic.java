@@ -69,7 +69,7 @@ import tuwien.auto.calimero.process.ProcessEvent;
  */
 public abstract class KnxDeviceServiceLogic implements ProcessCommunicationService, ManagementService
 {
-	private KnxDevice device;
+	protected KnxDevice device;
 	private Logger logger;
 
 	// XXX memory operations are not thread-safe
