@@ -23,13 +23,20 @@
 
 	<build>
 		<sourceDirectory>${basedir}/src/main/java</sourceDirectory>
-		<testSourceDirectory>${basedir}/test/java</testSourceDirectory>
+		<testSourceDirectory>${basedir}/src/test/java</testSourceDirectory>
 	</build>
 	<dependencies>
 		<dependency>
 			<groupId>com.github.calimero</groupId>
 			<artifactId>calimero-core</artifactId>
 			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.calimero</groupId>
+			<artifactId>calimero-core</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>
