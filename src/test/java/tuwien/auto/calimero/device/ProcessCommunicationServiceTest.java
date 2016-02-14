@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2015 B. Malinowsky
+    Copyright (c) 2011, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -218,7 +218,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupReadRequest(ProcessEvent)}
 	 * .
 	 *
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupted thread
 	 * @throws KNXException
 	 */
 	public final void testGroupReadRequestRunnable() throws KNXException, InterruptedException
@@ -242,7 +242,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupReadRequest(ProcessEvent)}
 	 * .
 	 *
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupted thread
 	 * @throws KNXException
 	 */
 	public final void testGroupReadRequest() throws KNXException, InterruptedException
@@ -260,7 +260,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * Test method for
 	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
 	 *
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupted thread
 	 * @throws KNXException
 	 */
 	public final void testGroupWriteRunnable() throws KNXException, InterruptedException
@@ -281,7 +281,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * Test method for
 	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
 	 *
-	 * @throws InterruptedException
+	 * @throws InterruptedException on interrupted thread
 	 * @throws KNXException
 	 */
 	public final void testGroupWrite() throws KNXException, InterruptedException
