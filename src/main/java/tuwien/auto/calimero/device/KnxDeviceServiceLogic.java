@@ -126,11 +126,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	public abstract void updateDatapointValue(final Datapoint ofDp, final DPTXlator update);
-//	{
-//		state.put(ofDp.getMainAddress(), update.getValue());
-//		logger.warn("value update of datapoint {} to {}, but value is not stored",
-//				ofDp.getMainAddress(), update.getValue());
-//	}
 
 	/**
 	 * Implement this method to provide a requested datapoint value. A subtype might implement this method as follows:
