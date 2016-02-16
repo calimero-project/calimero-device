@@ -49,8 +49,6 @@ import tuwien.auto.calimero.mgmt.PropertyAccess;
  */
 public class ManagementServiceTest extends TestCase
 {
-	private static final String knxServerConfig = "server-config.xml";
-
 	public static class DefaultMgmtLogic implements ManagementService {
 
 		@Override
@@ -197,8 +195,6 @@ public class ManagementServiceTest extends TestCase
 				// firmware version (8 bit): version (4 bit), sub code (4 bit)
 				descriptor = new byte[2];
 
-				final byte[] mask = null;// ios.getProperty(InterfaceObject.DEVICE_OBJECT,
-											// 1, PropertyAccess.PID., 1, 1);
 				try {
 					final byte[] firmware = ios.getProperty(InterfaceObject.DEVICE_OBJECT, 1,
 							PropertyAccess.PID.FIRMWARE_REVISION, 1, 1);
