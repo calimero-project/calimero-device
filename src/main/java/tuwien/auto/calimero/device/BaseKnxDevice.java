@@ -330,8 +330,8 @@ public class BaseKnxDevice implements KnxDevice
 				try {
 					final ServiceResult sr = sn.dispatch(e);
 					// mgmt svc notifier always returns null, so don't check here for now
-					//if (sr != null)
-					sn.response(e, sr);
+					if (sn instanceof ManagementServiceNotifier || sr != null)
+						sn.response(e, sr);
 				}
 				finally {
 					taskDone();
