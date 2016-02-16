@@ -103,7 +103,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 						}
 					}
 				};
-			return null;
+			return new ServiceResult();
 		}
 
 		public void groupWrite(final ProcessEvent e)
@@ -141,7 +141,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 					e1.printStackTrace();
 				}
 			}
-			return null;
+			return new ServiceResult();
 		}
 
 		public void groupWrite(final ProcessEvent e)
