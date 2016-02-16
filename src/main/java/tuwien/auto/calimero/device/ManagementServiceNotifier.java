@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2015 B. Malinowsky
+    Copyright (c) 2012, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -567,6 +567,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		// answer with non-existent property description on no result
 		if (sr == null) {
 			final byte[] asdu = new byte[7];
+			asdu[0] = (byte) objIndex;
+			asdu[1] = (byte) pid;
+			asdu[2] = (byte) propIndex;
 			final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_DESC_RESPONSE, asdu);
 			send(d, apdu, Priority.LOW);
 			return sr;
