@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2015 B. Malinowsky
+    Copyright (c) 2011, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -158,7 +158,7 @@ public class ManagementServiceTest extends TestCase
 
 	final ManagementService mgmtLogic = new DefaultMgmtLogic()
 	{
-		KnxDevice device; // XXX init
+		KnxDevice device = new BaseKnxDevice("test"); // XXX init
 		private final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		private final byte[] memory = new byte[100];
 
