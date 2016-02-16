@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2015 B. Malinowsky
+    Copyright (c) 2011, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -483,8 +483,8 @@ public class BaseKnxDevice implements KnxDevice
 		//final int maskVersion = 0x091A; // IP/TP1 KNXnet/IP router
 		//final int maskVersion = 0x0705; // TP1 BIM M112
 
-		// TODO set mask info
-		//ios.setProperty(d, 0);
+		ios.setProperty(devObject, objectInstance, PID.DEVICE_DESCRIPTOR, 1, 1,
+				new byte[] { maskVersion >> 8, maskVersion });
 
 		// Programming Mode (memory address 0x60)
 		setMemory(0x60, programmingMode ? 1 : 0);
