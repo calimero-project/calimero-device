@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2015 B. Malinowsky
+    Copyright (c) 2010, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -87,8 +87,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#InterfaceObjectServer(boolean)} .
+	 * Test method for {@link InterfaceObjectServer#InterfaceObjectServer(boolean)} .
 	 *
 	 * @throws KNXException
 	 */
@@ -109,22 +108,17 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#setResourceHandler
-	 * (tuwien.auto.calimero.server.InterfaceObjectServer.IosResourceHandler)}.
+	 * Test method for {@link InterfaceObjectServer#setResourceHandler(InterfaceObjectServer.IosResourceHandler)}.
 	 */
 	public final void testSetResourceHandler()
 	{
 		ios.setResourceHandler(null);
-		ios.setResourceHandler(new IosResourceHandler()
-		{
-			public void save(final String resource, final Collection<Property> definitions)
-				throws KNXMLException
+		ios.setResourceHandler(new IosResourceHandler() {
+			public void save(final String resource, final Collection<Property> definitions) throws KNXMLException
 			{}
 
 			@Override
-			public void save(final XmlWriter writer, final Collection<Property> definitions)
-				throws KNXMLException
+			public void save(final XmlWriter writer, final Collection<Property> definitions) throws KNXMLException
 			{}
 
 			public Collection<Property> load(final String resource) throws KNXMLException
@@ -138,22 +132,19 @@ public class InterfaceObjectServerTest extends TestCase
 				return null;
 			}
 
-			public void saveProperties(final String resource,
-				final Collection<Description> descriptions, final Collection<byte[]> values)
+			public void saveProperties(final String resource, final Collection<Description> descriptions,
+				final Collection<byte[]> values) throws KNXException
+			{}
+
+			public void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects)
 				throws KNXException
 			{}
 
-			public void saveInterfaceObjects(final String resource,
-				final Collection<InterfaceObject> ifObjects) throws KNXException
+			public void loadProperties(final String resource, final Collection<Description> descriptions,
+				final Collection<byte[]> values) throws KNXException
 			{}
 
-			public void loadProperties(final String resource,
-				final Collection<Description> descriptions, final Collection<byte[]> values)
-				throws KNXException
-			{}
-
-			public Collection<InterfaceObject> loadInterfaceObjects(final String resource)
-				throws KNXException
+			public Collection<InterfaceObject> loadInterfaceObjects(final String resource) throws KNXException
 			{
 				return null;
 			}
@@ -161,8 +152,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#loadDefinitions(java.lang.String)}.
+	 * Test method for {@link InterfaceObjectServer#loadDefinitions(java.lang.String)}.
 	 *
 	 * @throws KNXException
 	 */
@@ -172,9 +162,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#loadInterfaceObjects(java.lang.String)}
-	 * .
+	 * Test method for {@link InterfaceObjectServer#loadInterfaceObjects(java.lang.String)} .
 	 *
 	 * @throws KNXException
 	 */
@@ -186,8 +174,7 @@ public class InterfaceObjectServerTest extends TestCase
 		for (int i = 0; i < objects.length; i++) {
 			final InterfaceObject interfaceObject = objects[i];
 			System.out.println("" + interfaceObject);
-			for (final Iterator<PropertyKey> k = interfaceObject.values.keySet().iterator(); k
-					.hasNext();) {
+			for (final Iterator<PropertyKey> k = interfaceObject.values.keySet().iterator(); k.hasNext();) {
 				final PropertyKey key = k.next();
 				System.out.println(DataUnitBuilder.toHex(interfaceObject.values.get(key), ""));
 			}
@@ -196,8 +183,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for {@link tuwien.auto.calimero.server.InterfaceObjectServer#saveInterfaceObjects
-	 * (java.lang.String)}.
+	 * Test method for {@link InterfaceObjectServer#saveInterfaceObjects(java.lang.String)}.
 	 *
 	 * @throws KNXException
 	 */
@@ -205,14 +191,12 @@ public class InterfaceObjectServerTest extends TestCase
 	{
 		ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
-				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 1, 4, new byte[] { 1, 1, 2, 2,
-					3, 3, 4, 4 });
+				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 1, 4, new byte[] { 1, 1, 2, 2, 3, 3, 4, 4 });
 		ios.saveInterfaceObjects(baseDir + "testSaveInterfaceObjects.xml");
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#getInterfaceObjects()}.
+	 * Test method for {@link InterfaceObjectServer#getInterfaceObjects()}.
 	 */
 	public final void testGetInterfaceObjects()
 	{
@@ -220,8 +204,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#addInterfaceObject(int)}.
+	 * Test method for {@link InterfaceObjectServer#addInterfaceObject(int)}.
 	 */
 	public final void testAddInterfaceObject()
 	{
@@ -229,9 +212,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#addServerListener
-	 * (tuwien.auto.calimero.server.InterfaceObjectServerListener)}.
+	 * Test method for {@link InterfaceObjectServer#addServerListener(InterfaceObjectServerListener)}.
 	 */
 	public final void testAddServerListener()
 	{
@@ -239,9 +220,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#removeServerListener
-	 * (tuwien.auto.calimero.server.InterfaceObjectServerListener)}.
+	 * Test method for {@link InterfaceObjectServer#removeServerListener(InterfaceObjectServerListener)}.
 	 */
 	public final void testRemoveServerListener()
 	{
@@ -249,8 +228,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#getProperty(int, int, int, int)} .
+	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int)} .
 	 */
 	public final void testGetPropertyIntIntIntInt()
 	{
@@ -258,9 +236,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#setProperty(int, int, int, int, byte[])}
-	 * .
+	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, byte[])} .
 	 */
 	public final void testSetPropertyIntIntIntIntByteArray()
 	{
@@ -268,8 +244,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for {@link tuwien.auto.calimero.server.InterfaceObjectServer#setProperty(
-	 * int, int, int, int, int, byte[])}.
+	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, int, byte[])}.
 	 */
 	public final void testSetPropertyIntIntIntIntIntByteArray()
 	{
@@ -277,9 +252,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#getProperty(int, int, int, int, int)}
-	 * .
+	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int, int)} .
 	 */
 	public final void testGetPropertyIntIntIntIntInt()
 	{
@@ -287,8 +260,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for {@link tuwien.auto.calimero.server.InterfaceObjectServer
-	 * #setProperty(int, int, int, java.lang.String)}.
+	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, java.lang.String)}.
 	 */
 	public final void testSetPropertyIntIntIntString()
 	{
@@ -296,9 +268,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#getPropertyTranslated(
-	 * int, int, int, int)}.
+	 * Test method for {@link InterfaceObjectServer#getPropertyTranslated(int, int, int, int)}.
 	 */
 	public final void testGetPropertyTranslated()
 	{
@@ -306,8 +276,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for {@link tuwien.auto.calimero.server.InterfaceObjectServer
-	 * #setDescription(tuwien.auto.calimero.mgmt.Description, boolean)}.
+	 * Test method for {@link InterfaceObjectServer#setDescription(tuwien.auto.calimero.mgmt.Description, boolean)}.
 	 */
 	public final void testSetDescription()
 	{
@@ -315,8 +284,7 @@ public class InterfaceObjectServerTest extends TestCase
 	}
 
 	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.server.InterfaceObjectServer#getDescription(int, int)}.
+	 * Test method for {@link InterfaceObjectServer#getDescription(int, int)}.
 	 */
 	public final void testGetDescription()
 	{
@@ -336,16 +304,15 @@ public class InterfaceObjectServerTest extends TestCase
 				break;
 			}
 		}
-		ios.setDescription(new Description(objIdx, 0,
-				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 0, true, 0, 20, 3, 3), true);
-		Description d = ios.getDescription(objIdx,
-				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
+		ios.setDescription(
+				new Description(objIdx, 0, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 0, true, 0, 20, 3, 3),
+				true);
+		Description d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
 		assertTrue(d.getCurrentElements() == 0);
 
 		// set addresses
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
-				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 1, 3, new byte[] { 1, 1, 1, 2,
-					1, 3 });
+				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 1, 3, new byte[] { 1, 1, 1, 2, 1, 3 });
 		d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
 		assertTrue(d.getCurrentElements() == 3);
 
@@ -371,8 +338,7 @@ public class InterfaceObjectServerTest extends TestCase
 
 		try {
 			ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
-					PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 1,
-					new byte[] { 0, 0, 0, });
+					PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 1, new byte[] { 0, 0, 0, });
 			fail("only byte array length 2 allowed");
 		}
 		catch (final KNXException e) {

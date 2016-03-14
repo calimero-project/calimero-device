@@ -266,7 +266,7 @@ public class ManagementServiceTest extends TestCase
 
 	/**
 	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ManagementService#handlePropertyWrite()}.
+	 * {@link tuwien.auto.calimero.device.ManagementService#writeProperty(int, int, int, int, byte[])}.
 	 */
 	public final void testOnPropertyWrite()
 	{
