@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012 B. Malinowsky
+    Copyright (c) 2012, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -41,11 +41,11 @@ import java.util.EventObject;
 /**
  * @author B. Malinowsky
  */
-interface ServiceNotifier
+interface ServiceNotifier<E>
 {
 	ServiceResult dispatch(EventObject e);
 
 	void response(EventObject e, ServiceResult sr);
 
-	void setServiceInterface(Object svcIf);
+	void setServiceInterface(E svcIf);
 }

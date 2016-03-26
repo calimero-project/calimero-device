@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2015 B. Malinowsky
+    Copyright (c) 2011, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
 import tuwien.auto.calimero.process.ProcessListener;
 
-final class ProcessServiceNotifier implements ServiceNotifier, ProcessListener
+final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicationService>, ProcessListener
 {
 	private static final int GROUP_READ = 0x00;
 	private static final int GROUP_RESPONSE = 0x40;
@@ -130,8 +130,8 @@ final class ProcessServiceNotifier implements ServiceNotifier, ProcessListener
 			sr.run();
 	}
 
-	public void setServiceInterface(final Object svcIf)
+	public void setServiceInterface(final ProcessCommunicationService svcIf)
 	{
-		svc = (ProcessCommunicationService) svcIf;
+		svc = svcIf;
 	}
 }

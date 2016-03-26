@@ -66,7 +66,7 @@ import tuwien.auto.calimero.mgmt.TransportListener;
  *
  * @author B. Malinowsky
  */
-final class ManagementServiceNotifier implements TransportListener, ServiceNotifier
+final class ManagementServiceNotifier implements TransportListener, ServiceNotifier<ManagementService>
 {
 	// service IDs copied over from management client
 	private static final int ADC_READ = 0x0180;
@@ -214,9 +214,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	}
 
 	@Override
-	public void setServiceInterface(final Object svcIf)
+	public void setServiceInterface(final ManagementService svcIf)
 	{
-		mgmtSvc = (ManagementService) svcIf;
+		mgmtSvc = svcIf;
 	}
 
 	private void dispatchAndRespond(final FrameEvent e)
