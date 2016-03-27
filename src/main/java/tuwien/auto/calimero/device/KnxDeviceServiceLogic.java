@@ -192,7 +192,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (dp != null) {
 			try {
 				final DPTXlator t = requestDatapointValue(dp);
-				return new ServiceResult(t.getData(), t.getTypeSize() == 0);
+				if (t != null)
+					return new ServiceResult(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (final KNXException ke) {
 				ke.printStackTrace();
