@@ -193,9 +193,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				if (t != null)
 					return new ServiceResult(t.getData(), t.getTypeSize() == 0);
 			}
-			catch (final KNXException ke) {
-				ke.printStackTrace();
-				return null;
+			catch (final KNXException ex) {
+				ex.printStackTrace();
+			}
+			catch (final RuntimeException ex) {
+				ex.printStackTrace();
 			}
 		}
 		return null;
@@ -215,8 +217,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		catch (final KNXException ex) {
 			ex.printStackTrace();
 		}
-		catch (final KNXIllegalArgumentException iae) {
-			iae.printStackTrace();
+		catch (final RuntimeException ex) {
+			ex.printStackTrace();
 		}
 	}
 
