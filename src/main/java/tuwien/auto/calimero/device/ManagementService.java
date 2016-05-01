@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2015 B. Malinowsky
+    Copyright (c) 2011, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -37,6 +37,9 @@
 package tuwien.auto.calimero.device;
 
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.KNXAddress;
+import tuwien.auto.calimero.mgmt.Destination;
+import tuwien.auto.calimero.mgmt.TransportLayer;
 
 /**
  * Service interface for KNX application layer management services.
@@ -157,7 +160,7 @@ public interface ManagementService
 	ServiceResult restart(boolean masterReset, int eraseCode, int channel);
 
 	// a catch-all method for not specifically dispatched management services
-	ServiceResult management(int svcType, byte[] asdu);
+	ServiceResult management(int svcType, byte[] asdu, KNXAddress dst, Destination respondTo, TransportLayer tl);
 
 	/**
 	 * Returns whether verify mode is enabled on this endpoint for certain management services

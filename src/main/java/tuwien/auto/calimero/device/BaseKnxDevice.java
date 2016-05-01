@@ -323,7 +323,7 @@ public class BaseKnxDevice implements KnxDevice
 		mgmtNotifier.setServiceInterface(mgmt);
 	}
 
-	void dispatch(final ServiceNotifier sn, final EventObject e)
+	void dispatch(final ServiceNotifier<?> sn, final EventObject e)
 	{
 		if (threadingPolicy == INCOMING_EVENTS_THREADED) {
 			submitTask(() -> {

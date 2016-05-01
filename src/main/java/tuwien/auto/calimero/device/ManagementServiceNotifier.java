@@ -45,6 +45,7 @@ import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DetachEvent;
 import tuwien.auto.calimero.FrameEvent;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.cemi.CEMILData;
@@ -190,6 +191,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		final byte[] asdu = DataUnitBuilder.extractASDU(tpdu);
 		final CEMILData cemi = (CEMILData) fe.getFrame();
 		final IndividualAddress sender = cemi.getSource();
+		final KNXAddress dst = cemi.getDestination();
 
 		if (tpdu.length - 1 > getMaxApduLength()) {
 			logger.error(sender + "->" + cemi.getDestination() + " "
@@ -205,7 +207,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			d = impl.createDestination(sender, false);
 
 		try {
-			dispatchToService(svc, asdu, d);
+			dispatchToService(svc, asdu, dst, d);
 		}
 		catch (final RuntimeException rte) {
 			logger.error("executing service " + DataUnitBuilder.decodeAPCI(svc), rte);
@@ -224,7 +226,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		device.dispatch(this, e);
 	}
 
-	private void dispatchToService(final int svc, final byte[] data, final Destination respondTo)
+	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo)
 	{
 		logger.trace(DataUnitBuilder.decodeAPCI(svc));
 		if (svc == MEMORY_READ)
@@ -262,7 +264,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		else if (svc == RESTART)
 			onRestart(respondTo, data);
 		else
-			onManagement(svc, respondTo, data);
+			onManagement(svc, data, dst, respondTo);
 	}
 
 	private void onRestart(final Destination respondTo, final byte[] data)
@@ -690,15 +692,14 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		return sr;
 	}
 
-	private ServiceResult onManagement(final int svcType, final Destination respondTo,
-		final byte[] data)
+	private void onManagement(final int svcType, final byte[] data, final KNXAddress dst, final Destination respondTo)
 	{
-		final ServiceResult sr = mgmtSvc.management(svcType, data);
-		return sr;
+		final ServiceResult sr = mgmtSvc.management(svcType, data, dst, respondTo, tl);
+		if (sr != null)
+			sr.run();
 	}
 
-	private boolean verifyLength(final int length, final int minExpected, final int maxExpected,
-		final String svcType)
+	private boolean verifyLength(final int length, final int minExpected, final int maxExpected, final String svcType)
 	{
 		if (length < minExpected)
 			logger.error(

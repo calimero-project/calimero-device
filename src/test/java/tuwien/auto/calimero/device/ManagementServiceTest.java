@@ -38,11 +38,14 @@ package tuwien.auto.calimero.device;
 
 import junit.framework.TestCase;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KNXPropertyException;
+import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
+import tuwien.auto.calimero.mgmt.TransportLayer;
 
 /**
  * @author B. Malinowsky
@@ -133,7 +136,8 @@ public class ManagementServiceTest extends TestCase
 			return null;
 		}
 
-		public ServiceResult management(final int svcType, final byte[] asdu)
+		public ServiceResult management(final int svcType, final byte[] asdu, final KNXAddress dst,
+			final Destination respondTo, final TransportLayer tl)
 		{
 			return null;
 		}

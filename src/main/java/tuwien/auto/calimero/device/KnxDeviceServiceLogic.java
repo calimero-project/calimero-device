@@ -45,6 +45,7 @@ import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.datapoint.Datapoint;
@@ -58,7 +59,9 @@ import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.link.medium.PLSettings;
 import tuwien.auto.calimero.link.medium.RFSettings;
 import tuwien.auto.calimero.mgmt.Description;
+import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.process.ProcessEvent;
 
 /**
@@ -215,7 +218,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (final KNXException | RuntimeException ex) {
-			ex.printStackTrace();
+			logger.warn("on group write {}->{}: {}", e.getSourceAddr(), e.getDestination(),
+					DataUnitBuilder.toHex(e.getASDU(), " "), ex);
 		}
 	}
 
@@ -450,9 +454,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult management(final int svcType, final byte[] asdu)
+	public ServiceResult management(final int svcType, final byte[] asdu, final KNXAddress dst,
+		final Destination respondTo, final TransportLayer tl)
 	{
-		logger.trace("management service " + DataUnitBuilder.decodeAPCI(svcType));
+		logger.info("{}->{} {} {}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
+				DataUnitBuilder.toHex(asdu, ""));
 		return null;
 	}
 
