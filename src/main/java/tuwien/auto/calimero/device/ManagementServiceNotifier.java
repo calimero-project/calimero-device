@@ -55,6 +55,7 @@ import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
+import tuwien.auto.calimero.mgmt.Destination.State;
 import tuwien.auto.calimero.mgmt.KNXDisconnectException;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.TransportLayer;
@@ -738,22 +739,21 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private void send(final Destination respondTo, final byte[] apdu, final Priority p)
 	{
-		logger.trace(device.getAddress() + "->" + respondTo.getAddress() + " respond with "
-				+ DataUnitBuilder.toHex(apdu, " "));
+		// if we received a disconnect from the remote, the destination got destroyed to avoid keeping it around
+		if (respondTo.getState() == State.Destroyed) {
+			logger.warn("cannot respond, {}", respondTo);
+			return;
+		}
+		final IndividualAddress dst = respondTo.getAddress();
+		logger.trace("{}->{} respond with {}", device.getAddress(), dst, DataUnitBuilder.toHex(apdu, " "));
 		try {
 			if (respondTo.isConnectionOriented())
 				tl.sendData(respondTo, p, apdu);
 			else
-				tl.sendData(respondTo.getAddress(), p, apdu);
+				tl.sendData(dst, p, apdu);
 		}
-		catch (final KNXDisconnectException e) {
-			e.printStackTrace();
-		}
-		catch (final KNXLinkClosedException e) {
-			e.printStackTrace();
-		}
-		catch (final KNXTimeoutException e) {
-			e.printStackTrace();
+		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException e) {
+			logger.error("{}->{}: {}, {}", device.getAddress(), dst, DataUnitBuilder.toHex(apdu, " "), respondTo, e);
 		}
 	}
 
