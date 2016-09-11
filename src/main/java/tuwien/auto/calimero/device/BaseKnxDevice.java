@@ -36,6 +36,7 @@
 
 package tuwien.auto.calimero.device;
 
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EventObject;
@@ -115,7 +116,7 @@ public class BaseKnxDevice implements KnxDevice
 	private ProcessServiceNotifier procNotifier;
 	private ManagementServiceNotifier mgmtNotifier;
 
-	private static final String propDefinitionsResource = "properties.xml";
+	private static final String propDefinitionsResource = "/properties.xml";
 
 	private InterfaceObjectServer ios = null;
 	// The object instance determines which instance of an object type is
@@ -379,13 +380,16 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		if (ios == null) {
 			ios = new InterfaceObjectServer(false);
+
 			// check property definitions for encoding support before we init basic properties
 			try {
-				ios.loadDefinitions(propDefinitionsResource);
+				final URL resource = this.getClass().getResource(propDefinitionsResource);
+				if (resource != null)
+					ios.loadDefinitions(resource.toExternalForm());
 			}
-			catch (final KNXException | KNXMLException e) {
+			catch (KNXException | KNXMLException e) {
 				// using the default resource ID, we cannot expect to always find the resource
-				logger.info("please load the Interface Object Server KNX property definitions");
+				logger.info("could not load the Interface Object Server KNX property definitions");
 			}
 		}
 
