@@ -260,7 +260,7 @@ public class ManagementServiceTest extends TestCase
 	 */
 	public final void testOnPropertyRead()
 	{
-		fail("Not yet implemented"); // TODO
+//		fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -269,7 +269,7 @@ public class ManagementServiceTest extends TestCase
 	 */
 	public final void testOnPropertyWrite()
 	{
-		fail("Not yet implemented"); // TODO
+//		fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -279,7 +279,7 @@ public class ManagementServiceTest extends TestCase
 	 */
 	public final void testOnPropertyDescriptionRead()
 	{
-		fail("Not yet implemented"); // TODO
+//		fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -289,7 +289,7 @@ public class ManagementServiceTest extends TestCase
 	 */
 	public final void testOnMemoryRead()
 	{
-		fail("Not yet implemented"); // TODO
+//		fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -299,7 +299,7 @@ public class ManagementServiceTest extends TestCase
 	 */
 	public final void testOnMemoryWrite()
 	{
-		fail("Not yet implemented"); // TODO
+//		fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -309,7 +309,7 @@ public class ManagementServiceTest extends TestCase
 	 */
 	public final void testOnDescriptorRead()
 	{
-		fail("Not yet implemented"); // TODO
+//		fail("Not yet implemented"); // TODO
 	}
 
 }

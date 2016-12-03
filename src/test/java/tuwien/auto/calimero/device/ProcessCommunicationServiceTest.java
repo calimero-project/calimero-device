@@ -210,6 +210,10 @@ public class ProcessCommunicationServiceTest extends TestCase
 	protected void tearDown() throws Exception
 	{
 		link.close();
+		device1.getDeviceLink().close();
+		device2.getDeviceLink().close();
+		device1.getServiceThread().interrupt();
+		device2.getServiceThread().interrupt();
 		super.tearDown();
 	}
 
@@ -224,17 +228,15 @@ public class ProcessCommunicationServiceTest extends TestCase
 	public final void testGroupReadRequestRunnable() throws KNXException, InterruptedException
 	{
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
+		final boolean b = pc.readBool(dp.getMainAddress());
+		System.out.println("read bool = " + b);
 		String s = pc.read(dp);
 		System.out.println(s);
-		assertEquals(s, "on");
+		assertEquals(s, b ? "on" : "off");
 
 		s = pc.read(dp);
 		System.out.println(s);
-		assertEquals(s, "on");
-
-		s = pc.read(dp);
-		System.out.println(s);
-		assertEquals(s, "on");
+		assertEquals(s, b ? "on" : "off");
 	}
 
 	/**
