@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2015 B. Malinowsky
+    Copyright (c) 2010, 2016 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,15 +49,6 @@ public class KNXPropertyException extends KNXException
 	private static final long serialVersionUID = 1L;
 
 	private final int code;
-
-	/**
-	 * Constructs a new <code>KNXPropertyException</code> without a detail message, with status code
-	 * 0.
-	 */
-	public KNXPropertyException()
-	{
-		code = 0;
-	}
 
 	/**
 	 * Constructs a new <code>KNXPropertyException</code> with the specified detail message, with
