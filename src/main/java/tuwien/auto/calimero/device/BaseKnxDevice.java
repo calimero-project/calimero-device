@@ -140,7 +140,7 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		this.name = name;
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
-		logger = LogService.getLogger(name);
+		logger = LogService.getLogger("calimero.device." + name);
 	}
 
 	/**

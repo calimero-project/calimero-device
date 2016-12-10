@@ -99,7 +99,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 			throw new KNXLinkClosedException(
 					"cannot initialize process communication using closed link " + link.getName());
 		lnk = link;
-		logger = LogService.getLogger("process " + link.getName());
+		logger = LogService.getLogger("calimero.device.process " + link.getName());
 		listeners = new EventListeners<>(logger);
 	}
 
