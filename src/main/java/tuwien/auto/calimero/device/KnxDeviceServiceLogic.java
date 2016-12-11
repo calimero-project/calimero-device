@@ -289,8 +289,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readMemory(final int startAddress, final int bytes)
 	{
-		return new ServiceResult(DataUnitBuilder.copyOfRange(getDeviceMemory(), startAddress,
-				startAddress + bytes));
+		return new ServiceResult(Arrays.copyOfRange(getDeviceMemory(), startAddress, startAddress + bytes));
 	}
 
 	@Override

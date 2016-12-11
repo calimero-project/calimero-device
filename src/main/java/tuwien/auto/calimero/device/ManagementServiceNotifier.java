@@ -36,6 +36,7 @@
 
 package tuwien.auto.calimero.device;
 
+import java.util.Arrays;
 import java.util.EventObject;
 
 import org.slf4j.Logger;
@@ -305,7 +306,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			return;
 		final int level = data[0] & 0xff;
 
-		final byte[] key = DataUnitBuilder.copyOfRange(data, 1, 5);
+		final byte[] key = Arrays.copyOfRange(data, 1, 5);
 		// if key equals 0xFFFFFFFF, the key of the level shall be reset
 		// current access level has to be equal or less to level requested in this write
 		// if not, keyWrite shall return 0xff
@@ -323,9 +324,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	{
 		if (!verifyLength(data.length, 12, 12, "individual address SN write"))
 			return;
-		final byte[] sn = DataUnitBuilder.copyOfRange(data, 0, 6);
-		final byte[] addr = DataUnitBuilder.copyOfRange(data, 6, 8);
-		final byte[] reserved = DataUnitBuilder.copyOfRange(data, 8, 12);
+		final byte[] sn = Arrays.copyOfRange(data, 0, 6);
+		final byte[] addr = Arrays.copyOfRange(data, 6, 8);
+		final byte[] reserved = Arrays.copyOfRange(data, 8, 12);
 		// safety check that reserved area is zeroed out
 		// we don't bail, since its not required by the spec
 		for (int i = 0; i < reserved.length; i++) {
@@ -345,7 +346,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		if (!verifyLength(data.length, 6, 6, "individual address SN read"))
 			return;
 
-		final byte[] sn = DataUnitBuilder.copyOfRange(data, 0, 6);
+		final byte[] sn = Arrays.copyOfRange(data, 0, 6);
 		final ServiceResult sr = mgmtSvc.readAddressSerial(sn);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -368,7 +369,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		if (!verifyLength(data.length, 2, 2, "individual address write"))
 			return;
 
-		final byte[] addr = DataUnitBuilder.copyOfRange(data, 0, 2);
+		final byte[] addr = Arrays.copyOfRange(data, 0, 2);
 		final IndividualAddress ia = new IndividualAddress(addr);
 		// a device shall only set its address if in programming mode
 		// this service does not have a response
@@ -404,8 +405,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		// selective read service is only defined for RF (domain length 2)
 		if (!verifyLength(data.length, 5, 5, "domain address selective read"))
 			return;
-		final byte[] domain = DataUnitBuilder.copyOfRange(data, 0, 2);
-		final IndividualAddress ia = new IndividualAddress(DataUnitBuilder.copyOfRange(data, 2, 4));
+		final byte[] domain = Arrays.copyOfRange(data, 0, 2);
+		final IndividualAddress ia = new IndividualAddress(Arrays.copyOfRange(data, 2, 4));
 		final int range = data[4];
 
 		final ServiceResult sr = mgmtSvc.readDomainAddress(domain, ia, range);
@@ -431,7 +432,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	{
 		if (!verifyLength(data.length, lengthDoA, lengthDoA, "domain address write"))
 			return;
-		final byte[] domain = DataUnitBuilder.copyOfRange(data, 0, lengthDoA);
+		final byte[] domain = Arrays.copyOfRange(data, 0, lengthDoA);
 		/*final ServiceResult sr =*/ mgmtSvc.writeDomainAddress(domain);
 	}
 
@@ -446,7 +447,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			logger.warn("first byte in authorize request not zero");
 			return;
 		}
-		final byte[] key = DataUnitBuilder.copyOfRange(data, 1, 5);
+		final byte[] key = Arrays.copyOfRange(data, 1, 5);
 		final ServiceResult sr = mgmtSvc.authorize(key);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -541,7 +542,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		final int pid = data[1] & 0xff;
 		int elements = (data[2] & 0xff) >> 4;
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
-		final byte[] propertyData = DataUnitBuilder.copyOfRange(data, 4, data.length);
+		final byte[] propertyData = Arrays.copyOfRange(data, 4, data.length);
 
 		final ServiceResult sr = mgmtSvc.writeProperty(objIndex, pid, start, elements,
 				propertyData);
@@ -624,7 +625,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 			return null;
 		}
 
-		final byte[] memory = DataUnitBuilder.copyOfRange(data, 3, data.length);
+		final byte[] memory = Arrays.copyOfRange(data, 3, data.length);
 		if (memory.length != bytes)
 			logger.warn("ill-formed memory write: number field = {} but memory length = {}", bytes,
 					memory);
