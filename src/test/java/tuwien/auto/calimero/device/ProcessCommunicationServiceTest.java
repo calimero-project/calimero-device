@@ -37,6 +37,7 @@
 package tuwien.auto.calimero.device;
 
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 
 import junit.framework.TestCase;
 import tuwien.auto.calimero.GroupAddress;
@@ -66,8 +67,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 {
 	private InetSocketAddress remoteHost;
 
-//	private static int serviceMode = KNXNetworkLinkIP.TUNNELING;
-	private static int serviceMode = KNXNetworkLinkIP.ROUTING;
+	private static boolean useRouting = true;
 
 	// client link to read/write values to a KNX device
 	private KNXNetworkLink link;
@@ -184,24 +184,29 @@ public class ProcessCommunicationServiceTest extends TestCase
 
 		final IndividualAddress ia1 = new IndividualAddress("1.1.1");
 		final IndividualAddress ia2 = new IndividualAddress("1.1.2");
-		final KNXNetworkLink deviceLink1 = new KNXNetworkLinkIP(null, null, new KnxIPSettings(ia1));
+		final KNXNetworkLink deviceLink1 = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, null,
+				new KnxIPSettings(ia1));
 		device1 = new BaseKnxDevice(ia1.toString(), ia1, deviceLink1) {
 			{
 				threadingPolicy = INCOMING_EVENTS_THREADED;
 			}
 		};
-		final KNXNetworkLink deviceLink2 = new KNXNetworkLinkIP(null, null, new KnxIPSettings(ia2));
+		final KNXNetworkLink deviceLink2 = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, null,
+				new KnxIPSettings(ia2));
 		device2 = new BaseKnxDevice(ia2.toString(), ia2, deviceLink2);
 
 		device1.setServiceHandler(processLogicRunnable, null);
 		device2.setServiceHandler(processLogic, null);
 
 		// client link
-		if (serviceMode == KNXNetworkLinkIP.TUNNELING)
-			remoteHost = Util.getServer();
-		else
+		if (useRouting) {
 			remoteHost = new InetSocketAddress("224.0.23.12", 0);
-		link = new KNXNetworkLinkIP(serviceMode, null, remoteHost, false, TPSettings.TP1);
+			link = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, remoteHost.getAddress(), TPSettings.TP1);
+		}
+		else {
+			remoteHost = Util.getServer();
+			link = KNXNetworkLinkIP.newTunnelingLink(null, remoteHost, false, TPSettings.TP1);
+		}
 	}
 
 	/* (non-Javadoc)
