@@ -62,7 +62,6 @@ import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
-import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.xml.KNXMLException;
 
@@ -82,12 +81,27 @@ import tuwien.auto.calimero.xml.KNXMLException;
 public class BaseKnxDevice implements KnxDevice
 {
 	// can be between 15 and 254 bytes (255 is Escape code for extended L_Data frames)
-	private static int maxApduLength = 15;
+	private static final int maxApduLength = 15;
 
-	private final String name;
-	private IndividualAddress self;
+	private static final String propDefinitionsResource = "/properties.xml";
+	// The object instance determines which instance of an object type is
+	// queried for properties. Always defaults to 1.
+	private static final int objectInstance = 1;
 
-	private final Logger logger;
+	// PID.PROGMODE
+	private static final int defDeviceStatus = 0;
+	// PID.SERIAL_NUMBER
+	private static final byte[] defSerialNumber = new byte[6];
+
+	// Values used for manufacturer data DIB
+
+	// PID.MANUFACTURER_ID
+	private static final int defMfrId = 0;
+	// PID.MANUFACTURER_DATA
+	// one element is 4 bytes, value length has to be multiple of that
+	// defaults to 'bm2011  '
+	private static final byte[] defMfrData = new byte[] { 'b', 'm', '2', '0', '1', '1', ' ', ' ' };
+
 
 	// service event threading
 	static final int INCOMING_EVENTS_THREADED = 1;
@@ -111,32 +125,13 @@ public class BaseKnxDevice implements KnxDevice
 	// local queue if a task is currently submitted to our executor service
 	private final List<Runnable> tasks = new ArrayList<>(5);
 
+	private final String name;
+	private final InterfaceObjectServer ios;
+	private final Logger logger;
+	private IndividualAddress self;
 	private ProcessServiceNotifier procNotifier;
 	private ManagementServiceNotifier mgmtNotifier;
-
-	private static final String propDefinitionsResource = "/properties.xml";
-
-	private InterfaceObjectServer ios = null;
-	// The object instance determines which instance of an object type is
-	// queried for properties. Always defaults to 1.
-	private final int objectInstance = 1;
-
 	private KNXNetworkLink link;
-	private static final int devObject = InterfaceObject.DEVICE_OBJECT;
-
-	// PID.PROGMODE
-	private static final int defDeviceStatus = 0;
-	// PID.SERIAL_NUMBER
-	private static final byte[] defSerialNumber = new byte[6];
-
-	// Values used for manufacturer data DIB
-
-	// PID.MANUFACTURER_ID
-	private static final int defMfrId = 0;
-	// PID.MANUFACTURER_DATA
-	// one element is 4 bytes, value length has to be multiple of that
-	// defaults to 'bm2011  '
-	private static final byte[] defMfrData = new byte[] { 'b', 'm', '2', '0', '1', '1', ' ', ' ' };
 
 	BaseKnxDevice(final String name)
 	{
