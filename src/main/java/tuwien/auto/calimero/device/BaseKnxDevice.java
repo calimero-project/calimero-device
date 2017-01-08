@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2016 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,6 +35,8 @@
 */
 
 package tuwien.auto.calimero.device;
+
+import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -390,9 +392,9 @@ public class BaseKnxDevice implements KnxDevice
 		}
 
 		// initialize interface device object properties
-		ios.setProperty(devObject, objectInstance, PID.MAX_APDULENGTH, 1, 1, new byte[] { 0, (byte) maxApduLength });
+		setDeviceProperty(PID.MAX_APDULENGTH, new byte[] { 0, (byte) maxApduLength });
 		final byte[] defDesc = new String("KNX Device").getBytes(Charset.forName("ISO-8859-1"));
-		ios.setProperty(devObject, objectInstance, PID.DESCRIPTION, 1, defDesc.length, defDesc);
+		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, defDesc.length, defDesc);
 
 		final String[] sver = Settings.getLibraryVersion().split("\\.| |-");
 		int last = 0;
@@ -401,31 +403,30 @@ public class BaseKnxDevice implements KnxDevice
 		}
 		catch (final NumberFormatException e) {}
 		final int ver = Integer.parseInt(sver[0]) << 12 | Integer.parseInt(sver[1]) << 6 | last;
-		ios.setProperty(devObject, objectInstance, PID.VERSION, 1, 1,
-				new byte[] { (byte) (ver >>> 8), (byte) (ver & 0xff) });
+		setDeviceProperty(PID.VERSION, new byte[] { (byte) (ver >>> 8), (byte) (ver & 0xff) });
 
 		// revision counting is not aligned with library version for now
-		ios.setProperty(devObject, objectInstance, PID.FIRMWARE_REVISION, 1, 1, new byte[] { 1 });
+		setDeviceProperty(PID.FIRMWARE_REVISION, new byte[] { 1 });
 
 		//
 		// set properties used in device DIB for search response during discovery
 		//
 		// device status is not in programming mode
-		ios.setProperty(devObject, objectInstance, PID.PROGMODE, 1, 1, new byte[] { defDeviceStatus });
-		ios.setProperty(devObject, objectInstance, PID.SERIAL_NUMBER, 1, 1, defSerialNumber);
+		setDeviceProperty(PID.PROGMODE, new byte[] { defDeviceStatus });
+		setDeviceProperty(PID.SERIAL_NUMBER, defSerialNumber);
 		// server KNX device address, since we don't know about routing at this time
 		// address is always 0.0.0; might be updated later or by routing configuration
 		final byte[] device = new IndividualAddress(0).toByteArray();
 
 		// equal to PID.KNX_INDIVIDUAL_ADDRESS
-		ios.setProperty(devObject, objectInstance, PID.SUBNET_ADDRESS, 1, 1, new byte[] { device[0] });
-		ios.setProperty(devObject, objectInstance, PID.DEVICE_ADDRESS, 1, 1, new byte[] { device[1] });
+		setDeviceProperty(PID.SUBNET_ADDRESS, new byte[] { device[0] });
+		setDeviceProperty(PID.DEVICE_ADDRESS, new byte[] { device[1] });
 
 		//
 		// set properties used in manufacturer data DIB for discovery self description
 		//
-		ios.setProperty(devObject, objectInstance, PID.MANUFACTURER_ID, 1, 1, fromWord(defMfrId));
-		ios.setProperty(devObject, objectInstance, PID.MANUFACTURER_DATA, 1, defMfrData.length / 4, defMfrData);
+		setDeviceProperty(PID.MANUFACTURER_ID, fromWord(defMfrId));
+		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.MANUFACTURER_DATA, 1, defMfrData.length / 4, defMfrData);
 
 		// set default medium to TP1 (Bit 1 set)
 		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, new byte[] { 0, 2 });
@@ -433,7 +434,7 @@ public class BaseKnxDevice implements KnxDevice
 		// a device should set PID_MAX_APDULENGTH (Chapter 3/5/1 Resources)
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)
 		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, true, 0, 10, 0, 0), true);
-		ios.setProperty(devObject, objectInstance, PID.MAX_APDULENGTH, 1, 1, fromWord(maxApduLength));
+		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(maxApduLength));
 	}
 
 	// property id to distinguish hardware types which are using the same
@@ -442,7 +443,6 @@ public class BaseKnxDevice implements KnxDevice
 
 	private void addDeviceInfo() throws KNXPropertyException
 	{
-
 		// in devices without PEI, value is 0
 		// PEI type 1: Illegal adapter
 		// PEI type 10, 12, 14 and 16: serial interface to application module
@@ -465,17 +465,17 @@ public class BaseKnxDevice implements KnxDevice
 		final int firmwareRev = 3;
 
 		// Physical PEI
-		ios.setProperty(devObject, objectInstance, PropertyAccess.PID.PEI_TYPE, 1, 1, fromByte(peiType));
+		setDeviceProperty(PID.PEI_TYPE, fromByte(peiType));
 
 		// application program object
 		final int appProgamObject = InterfaceObject.APPLICATIONPROGRAM_OBJECT;
 		ios.addInterfaceObject(appProgamObject);
 
 		// Required PEI Type (Application Program Object)
-		ios.setProperty(appProgamObject, objectInstance, PropertyAccess.PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
+		ios.setProperty(appProgamObject, objectInstance, PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
 
 		// Manufacturer ID (Device Object)
-		ios.setProperty(devObject, objectInstance, PropertyAccess.PID.MANUFACTURER_ID, 1, 1, fromWord(manufacturerId));
+		setDeviceProperty(PID.MANUFACTURER_ID, fromWord(manufacturerId));
 
 		// set device descriptor information
 		// Device Descriptor Type 0 is 2 bytes:
@@ -489,23 +489,22 @@ public class BaseKnxDevice implements KnxDevice
 		//final int maskVersion = 0x091A; // IP/TP1 KNXnet/IP router
 		//final int maskVersion = 0x0705; // TP1 BIM M112
 
-		ios.setProperty(devObject, objectInstance, PID.DEVICE_DESCRIPTOR, 1, 1,
-				new byte[] { maskVersion >> 8, maskVersion });
+		setDeviceProperty(PID.DEVICE_DESCRIPTOR, new byte[] { maskVersion >> 8, maskVersion });
 
 		// Programming Mode (memory address 0x60)
 		final boolean programmingMode = false;
 		setMemory(0x60, programmingMode ? 1 : 0);
 
 		// Run State (Application Program Object)
-		ios.setProperty(appProgamObject, objectInstance, PropertyAccess.PID.RUN_STATE_CONTROL, 1, 1,
+		ios.setProperty(appProgamObject, objectInstance, PID.RUN_STATE_CONTROL, 1, 1,
 				fromWord(runState));
 
 		// Firmware Revision
-		ios.setProperty(devObject, objectInstance, PropertyAccess.PID.FIRMWARE_REVISION, 1, 1, fromByte(firmwareRev));
+		setDeviceProperty(PID.FIRMWARE_REVISION, fromByte(firmwareRev));
 
 		// Hardware Type
 		final byte[] hwType = new byte[6];
-		ios.setProperty(devObject, pidHardwareType, 1, 1, hwType);
+		setDeviceProperty(pidHardwareType, hwType);
 		// validity check on mask and hardware type octets
 		// AN059v3, AN089v3
 		if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
@@ -514,14 +513,19 @@ public class BaseKnxDevice implements KnxDevice
 		}
 		// Serial Number
 		final byte[] sno = new byte[6]; // PDT Generic 10 bytes
-		ios.setProperty(devObject, PropertyAccess.PID.SERIAL_NUMBER, 1, 1, sno);
+		setDeviceProperty(PID.SERIAL_NUMBER, sno);
 		// Order Info
 		final byte[] orderInfo = new byte[10]; // PDT Generic 10 bytes
-		ios.setProperty(devObject, PropertyAccess.PID.ORDER_INFO, 1, 1, orderInfo);
+		setDeviceProperty(PID.ORDER_INFO, orderInfo);
 
 		// Application ID (Application Program Object)
 		final byte[] applicationVersion = new byte[5]; // PDT Generic 5 bytes
-		ios.setProperty(appProgamObject, objectInstance, PropertyAccess.PID.PROGRAM_VERSION, 1, 1, applicationVersion);
+		ios.setProperty(appProgamObject, objectInstance, PID.PROGRAM_VERSION, 1, 1, applicationVersion);
+	}
+
+	private void setDeviceProperty(final int propertyId, final byte[] data) throws KNXPropertyException
+	{
+		ios.setProperty(DEVICE_OBJECT, objectInstance, propertyId, 1, 1, data);
 	}
 
 	private void submitTask(final Runnable task)
