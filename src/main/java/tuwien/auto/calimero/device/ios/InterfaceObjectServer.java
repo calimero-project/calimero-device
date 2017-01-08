@@ -1219,14 +1219,14 @@ public class InterfaceObjectServer implements PropertyAccess
 				w.writeStartElement(TAG_PROPERTY);
 				w.writeAttribute(ATTR_INDEX, Integer.toString(d.getPropIndex()));
 				w.writeAttribute(ATTR_PID, Integer.toString(d.getPID()));
-				w.writeAttribute(ATTR_PDT,
-						d.getPDT() == -1 ? "<tbd>" : Integer.toString(d.getPDT()));
+				w.writeAttribute(ATTR_PDT, d.getPDT() == -1 ? "<tbd>" : Integer.toString(d.getPDT()));
 				w.writeAttribute(ATTR_ELEMS, Integer.toString(d.getCurrentElements()));
 				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements()));
-				w.writeAttribute(ATTR_RW, Integer.toString(d.getReadLevel()) + "/"
-						+ Integer.toString(d.getWriteLevel()));
+				w.writeAttribute(ATTR_RW,
+						Integer.toString(d.getReadLevel()) + "/" + Integer.toString(d.getWriteLevel()));
 				w.writeAttribute(ATTR_WRITE, d.isWriteEnabled() ? "1" : "0");
-				w.writeStartElement(TAG_DATA, null, DataUnitBuilder.toHex(data, ""));
+				w.writeStartElement(TAG_DATA);
+				w.writeCharacters(DataUnitBuilder.toHex(data, ""));
 				w.writeEndElement();
 				w.writeEndElement();
 			}
