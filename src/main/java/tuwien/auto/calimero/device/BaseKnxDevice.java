@@ -498,8 +498,7 @@ public class BaseKnxDevice implements KnxDevice
 		// validity check on mask and hardware type octets
 		// AN059v3, AN089v3
 		if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
-			System.err.println("manufacturer-specific device identification of hardware type "
-					+ "should be 0 for this mask!");
+			logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
 		}
 		// Serial Number
 		final byte[] sno = new byte[6]; // PDT Generic 10 bytes
