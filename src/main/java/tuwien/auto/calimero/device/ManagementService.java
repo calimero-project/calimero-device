@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2016 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -65,10 +65,10 @@ public interface ManagementService
 	 * To indicate an (illegal) access problem, or protected memory, use a service result with a
 	 * data byte array of length 0.
 	 *
-	 * @param objectIndex
-	 * @param propertyId
-	 * @param startIndex
-	 * @param elements
+	 * @param objectIndex interface object index
+	 * @param propertyId property identifier
+	 * @param startIndex start index in the property value to start reading from
+	 * @param elements number of elements to read
 	 * @return the service result with the requested property values
 	 */
 	ServiceResult readProperty(int objectIndex, int propertyId, int startIndex, int elements);
@@ -76,34 +76,36 @@ public interface ManagementService
 	/**
 	 * Invoked for an application layer property write service.
 	 *
-	 * @param objectIndex
-	 * @param propertyId
-	 * @param startIndex
-	 * @param elements
-	 * @param data
-	 * @return
+	 * @param objectIndex interface object index
+	 * @param propertyId property identifier
+	 * @param startIndex start index in the property value to start writing to
+	 * @param elements number of elements to write
+	 * @param data byte array containing property value data to write
+	 * @return the service result of writing the property values
 	 */
-	ServiceResult writeProperty(int objectIndex, int propertyId, int startIndex, int elements,
-		byte[] data);
+	ServiceResult writeProperty(int objectIndex, int propertyId, int startIndex, int elements, byte[] data);
 
 	/**
 	 * Invoked for an application layer property description read service.
+	 * <p>
+	 * The property of the object is addressed either with a the <code>propertyId</code> or with the
+	 * <code>propertyIndex</code>. The property index is only used if the property identifier is 0, otherwise the index
+	 * is ignored.<br>
 	 *
-	 * @param objectIndex
-	 * @param propertyId
-	 * @param propertyIndex
-	 * @return
+	 * @param objectIndex interface object index
+	 * @param propertyId property identifier
+	 * @param propertyIndex property index, starts with index 0 for the first property
+	 * @return the service result containing the property description, starting with the property object index
 	 */
 	ServiceResult readPropertyDescription(int objectIndex, int propertyId, int propertyIndex);
 
 	/**
 	 * Invoked for an application layer memory read service.
 	 * <p>
-	 * The read memory bytes returned from this method is sent back to the client using a memory
-	 * read response.
+	 * The read memory bytes returned from this method is sent back to the client using a memory read response.
 	 *
-	 * @param startAddress
-	 * @param bytes
+	 * @param startAddress the 16 bit start address to read memory
+	 * @param bytes number of data bytes to read (with increasing addresses), <code>bytes &gt; 0</code>
 	 * @return the service result with the requested memory data
 	 */
 	ServiceResult readMemory(int startAddress, int bytes);
@@ -111,9 +113,9 @@ public interface ManagementService
 	/**
 	 * Invoked for an application layer memory write service.
 	 *
-	 * @param startAddress
-	 * @param data
-	 * @return
+	 * @param startAddress 16 bit start address to write memory
+	 * @param data byte array containing the memory data to write
+	 * @return service result with the written memory data
 	 */
 	ServiceResult writeMemory(int startAddress, byte[] data);
 
@@ -147,7 +149,7 @@ public interface ManagementService
 	 * | CI 3 (16 bit) | CI 4 (16 bit) |<br>
 	 *
 	 * @param type descriptor type, currently defined are types 0 and 2
-	 * @return
+	 * @return service result with the byte array containing device descriptor information
 	 */
 	ServiceResult readDescriptor(int type);
 

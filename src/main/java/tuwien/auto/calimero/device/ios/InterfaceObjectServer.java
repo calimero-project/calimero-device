@@ -1019,7 +1019,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		 * @param values a collection of property value data, of type <code>byte[]</code>; every
 		 *        <code>values</code> entry corresponds to one <code>descriptions</code> entry,
 		 *        aligned by the {@link Iterator#next()} behavior of the supplied collections
-		 * @throws KNXException
+		 * @throws KNXException on errors accessing the resource, or saving the data
 		 */
 		void saveProperties(final String resource, final Collection<Description> descriptions,
 			final Collection<byte[]> values) throws KNXException;

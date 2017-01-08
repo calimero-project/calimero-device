@@ -171,8 +171,8 @@ public class BaseKnxDevice implements KnxDevice
 	 * @param device the device address, or the default individual address; if a device address is
 	 *        assigned, this address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to
-	 * @throws KNXLinkClosedException
-	 * @throws KNXPropertyException
+	 * @throws KNXLinkClosedException if the network link is closed
+	 * @throws KNXPropertyException on error setting KNX properties during device initialization
 	 */
 	protected BaseKnxDevice(final String name, final IndividualAddress device,
 		final KNXNetworkLink link) throws KNXLinkClosedException, KNXPropertyException
@@ -203,8 +203,8 @@ public class BaseKnxDevice implements KnxDevice
 	 * @param link the KNX network link this device is attached to
 	 * @param process the device process communication service handler
 	 * @param mgmt the device management service handler
-	 * @throws KNXLinkClosedException
-	 * @throws KNXPropertyException
+	 * @throws KNXLinkClosedException if the network link is closed
+	 * @throws KNXPropertyException on error setting KNX properties during device initialization
 	 */
 	public BaseKnxDevice(final String name, final IndividualAddress device,
 		final KNXNetworkLink link, final ProcessCommunicationService process,
