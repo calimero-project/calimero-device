@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2016 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -60,8 +60,7 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 	private final ProcessCommunicationResponder res;
 
 	// pre-condition: knxDevice != null, link != null
-	ProcessServiceNotifier(final BaseKnxDevice device)
-		throws KNXLinkClosedException
+	ProcessServiceNotifier(final BaseKnxDevice device) throws KNXLinkClosedException
 	{
 		if (device == null)
 			throw new NullPointerException("KNX device is required");

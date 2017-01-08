@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2016 B. Malinowsky
+    Copyright (c) 2012, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -232,11 +232,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int startIndex, final int elements)
 	{
 		try {
-			final byte[] res = device.getInterfaceObjectServer().getProperty(objectIndex,
-					propertyId, startIndex, elements);
+			final byte[] res = device.getInterfaceObjectServer().getProperty(objectIndex, propertyId, startIndex,
+					elements);
 			return new ServiceResult(res);
 		}
-		catch (final KNXPropertyException | KNXIllegalArgumentException e) {
+		catch (KNXPropertyException | KNXIllegalArgumentException e) {
 			logger.error("read property " + e);
 		}
 		return null;
@@ -247,8 +247,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int startIndex, final int elements, final byte[] data)
 	{
 		try {
-			device.getInterfaceObjectServer().setProperty(objectIndex, propertyId, startIndex,
-					elements, data);
+			device.getInterfaceObjectServer().setProperty(objectIndex, propertyId, startIndex, elements, data);
 			// handle some special cases
 			if (propertyId == PID.PROGMODE)
 				setProgrammingMode((data[0] & 0x01) == 0x01);
@@ -258,15 +257,14 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			// but this is crap to do here, the service notifier should do this
 			return new ServiceResult(data);
 		}
-		catch (final KNXPropertyException | KNXIllegalArgumentException e) {
+		catch (KNXPropertyException | KNXIllegalArgumentException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
 	@Override
-	public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId,
-		final int propertyIndex)
+	public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId, final int propertyIndex)
 	{
 		try {
 			final InterfaceObjectServer ios = device.getInterfaceObjectServer();

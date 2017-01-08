@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2015 B. Malinowsky
+    Copyright (c) 2010, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -105,8 +105,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 	private final boolean strictMode;
 
-	private final EventListeners<InterfaceObjectServerListener> listeners = new EventListeners<>(
-			logger);
+	private final EventListeners<InterfaceObjectServerListener> listeners = new EventListeners<>(logger);
 
 	/**
 	 * Creates a new interface object server.
@@ -346,7 +345,6 @@ public class InterfaceObjectServer implements PropertyAccess
 	/**
 	 * See {@link #setProperty(int, int, int, int, byte[])}, but uses the object type and object
 	 * instance to refer to the interface object.
-	 * <p>
 	 *
 	 * @param objectType object type of the interface object containing the KNX property
 	 * @param objectInstance object instance of the interface object in the server, 1 refers to the
@@ -1210,7 +1208,6 @@ public class InterfaceObjectServer implements PropertyAccess
 		@Override
 		public void saveProperties(final String resource,
 			final Collection<Description> descriptions, final Collection<byte[]> values)
-				throws KNXException
 		{
 			if (values.size() < descriptions.size())
 				throw new KNXIllegalArgumentException("values size " + values.size()

@@ -108,11 +108,10 @@ public class BaseKnxDevice implements KnxDevice
 	static final int OUTGOING_EVENTS_THREADED = 2;
 	int threadingPolicy;
 
-	// proc. & mgmt communication service tasks are processed as follows:
+	// process & mgmt communication service tasks are processed as follows:
 	//  *) producer / consumer pattern
 	//  *) in-order task processing per producer
 	//  *) sequential task processing per producer
-
 	private static final ThreadFactory factory = Executors.defaultThreadFactory();
 	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 10,
 			TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), (r) -> {
@@ -365,10 +364,10 @@ public class BaseKnxDevice implements KnxDevice
 		final ProcessCommunicationService process, final ManagementService mgmt)
 			throws KNXLinkClosedException, KNXPropertyException
 	{
-		// if we throw here for processService == null or mgmtService == null,
+		// if we throw here for process == null or mgmt == null,
 		// subclasses always have to supply handlers but cannot supply 'this' if the handlers are
 		// implemented by the class
-		//if (processService == null || mgmtService == null)
+		//if (process == null || mgmt == null)
 		//  throw new NullPointerException("handler missing");
 
 		setAddress(device);
