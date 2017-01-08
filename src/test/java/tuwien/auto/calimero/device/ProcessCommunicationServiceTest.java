@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2016 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -77,8 +77,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 	private final Datapoint dp2 = new StateDP(new GroupAddress(1, 1, 2), "Value", 0,
 			DPTXlator8BitUnsigned.DPT_SCALING.getID());
 
-	private boolean dpState = true;
-	private int dp2State = 30;
+	private boolean dpState;
+	private int dp2State;
 
 	// test Runnable return in ServiceResult
 	private final ProcessCommunicationService processLogicRunnable = new ProcessCommunicationService() {
@@ -88,11 +88,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 				return new ServiceResult() {
 					public void run()
 					{
-						try {
-							System.out.println(
-									"Runnable groupReadRequest: service result value " + dpState);
-							final ProcessCommunicationBase responder = new ProcessCommunicationResponder(
-									device1.getDeviceLink());
+						try (final ProcessCommunicationBase responder = new ProcessCommunicationResponder(
+								device1.getDeviceLink())) {
 							responder.write(dp.getMainAddress(), dpState);
 						}
 						catch (final KNXTimeoutException e) {
@@ -113,10 +110,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 					final DPTXlatorBoolean t = new DPTXlatorBoolean(dp.getDPT());
 					t.setData(e.getASDU());
 					dpState = t.getValueBoolean();
-					System.out.println("group write value = " + dpState);
 				}
 				catch (final KNXFormatException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			}
@@ -132,7 +127,6 @@ public class ProcessCommunicationServiceTest extends TestCase
 		{
 			if (e.getDestination().equals(dp2.getMainAddress())) {
 				try {
-					System.out.println("groupReadRequest: service result value =" + dp2State);
 					final DPTXlator8BitUnsigned x = new DPTXlator8BitUnsigned(dp2.getDPT());
 					x.setValue(dp2State);
 					return new ServiceResult(x.getData());
@@ -151,10 +145,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 					final DPTXlator8BitUnsigned t = new DPTXlator8BitUnsigned(dp2.getDPT());
 					t.setData(e.getASDU());
 					dp2State = t.getValueUnsigned();
-					System.out.println("group write value = " + dp2State);
 				}
 				catch (final KNXFormatException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			}
@@ -181,6 +173,9 @@ public class ProcessCommunicationServiceTest extends TestCase
 	protected void setUp() throws Exception
 	{
 		super.setUp();
+
+		dpState = true;
+		dp2State = 30;
 
 		final IndividualAddress ia1 = new IndividualAddress("1.1.1");
 		final IndividualAddress ia2 = new IndividualAddress("1.1.2");
@@ -214,6 +209,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 */
 	protected void tearDown() throws Exception
 	{
+		device1.getDeviceLink().close();
+		device2.getDeviceLink().close();
 		link.close();
 		super.tearDown();
 	}
@@ -230,16 +227,15 @@ public class ProcessCommunicationServiceTest extends TestCase
 	{
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 		String s = pc.read(dp);
-		System.out.println(s);
 		assertEquals(s, "on");
 
 		s = pc.read(dp);
-		System.out.println(s);
 		assertEquals(s, "on");
 
 		s = pc.read(dp);
-		System.out.println(s);
 		assertEquals(s, "on");
+
+		pc.close();
 	}
 
 	/**
@@ -259,6 +255,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 
 		s = pc.read(dp2);
 		assertEquals(s, "30 %");
+
+		pc.close();
 	}
 
 	/**
@@ -278,8 +276,9 @@ public class ProcessCommunicationServiceTest extends TestCase
 
 		pc.write(dp, "off");
 		s = pc.read(dp);
-		System.out.println(s);
 		assertEquals(s, "off");
+
+		pc.close();
 	}
 
 	/**
@@ -300,5 +299,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 		pc.write(dp2, "30");
 		s = pc.read(dp2);
 		assertEquals(s, "30 %");
+
+		pc.close();
 	}
 }
