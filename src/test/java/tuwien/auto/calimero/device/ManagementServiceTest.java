@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2016 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,285 +36,143 @@
 
 package tuwien.auto.calimero.device;
 
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
-import tuwien.auto.calimero.device.ios.InterfaceObject;
-import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
-import tuwien.auto.calimero.device.ios.KNXPropertyException;
-import tuwien.auto.calimero.mgmt.Destination;
-import tuwien.auto.calimero.mgmt.PropertyAccess;
-import tuwien.auto.calimero.mgmt.TransportLayer;
+import tuwien.auto.calimero.cemi.CEMILData;
+import tuwien.auto.calimero.datapoint.Datapoint;
+import tuwien.auto.calimero.dptxlator.DPTXlator;
+import tuwien.auto.calimero.link.AbstractLink;
+import tuwien.auto.calimero.link.KNXNetworkLink;
+import tuwien.auto.calimero.link.medium.TPSettings;
+import tuwien.auto.calimero.mgmt.Description;
+import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 
 /**
  * @author B. Malinowsky
  */
-public class ManagementServiceTest extends TestCase
+public class ManagementServiceTest
 {
-	public static class DefaultMgmtLogic implements ManagementService {
+	private static final int objectIndex = 0;
+	private static final int propertyId = PID.OBJECT_TYPE;
 
-		@Override
-		public ServiceResult writeProperty(final int objectIndex, final int propertyId,
-			final int startIndex, final int elements, final byte[] data)
-		{
-			return null;
-		}
+	private ManagementService mgmt;
+	private KnxDevice device;
 
-		public ServiceResult writeMemory(final int startAddress, final byte[] data)
-		{
-			return null;
-		}
-
-		public ServiceResult writeAddressSerial(final byte[] serialNo,
-			final IndividualAddress newAddress)
-		{
-			return null;
-		}
-
-		public ServiceResult writeAddress(final IndividualAddress newAddress)
-		{
-			return null;
-		}
-
-		public ServiceResult restart(final boolean masterReset, final int eraseCode,
-			final int channel)
-		{
-			return null;
-		}
-
-		public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId,
-			final int propertyIndex)
-		{
-			return null;
-		}
-
-		public ServiceResult readProperty(final int objectIndex, final int propertyId,
-			final int startIndex, final int elements)
-		{
-			return null;
-		}
-
-		public ServiceResult readMemory(final int startAddress, final int bytes)
-		{
-			return null;
-		}
-
-		public ServiceResult readDomainAddress()
-		{
-			return null;
-		}
-
-		public ServiceResult readDomainAddress(final byte[] domain,
-			final IndividualAddress startAddress, final int range)
-		{
-			return null;
-		}
-
-		public ServiceResult writeDomainAddress(final byte[] domain)
-		{
-			return null;
-		}
-
-		public ServiceResult readDescriptor(final int type)
-		{
-			return null;
-		}
-
-		public ServiceResult readAddressSerial(final byte[] serialNo)
-		{
-			return null;
-		}
-
-		public ServiceResult readAddress()
-		{
-			return null;
-		}
-
-		public ServiceResult readADC(final int channel, final int consecutiveReads)
-		{
-			return null;
-		}
-
-		public ServiceResult management(final int svcType, final byte[] asdu, final KNXAddress dst,
-			final Destination respondTo, final TransportLayer tl)
-		{
-			return null;
-		}
-
-		public ServiceResult keyWrite(final int accessLevel, final byte[] key)
-		{
-			return null;
-		}
-
-		public boolean isVerifyModeEnabled()
-		{
-			return false;
-		}
-
-		public ServiceResult authorize(final byte[] key)
-		{
-			return null;
-		}
-	};
-
-	final ManagementService mgmtLogic = new DefaultMgmtLogic()
+	@BeforeEach
+	void init() throws Exception
 	{
-		KnxDevice device = new BaseKnxDevice("test"); // XXX init
-		private final InterfaceObjectServer ios = device.getInterfaceObjectServer();
-		private final byte[] memory = new byte[100];
+		final KNXNetworkLink link = new AbstractLink("test link", TPSettings.TP1) {
+			@Override
+			protected void onSend(final CEMILData msg, final boolean waitForCon) {}
 
-		public ServiceResult writeProperty(final int objectIndex, final int pid,
-			final int startIndex, final int elements, final byte[] data)
-		{
-			return null;
-		}
+			@Override
+			protected void onSend(final KNXAddress dst, final byte[] msg, final boolean waitForCon) {}
+		};
 
-		public ServiceResult readProperty(final int objectIndex, final int pid,
-			final int elements, final int startIndex)
-		{
-			System.out.println("property read");
-			try {
-				return new ServiceResult(ios.getProperty(objectIndex, pid, startIndex, elements));
+		mgmt = new KnxDeviceServiceLogic() {
+			@Override
+			public void updateDatapointValue(final Datapoint ofDp, final DPTXlator update)
+			{
+				fail("not under test");
 			}
-			catch (final KNXException e) {
-				e.printStackTrace();
+
+			@Override
+			public DPTXlator requestDatapointValue(final Datapoint ofDp) throws KNXException
+			{
+				fail("not under test");
+				return null;
 			}
-			return null;
-		}
+		};
 
-		public ServiceResult readMemory(final int startAddress, final int bytes)
-		{
-			final byte[] range = new byte[bytes];
-			for (int i = 0; i < bytes; ++i)
-				range[i] = memory[startAddress + i];
-			return new ServiceResult(range);
-		}
-
-		public ServiceResult readDescriptor(final int type)
-		{
-			byte[] descriptor = null;
-			if (type == 0) {
-				// mask type (8 bit): Medium Type (4 bit), Firmware Type (4 bit)
-				// firmware version (8 bit): version (4 bit), sub code (4 bit)
-				descriptor = new byte[2];
-
-				try {
-					final byte[] firmware = ios.getProperty(InterfaceObject.DEVICE_OBJECT, 1,
-							PropertyAccess.PID.FIRMWARE_REVISION, 1, 1);
-				}
-				catch (final KNXPropertyException e) {
-					e.printStackTrace();
-				}
-			}
-			else if (type == 2) {
-				// application manufacturer (16 bit) | device type (16 bit) | version (8
-				// bit) |
-				// Link Mgmt Service support (2 bit) | Logical Tag (LT) base value (6 bit)
-				// |
-				// CI 1 (16 bit) | CI 2 (16 bit) | CI 3 (16 bit) | CI 4 (16 bit) |
-				descriptor = new byte[14];
-			}
-			else {
-
-			}
-			return new ServiceResult(descriptor);
-		}
-
-		public ServiceResult readPropertyDescription(final int objectIndex, final int pid,
-			final int propertyIndex)
-		{
-			try {
-				return new ServiceResult(ios.getDescription(objectIndex, pid).toByteArray());
-			}
-			catch (final KNXException e) {
-				e.printStackTrace();
-			}
-			return null;
-		}
-	};
-
-	/**
-	 * @param name
-	 */
-	public ManagementServiceTest(final String name)
-	{
-		super(name);
+		device = new BaseKnxDevice("test", new IndividualAddress(0, 0x02, 0xff), link, null, mgmt);
+		((KnxDeviceServiceLogic) mgmt).setDevice(device);
 	}
 
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#setUp()
-	 */
-	protected void setUp() throws Exception
+	@Test
+	void readProperty()
 	{
-		super.setUp();
+		final ServiceResult r = mgmt.readProperty(objectIndex, propertyId, 1, 1);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertEquals(2, r.getResult().length);
 	}
 
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#tearDown()
-	 */
-	protected void tearDown() throws Exception
+	@Test
+	void writeProperty()
 	{
-		super.tearDown();
+		final byte[] data = new byte[] { 1, 2, 3, 4 };
+		ServiceResult r = mgmt.writeProperty(objectIndex, 110, 1, 1, data);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertArrayEquals(data, r.getResult());
+
+		r = mgmt.readProperty(objectIndex, 110, 1, 1);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertArrayEquals(data, r.getResult());
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ManagementService#readProperty(int, int, int, int)}
-	 * .
-	 */
-	public final void testOnPropertyRead()
+	@Test
+	void readPropertyDescription()
 	{
-		fail("Not yet implemented"); // TODO
+		ServiceResult r = mgmt.readPropertyDescription(objectIndex, propertyId, 0);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertEquals(7, r.getResult().length);
+		new Description(0, r.getResult());
+
+		r = mgmt.readPropertyDescription(objectIndex, 0, 0);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertEquals(7, r.getResult().length);
+		new Description(0, r.getResult());
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ManagementService#writeProperty(int, int, int, int, byte[])}.
-	 */
-	public final void testOnPropertyWrite()
+	@Test
+	public final void readMemory()
 	{
-		fail("Not yet implemented"); // TODO
+		final ServiceResult r = mgmt.readMemory(0x60, 1);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertEquals(1, r.getResult().length);
+		assertEquals(0, r.getResult()[0]);
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ManagementService#readPropertyDescription(int, int, int)}
-	 * .
-	 */
-	public final void testOnPropertyDescriptionRead()
+	@Test
+	public final void writeMemory()
 	{
-		fail("Not yet implemented"); // TODO
+		final int start = 0x22;
+		final byte[] data = new byte[] { 1, 2, 3, 4 };
+
+		ServiceResult r = mgmt.writeMemory(start, data);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertEquals(4, r.getResult().length);
+
+		r = mgmt.readMemory(start, 4);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertArrayEquals(data, r.getResult());
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ManagementService#readMemory(int, int)}
-	 * .
-	 */
-	public final void testOnMemoryRead()
+	@Test
+	public final void readDescriptor()
 	{
-		fail("Not yet implemented"); // TODO
+		ServiceResult r = mgmt.readDescriptor(0);
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertEquals(2, r.getResult().length);
+		r = mgmt.readDescriptor(2);
+		assertNull(r);
 	}
-
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ManagementService#writeMemory(int, byte[])}
-	 * .
-	 */
-	public final void testOnMemoryWrite()
-	{
-		fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ManagementService#readDescriptor(int)}
-	 * .
-	 */
-	public final void testOnDescriptorRead()
-	{
-		fail("Not yet implemented"); // TODO
-	}
-
 }

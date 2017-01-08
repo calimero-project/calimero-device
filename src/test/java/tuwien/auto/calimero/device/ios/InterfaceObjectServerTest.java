@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2016 B. Malinowsky
+    Copyright (c) 2010, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,15 +36,22 @@
 
 package tuwien.auto.calimero.device.ios;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.util.Collection;
 import java.util.Iterator;
 
-import junit.framework.TestCase;
-import tuwien.auto.calimero.DataUnitBuilder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer.IosResourceHandler;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
+import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.xml.KNXMLException;
@@ -54,36 +61,17 @@ import tuwien.auto.calimero.xml.XmlWriter;
 /**
  * @author B. Malinowsky
  */
-public class InterfaceObjectServerTest extends TestCase
+public class InterfaceObjectServerTest
 {
 	private static final String baseDir = "src/test/resources/";
 	private static final String propertiesFile = baseDir + "properties.xml";
 
 	private InterfaceObjectServer ios;
 
-	/**
-	 * @param name
-	 */
-	public InterfaceObjectServerTest(final String name)
+	@BeforeEach
+	void init() throws Exception
 	{
-		super(name);
-	}
-
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#setUp()
-	 */
-	protected void setUp() throws Exception
-	{
-		super.setUp();
 		ios = new InterfaceObjectServer(false);
-	}
-
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#tearDown()
-	 */
-	protected void tearDown() throws Exception
-	{
-		super.tearDown();
 	}
 
 	/**
@@ -91,26 +79,18 @@ public class InterfaceObjectServerTest extends TestCase
 	 *
 	 * @throws KNXException
 	 */
-	public final void testInterfaceObjectServer() throws KNXException
+	@Test
+	void interfaceObjectServer() throws KNXException
 	{
-		final InterfaceObjectServer s = new InterfaceObjectServer(false);
-		final InterfaceObject[] ios = s.getInterfaceObjects();
-		for (int i = 0; i < ios.length; i++) {
-			System.out.println(ios[i]);
-		}
-		final Description d = s.getDescription(0, 1);
-		System.out.println(d);
-		final Description set = new Description(0, 0, 1, 0, 15, false, 1, 1, 3, 3);
-		s.setDescription(set, true);
-
-		System.out.println(s.getDescription(0, 1));
-		s.saveInterfaceObjects(baseDir + "savedProperties.xml");
+		new InterfaceObjectServer(false);
+		new InterfaceObjectServer(true);
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#setResourceHandler(InterfaceObjectServer.IosResourceHandler)}.
 	 */
-	public final void testSetResourceHandler()
+	@Test
+	void setResourceHandler()
 	{
 		ios.setResourceHandler(null);
 		ios.setResourceHandler(new IosResourceHandler() {
@@ -156,7 +136,8 @@ public class InterfaceObjectServerTest extends TestCase
 	 *
 	 * @throws KNXException
 	 */
-	public final void testLoadDefinitions() throws KNXException
+	@Test
+	void loadDefinitions() throws KNXException
 	{
 		ios.loadDefinitions(propertiesFile);
 	}
@@ -166,20 +147,24 @@ public class InterfaceObjectServerTest extends TestCase
 	 *
 	 * @throws KNXException
 	 */
-	public final void testLoadInterfaceObjects() throws KNXException
+	@Test
+	void loadInterfaceObjects() throws KNXException
 	{
 		ios.loadInterfaceObjects(baseDir + "testLoadInterfaceObjects.xml");
 		final Description d = ios.getDescription(0, 1);
 		final InterfaceObject[] objects = ios.getInterfaceObjects();
+		assertNotNull(objects);
+		assertTrue(objects.length > 2);
 		for (int i = 0; i < objects.length; i++) {
 			final InterfaceObject interfaceObject = objects[i];
-			System.out.println("" + interfaceObject);
+			assertEquals(i, interfaceObject.getIndex());
 			for (final Iterator<PropertyKey> k = interfaceObject.values.keySet().iterator(); k.hasNext();) {
 				final PropertyKey key = k.next();
-				System.out.println(DataUnitBuilder.toHex(interfaceObject.values.get(key), ""));
+				assertNotNull(key);
+				assertNotNull(interfaceObject.values.get(key));
 			}
 		}
-		System.out.println(d.getPDT());
+		assertEquals(0, d.getPDT());
 	}
 
 	/**
@@ -187,7 +172,8 @@ public class InterfaceObjectServerTest extends TestCase
 	 *
 	 * @throws KNXException
 	 */
-	public final void testSaveInterfaceObjects() throws KNXException
+	@Test
+	void SaveInterfaceObjects() throws KNXException
 	{
 		ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
@@ -198,100 +184,132 @@ public class InterfaceObjectServerTest extends TestCase
 	/**
 	 * Test method for {@link InterfaceObjectServer#getInterfaceObjects()}.
 	 */
-	public final void testGetInterfaceObjects()
+	@Test
+	void getInterfaceObjects()
 	{
-		fail("Not yet implemented");
+		final InterfaceObject[] objects = ios.getInterfaceObjects();
+		assertNotNull(objects);
+		assertEquals(2, objects.length);
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#addInterfaceObject(int)}.
 	 */
-	public final void testAddInterfaceObject()
+	@Test
+	void addInterfaceObject()
 	{
-		fail("Not yet implemented");
+		final int length = ios.getInterfaceObjects().length;
+		ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
+		assertEquals(length + 1, ios.getInterfaceObjects().length);
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#addServerListener(InterfaceObjectServerListener)}.
 	 */
-	public final void testAddServerListener()
+	@Test
+	void addServerListener()
 	{
-		fail("Not yet implemented");
+		ios.addServerListener(e -> {});
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#removeServerListener(InterfaceObjectServerListener)}.
 	 */
-	public final void testRemoveServerListener()
+	@Test
+	void removeServerListener()
 	{
-		fail("Not yet implemented");
+		final InterfaceObjectServerListener l = e -> {};
+		ios.removeServerListener(l);
+		ios.addServerListener(l);
+		ios.removeServerListener(l);
+		ios.removeServerListener(l);
 	}
+
+	private final int objectType = InterfaceObject.DEVICE_OBJECT;
+	private final int objectIndex = 0;
+	private final int objectInstance = 1;
+	private final int propertyId = PID.OBJECT_INDEX;
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int)} .
+	 *
+	 * @throws KNXPropertyException
 	 */
-	public final void testGetPropertyIntIntIntInt()
+	@Test
+	void getPropertyIntIntIntInt() throws KNXPropertyException
 	{
-		fail("Not yet implemented");
+		ios.getProperty(objectIndex , propertyId, 1, 1);
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, byte[])} .
+	 *
+	 * @throws KNXPropertyException
 	 */
-	public final void testSetPropertyIntIntIntIntByteArray()
+	@Test
+	void setPropertyIntIntIntIntByteArray() throws KNXPropertyException
 	{
-		fail("Not yet implemented");
+		ios.setProperty(objectIndex, propertyId, 1, 1, new byte[] { 0, 0});
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, int, byte[])}.
+	 *
+	 * @throws KNXPropertyException
 	 */
-	public final void testSetPropertyIntIntIntIntIntByteArray()
+	@Test
+	void setPropertyIntIntIntIntIntByteArray() throws KNXPropertyException
 	{
-		fail("Not yet implemented");
+		ios.setProperty(objectType, objectInstance, propertyId, 1, 1, new byte[] { 0, 0 });
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int, int)} .
+	 * @throws KNXPropertyException
 	 */
-	public final void testGetPropertyIntIntIntIntInt()
+	@Test
+	void getPropertyIntIntIntIntInt() throws KNXPropertyException
 	{
-		fail("Not yet implemented");
+		ios.getProperty(objectType, objectInstance , propertyId, 1, 1);
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, java.lang.String)}.
 	 */
-	public final void testSetPropertyIntIntIntString()
+	@Test
+	void setPropertyIntIntIntString()
 	{
-		fail("Not yet implemented");
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#getPropertyTranslated(int, int, int, int)}.
 	 */
-	public final void testGetPropertyTranslated()
+	@Test void GetPropertyTranslated()
 	{
-		fail("Not yet implemented");
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#setDescription(tuwien.auto.calimero.mgmt.Description, boolean)}.
 	 */
-	public final void testSetDescription()
+	@Test
+	void setDescription()
 	{
-		fail("Not yet implemented");
+		final Description set = new Description(0, 0, 1, 0, 15, false, 1, 1, 3, 3);
+		ios.setDescription(set, true);
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#getDescription(int, int)}.
+	 * @throws KNXPropertyException
 	 */
-	public final void testGetDescription()
+	@Test
+	void getDescription() throws KNXPropertyException
 	{
-		fail("Not yet implemented");
+		final Description d = ios.getDescription(0, 1);
 	}
 
-	public final void testResetElements() throws KNXException
+	@Test
+	void resetElements() throws KNXException
 	{
 		ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
 		// get KNXnet/IP parameter object to set some additional addresses
