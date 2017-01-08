@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2016 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,6 +47,8 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.NetworkLinkListener;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.link.medium.TPSettings;
+import tuwien.auto.calimero.mgmt.Destination;
+import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.process.ProcessEvent;
 
 /**
@@ -63,12 +65,14 @@ public class BaseKnxDeviceTest extends TestCase
 		/**
 		 * @param settings
 		 */
+		@Override
 		public void setKNXMedium(final KNXMediumSettings settings)
 		{}
 
 		/**
 		 * @param count
 		 */
+		@Override
 		public void setHopCount(final int count)
 		{}
 
@@ -77,6 +81,7 @@ public class BaseKnxDeviceTest extends TestCase
 		 * @param p
 		 * @param nsdu
 		 */
+		@Override
 		public void sendRequestWait(final KNXAddress dst, final Priority p, final byte[] nsdu)
 		{}
 
@@ -85,6 +90,7 @@ public class BaseKnxDeviceTest extends TestCase
 		 * @param p
 		 * @param nsdu
 		 */
+		@Override
 		public void sendRequest(final KNXAddress dst, final Priority p, final byte[] nsdu)
 		{}
 
@@ -92,59 +98,192 @@ public class BaseKnxDeviceTest extends TestCase
 		 * @param msg
 		 * @param waitForCon
 		 */
+		@Override
 		public void send(final CEMILData msg, final boolean waitForCon)
 		{}
 
 		/**
 		 * @param l
 		 */
+		@Override
 		public void removeLinkListener(final NetworkLinkListener l)
 		{}
 
+		@Override
 		public boolean isOpen()
 		{
 			return true;
 		}
 
+		@Override
 		public String getName()
 		{
 			return "test link";
 		}
 
+		@Override
 		public KNXMediumSettings getKNXMedium()
 		{
 			return TPSettings.TP1;
 		}
 
+		@Override
 		public int getHopCount()
 		{
 			return 0;
 		}
 
+		@Override
 		public void close()
 		{}
 
 		/**
 		 * @param l
 		 */
+		@Override
 		public void addLinkListener(final NetworkLinkListener l)
 		{}
 	};
 
 	private final ProcessCommunicationService processLogic = new ProcessCommunicationService() {
+		@Override
 		public ServiceResult groupReadRequest(final ProcessEvent e)
 		{
 			return null;
 		}
 
+		@Override
 		public void groupWrite(final ProcessEvent e)
 		{}
 
+		@Override
 		public void groupResponse(final ProcessEvent e)
 		{}
 	};
 
-	static final ManagementService mgmtLogic = new ManagementServiceTest.DefaultMgmtLogic();
+	private static class DefaultMgmtLogic implements ManagementService
+	{
+		@Override
+		public ServiceResult writeProperty(final int objectIndex, final int propertyId, final int startIndex,
+			final int elements, final byte[] data)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult writeMemory(final int startAddress, final byte[] data)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult writeAddressSerial(final byte[] serialNo, final IndividualAddress newAddress)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult writeAddress(final IndividualAddress newAddress)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult restart(final boolean masterReset, final int eraseCode, final int channel)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId,
+			final int propertyIndex)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readProperty(final int objectIndex, final int propertyId, final int startIndex,
+			final int elements)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readMemory(final int startAddress, final int bytes)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readDomainAddress()
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readDomainAddress(final byte[] domain, final IndividualAddress startAddress,
+			final int range)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult writeDomainAddress(final byte[] domain)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readDescriptor(final int type)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readAddressSerial(final byte[] serialNo)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readAddress()
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult readADC(final int channel, final int consecutiveReads)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult management(final int svcType, final byte[] asdu, final KNXAddress dst,
+			final Destination respondTo, final TransportLayer tl)
+		{
+			return null;
+		}
+
+		@Override
+		public ServiceResult keyWrite(final int accessLevel, final byte[] key)
+		{
+			return null;
+		}
+
+		@Override
+		public boolean isVerifyModeEnabled()
+		{
+			return false;
+		}
+
+		@Override
+		public ServiceResult authorize(final byte[] key)
+		{
+			return null;
+		}
+	};
+
+	private static final ManagementService mgmtLogic = new DefaultMgmtLogic();
 
 	/**
 	 * @param name
@@ -157,6 +296,7 @@ public class BaseKnxDeviceTest extends TestCase
 	/* (non-Javadoc)
 	 * @see junit.framework.TestCase#setUp()
 	 */
+	@Override
 	protected void setUp() throws Exception
 	{
 		super.setUp();
@@ -166,6 +306,7 @@ public class BaseKnxDeviceTest extends TestCase
 	/* (non-Javadoc)
 	 * @see junit.framework.TestCase#tearDown()
 	 */
+	@Override
 	protected void tearDown() throws Exception
 	{
 		super.tearDown();
