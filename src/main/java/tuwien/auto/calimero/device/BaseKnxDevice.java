@@ -142,7 +142,18 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		this.name = name;
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
+		ios = new InterfaceObjectServer(false);
 		logger = LogService.getLogger("calimero.device." + name);
+		// check property definitions for encoding support before we init basic properties
+		try {
+			final URL resource = this.getClass().getResource(propDefinitionsResource);
+			if (resource != null)
+				ios.loadDefinitions(resource.toString());
+		}
+		catch (KNXException | KNXMLException e) {
+			// using the default resource ID, we cannot expect to always find the resource
+			logger.info("could not load the Interface Object Server KNX property definitions");
+		}
 	}
 
 	/**
@@ -376,21 +387,6 @@ public class BaseKnxDevice implements KnxDevice
 	// taken from KNX server
 	private void initKnxProperties() throws KNXPropertyException
 	{
-		if (ios == null) {
-			ios = new InterfaceObjectServer(false);
-
-			// check property definitions for encoding support before we init basic properties
-			try {
-				final URL resource = this.getClass().getResource(propDefinitionsResource);
-				if (resource != null)
-					ios.loadDefinitions(resource.toExternalForm());
-			}
-			catch (KNXException | KNXMLException e) {
-				// using the default resource ID, we cannot expect to always find the resource
-				logger.info("could not load the Interface Object Server KNX property definitions");
-			}
-		}
-
 		// initialize interface device object properties
 		setDeviceProperty(PID.MAX_APDULENGTH, new byte[] { 0, (byte) maxApduLength });
 		final byte[] defDesc = new String("KNX Device").getBytes(Charset.forName("ISO-8859-1"));
