@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2016 B. Malinowsky
+    Copyright (c) 2012, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -127,7 +127,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		this.device = device;
 		tl = new TransportLayerImpl(device.getDeviceLink(), true);
 		tl.addTransportListener(this);
-		logger = device.getLogger();
+		logger = device.logger();
 
 		final int medium = device.getDeviceLink().getKNXMedium().getMedium();
 		if (medium == KNXMediumSettings.MEDIUM_PL110)

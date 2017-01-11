@@ -89,7 +89,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public void setDevice(final KnxDevice device)
 	{
 		this.device = device;
-		logger = (device instanceof BaseKnxDevice) ? ((BaseKnxDevice) device).getLogger()
+		logger = (device instanceof BaseKnxDevice) ? ((BaseKnxDevice) device).logger()
 				: LoggerFactory.getLogger(KnxDeviceServiceLogic.class);
 
 		domainAddress = new byte[0];

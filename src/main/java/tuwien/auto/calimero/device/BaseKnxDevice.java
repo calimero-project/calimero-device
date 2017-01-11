@@ -114,13 +114,14 @@ public class BaseKnxDevice implements KnxDevice
 	//  *) in-order task processing per producer
 	//  *) sequential task processing per producer
 	private static final ThreadFactory factory = Executors.defaultThreadFactory();
-	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 10,
-			TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), (r) -> {
+	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 10, TimeUnit.SECONDS,
+			new LinkedBlockingQueue<Runnable>(), (r) -> {
 				final Thread t = factory.newThread(r);
 				t.setName("Calimero Device Task (" + t.getName() + ")");
 				t.setDaemon(true); // on shutdown, we won't execute any remaining tasks
 				return t;
 			});
+
 	private boolean taskSubmitted;
 	// local queue if a task is currently submitted to our executor service
 	private final List<Runnable> tasks = new ArrayList<>(5);
@@ -129,6 +130,7 @@ public class BaseKnxDevice implements KnxDevice
 	private final DeviceDescriptor dd;
 	private final InterfaceObjectServer ios;
 	private final Logger logger;
+
 	private IndividualAddress self;
 	private ProcessServiceNotifier procNotifier;
 	private ManagementServiceNotifier mgmtNotifier;
@@ -242,9 +244,8 @@ public class BaseKnxDevice implements KnxDevice
 	 * @throws KNXLinkClosedException on closed network link
 	 * @throws KNXPropertyException on error initializing the device properties
 	 */
-	public BaseKnxDevice(final String name, final IndividualAddress device,
-		final KNXNetworkLink link, final KnxDeviceServiceLogic logic)
-			throws KNXLinkClosedException, KNXPropertyException
+	public BaseKnxDevice(final String name, final IndividualAddress device, final KNXNetworkLink link,
+		final KnxDeviceServiceLogic logic) throws KNXLinkClosedException, KNXPropertyException
 	{
 		this(name, device, link, logic, logic);
 		logic.setDevice(this);
@@ -300,7 +301,7 @@ public class BaseKnxDevice implements KnxDevice
 	 * @return the task executor providing the threads to run the process communication and
 	 *         management services
 	 */
-	public ExecutorService getTaskExecutor()
+	public ExecutorService taskExecutor()
 	{
 		return executor;
 	}
@@ -486,8 +487,7 @@ public class BaseKnxDevice implements KnxDevice
 		setMemory(0x60, programmingMode ? 1 : 0);
 
 		// Run State (Application Program Object)
-		ios.setProperty(appProgamObject, objectInstance, PID.RUN_STATE_CONTROL, 1, 1,
-				fromWord(runState));
+		ios.setProperty(appProgamObject, objectInstance, PID.RUN_STATE_CONTROL, 1, 1, fromWord(runState));
 
 		// Firmware Revision
 		setDeviceProperty(PID.FIRMWARE_REVISION, fromByte(firmwareRev));
@@ -552,10 +552,5 @@ public class BaseKnxDevice implements KnxDevice
 	private static byte[] fromByte(final int uchar)
 	{
 		return new byte[] { (byte) uchar };
-	}
-
-	Logger getLogger()
-	{
-		return logger;
 	}
 }
