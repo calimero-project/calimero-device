@@ -220,7 +220,6 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * Saves the interface objects contained in this interface object server to the specified
 	 * resource using the resource handler set by
 	 * {@link #setResourceHandler(InterfaceObjectServer.IosResourceHandler)}.
-	 * <p>
 	 *
 	 * @param resource resource storage location identifier passed to the used IOS resource handler
 	 * @throws KNXException on problems saving the interface objects, as thrown by the IOS resource
@@ -284,7 +283,6 @@ public class InterfaceObjectServer implements PropertyAccess
 	/**
 	 * Removes the specified interface object from the list of interface objects maintained by this
 	 * Interface Object Server.
-	 * <p>
 	 *
 	 * @param io the interface object to remove
 	 */
@@ -364,7 +362,6 @@ public class InterfaceObjectServer implements PropertyAccess
 	/**
 	 * See {@link #getProperty(int, int, int, int)}, but uses the object type and object instance to
 	 * refer to the interface object.
-	 * <p>
 	 *
 	 * @param objectType object type of the interface object containing the KNX property
 	 * @param objectInstance object instance of the interface object in the server, 1 refers to the
@@ -381,10 +378,6 @@ public class InterfaceObjectServer implements PropertyAccess
 		return adapter.getProperty(objectType, objectInstance, propertyId, start, elements);
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.mgmt.PropertyAccess
-	 * #setProperty(int, int, int, java.lang.String)
-	 */
 	@Override
 	public void setProperty(final int objIndex, final int propertyId, final int position,
 		final String value) throws KNXException, InterruptedException
@@ -526,11 +519,10 @@ public class InterfaceObjectServer implements PropertyAccess
 		try {
 			return client.getDescription(objIndex, pid);
 		}
+		catch (final KNXPropertyException e) {
+			throw e;
+		}
 		catch (final KNXException e) {
-			// forward all KNXPropertyExceptions from our adapter
-			if (e instanceof KNXPropertyException)
-				throw (KNXPropertyException) e;
-			// XXX
 			// KNXException is currently thrown by PropertyClient.getObjectType,
 			// quite unnecessary to use that base type exception (maybe rework).
 			final KNXPropertyException pe = new KNXPropertyException(e.getMessage());
@@ -544,16 +536,15 @@ public class InterfaceObjectServer implements PropertyAccess
 	}
 
 	@Override
-	public Description getDescriptionByIndex(final int objIndex, final int propIndex)
-		throws KNXPropertyException
+	public Description getDescriptionByIndex(final int objIndex, final int propIndex) throws KNXPropertyException
 	{
 		try {
 			return client.getDescriptionByIndex(objIndex, propIndex);
 		}
+		catch (final KNXPropertyException e) {
+			throw e;
+		}
 		catch (final KNXException e) {
-			// forward all KNXPropertyExceptions from our adapter
-			if (e instanceof KNXPropertyException)
-				throw (KNXPropertyException) e;
 			// KNXException is currently thrown by PropertyClient.getObjectType,
 			// quite unnecessary to use that base type exception (maybe rework).
 			final KNXPropertyException pe = new KNXPropertyException(e.getMessage());
@@ -638,12 +629,10 @@ public class InterfaceObjectServer implements PropertyAccess
 					return io;
 			}
 		}
-		throw new KNXIllegalArgumentException(
-				"interface object index " + objIndex + " past last interface object");
+		throw new KNXIllegalArgumentException("interface object index " + objIndex + " past last interface object");
 	}
 
-	private InterfaceObject findByObjectType(final int objectType, final int objectInstance)
-		throws KNXPropertyException
+	private InterfaceObject findByObjectType(final int objectType, final int objectInstance) throws KNXPropertyException
 	{
 		synchronized (objects) {
 			int inst = 0;
@@ -663,16 +652,12 @@ public class InterfaceObjectServer implements PropertyAccess
 			return data[0] & 0xff;
 		if (data.length == 2)
 			return (data[0] & 0xff) << 8 | data[1] & 0xff;
-		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8
-				| data[3] & 0xff;
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3] & 0xff;
 	}
 
 	// Adapter only throws KNXPropertyException on get/set property/desc
 	private final class IosAdapter implements PropertyAdapter
 	{
-		IosAdapter()
-		{}
-
 		@Override
 		public void setProperty(final int objIndex, final int pid, final int start,
 			final int elements, final byte[] data) throws KNXPropertyException
@@ -680,31 +665,27 @@ public class InterfaceObjectServer implements PropertyAccess
 			setProperty(getIfObject(objIndex), pid, start, elements, data);
 		}
 
-		public void setProperty(final int objectType, final int objectInstance,
-			final int propertyId, final int start, final int elements, final byte[] data)
-				throws KNXPropertyException
+		public void setProperty(final int objectType, final int objectInstance, final int propertyId, final int start,
+			final int elements, final byte[] data) throws KNXPropertyException
 		{
-			setProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements,
-					data);
+			setProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements, data);
 		}
 
 		@Override
-		public byte[] getProperty(final int objIndex, final int pid, final int start,
-			final int elements) throws KNXPropertyException
+		public byte[] getProperty(final int objIndex, final int pid, final int start, final int elements)
+			throws KNXPropertyException
 		{
 			return getProperty(getIfObject(objIndex), pid, start, elements);
 		}
 
-		public byte[] getProperty(final int objectType, final int objectInstance,
-			final int propertyId, final int start, final int elements) throws KNXPropertyException
+		public byte[] getProperty(final int objectType, final int objectInstance, final int propertyId, final int start,
+			final int elements) throws KNXPropertyException
 		{
-			return getProperty(findByObjectType(objectType, objectInstance), propertyId, start,
-					elements);
+			return getProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements);
 		}
 
 		@Override
-		public byte[] getDescription(final int objIndex, final int pid, final int propIndex)
-			throws KNXPropertyException
+		public byte[] getDescription(final int objIndex, final int pid, final int propIndex) throws KNXPropertyException
 		{
 			final InterfaceObject io = getIfObject(objIndex);
 			Description d = null;
@@ -845,8 +826,8 @@ public class InterfaceObjectServer implements PropertyAccess
 			firePropertyChanged(io, pid, start, elements, data);
 		}
 
-		private byte[] getProperty(final InterfaceObject io, final int pid, final int start,
-			final int elements) throws KNXPropertyException
+		private byte[] getProperty(final InterfaceObject io, final int pid, final int start, final int elements)
+			throws KNXPropertyException
 		{
 			final byte[] values = io.values.get(new PropertyKey(io.getType(), pid));
 
@@ -984,8 +965,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		 * @param ifObjects a collection of interface objects, type {@link InterfaceObject}, to save
 		 * @throws KNXException on errors accessing the resource, or saving the data
 		 */
-		void saveInterfaceObjects(final String resource,
-			final Collection<InterfaceObject> ifObjects) throws KNXException;
+		void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects)
+			throws KNXException;
 
 		/**
 		 * Reads KNX property data from a resource identified by <code>resource</code>, and loads
