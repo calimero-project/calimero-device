@@ -84,8 +84,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	// domain can be 2 or 6 bytes, set in setDevice()
 	private byte[] domainAddress;
 
-	private static final int T_MEDIUM_TP1 = 20; // ms
-	private static final int T_MEDIUM_PL110 = 390; // ms
 	private int mediumTimeFactor; // [ms]
 
 	// device descriptor type 0
@@ -111,13 +109,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int medium = device.getDeviceLink().getKNXMedium().getMedium();
 		if (medium == KNXMediumSettings.MEDIUM_PL110) {
 			domainAddress = ((PLSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
-			mediumTimeFactor = T_MEDIUM_PL110;
 		}
 		else if (medium == KNXMediumSettings.MEDIUM_RF) {
 			domainAddress = ((RFSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
 		}
-		else if (medium == KNXMediumSettings.MEDIUM_TP1)
-			mediumTimeFactor = T_MEDIUM_TP1;
+		mediumTimeFactor = device.getDeviceLink().getKNXMedium().timeFactor();
 	}
 
 	/**
