@@ -306,6 +306,7 @@ public class InterfaceObjectServerTest
 	void getDescription() throws KNXPropertyException
 	{
 		final Description d = ios.getDescription(0, 1);
+		assertNotNull(d);
 	}
 
 	@Test
