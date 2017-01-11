@@ -364,6 +364,16 @@ public class BaseKnxDevice implements KnxDevice
 		}
 	}
 
+	DeviceDescriptor deviceDescriptor()
+	{
+		return dd;
+	}
+
+	Logger logger()
+	{
+		return logger;
+	}
+
 	private void init(final IndividualAddress device, final KNXNetworkLink link,
 		final ProcessCommunicationService process, final ManagementService mgmt)
 			throws KNXLinkClosedException, KNXPropertyException

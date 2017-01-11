@@ -86,19 +86,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	private int mediumTimeFactor; // [ms]
 
-	// device descriptor type 0
-	private final DeviceDescriptor dd;
-
-	public KnxDeviceServiceLogic()
-	{
-		this(DeviceDescriptor.DD0.TYPE_5705);
-	}
-
-	public KnxDeviceServiceLogic(final DeviceDescriptor dd)
-	{
-		this.dd = dd;
-	}
-
 	public void setDevice(final KnxDevice device)
 	{
 		this.device = device;
@@ -397,8 +384,19 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readDescriptor(final int type)
 	{
-		// by default, we only answer for descriptor type 0
-		return type == 0 ? new ServiceResult(dd.toByteArray()) : null;
+		try {
+			if (type == 0)
+				return new ServiceResult(device.getInterfaceObjectServer().getProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1));
+			if (device instanceof BaseKnxDevice) {
+				final DeviceDescriptor dd = ((BaseKnxDevice) device).deviceDescriptor();
+				if (dd instanceof DeviceDescriptor.DD2)
+					return new ServiceResult(dd.toByteArray());
+			}
+		}
+		catch (final KNXPropertyException e) {
+			logger.error("no device descriptor type 0 set");
+		}
+		return null;
 	}
 
 	@Override
