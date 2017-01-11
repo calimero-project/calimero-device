@@ -52,6 +52,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 
+import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.Settings;
@@ -125,6 +126,7 @@ public class BaseKnxDevice implements KnxDevice
 	private final List<Runnable> tasks = new ArrayList<>(5);
 
 	private final String name;
+	private final DeviceDescriptor dd;
 	private final InterfaceObjectServer ios;
 	private final Logger logger;
 	private IndividualAddress self;
@@ -132,12 +134,14 @@ public class BaseKnxDevice implements KnxDevice
 	private ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
-	BaseKnxDevice(final String name)
+	BaseKnxDevice(final String name, final DeviceDescriptor dd)
 	{
-		this.name = name;
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
+		this.name = name;
+		this.dd = dd;
 		ios = new InterfaceObjectServer(false);
 		logger = LogService.getLogger("calimero.device." + name);
+
 		// check property definitions for encoding support before we init basic properties
 		try {
 			final URL resource = this.getClass().getResource(propDefinitionsResource);
@@ -151,16 +155,14 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	/**
-	 * Creates a new KNX device, requiring subtypes to initialize the service logic during
-	 * construction.
+	 * Creates a new KNX device, requiring any subtype to initialize the service logic during construction.
 	 * <p>
-	 * The device address is either a configured subnetwork unique device address, or the default
-	 * individual address if no address was assigned to the device yet. The default individual
-	 * device address consists of a medium dependent default subnetwork address and the device
-	 * address for unregistered devices. Unregistered devices are identified by using the device
-	 * address 0xff, a value reserved for this purpose. The subnetwork address part describes the
-	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is
-	 * as follows, listed as <i>Medium</i>: <i>Subnetwork address</i>:
+	 * The device address is either a configured subnetwork unique device address, or the default individual address if
+	 * no address was assigned to the device yet. The default individual device address consists of a medium dependent
+	 * default subnetwork address and the device address for unregistered devices. Unregistered devices are identified
+	 * by using the device address 0xff, a value reserved for this purpose. The subnetwork address part describes the
+	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is as follows, listed
+	 * as <i>Medium</i>: <i>Subnetwork address</i>:
 	 * <ul>
 	 * <li>TP 1: 0x02</li>
 	 * <li>PL 110: 0x04</li>
@@ -168,16 +170,18 @@ public class BaseKnxDevice implements KnxDevice
 	 * </ul>
 	 *
 	 * @param name KNX device name, used for human readable naming or device identification
-	 * @param device the device address, or the default individual address; if a device address is
-	 *        assigned, this address shall be unique in the subnetwork the device resides
+	 * @param dd device descriptor
+	 * @param device the device address, or the default individual address; if a device address is assigned, this
+	 *        address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to
 	 * @throws KNXLinkClosedException if the network link is closed
 	 * @throws KNXPropertyException on error setting KNX properties during device initialization
+	 * @see #setServiceHandler(ProcessCommunicationService, ManagementService)
 	 */
-	protected BaseKnxDevice(final String name, final IndividualAddress device,
+	protected BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
 		final KNXNetworkLink link) throws KNXLinkClosedException, KNXPropertyException
 	{
-		this(name);
+		this(name, dd);
 		init(device, link, null, null);
 	}
 
@@ -210,7 +214,7 @@ public class BaseKnxDevice implements KnxDevice
 		final KNXNetworkLink link, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException, KNXPropertyException
 	{
-		this(name);
+		this(name, DeviceDescriptor.DD0.TYPE_5705);
 		init(device, link, process, mgmt);
 	}
 
@@ -464,22 +468,8 @@ public class BaseKnxDevice implements KnxDevice
 		// Required PEI Type (Application Program Object)
 		ios.setProperty(appProgamObject, objectInstance, PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
 
-		// Manufacturer ID (Device Object)
 		setDeviceProperty(PID.MANUFACTURER_ID, fromWord(manufacturerId));
-
-		// set device descriptor information
-		// Device Descriptor Type 0 is 2 bytes:
-		//        Mask Type (8 bit)                    Firmware Version (8 bit)
-		// | Medium Type MMMM | Firmware Type FFFF | Version VVVV | Subcode SSSS |
-
-		// set mask to something arbitrary
-		//final int maskVersion = 0x0013; // TP1 BCU1 System 1
-		//final int maskVersion = 0x0021; // TP1 BCU2 System 2
-		final int maskVersion = 0x0025; // TP1 BCU2 System 2
-		//final int maskVersion = 0x091A; // IP/TP1 KNXnet/IP router
-		//final int maskVersion = 0x0705; // TP1 BIM M112
-
-		setDeviceProperty(PID.DEVICE_DESCRIPTOR, new byte[] { maskVersion >> 8, maskVersion });
+		setDeviceProperty(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
 
 		// Programming Mode (memory address 0x60)
 		final boolean programmingMode = false;
@@ -495,8 +485,8 @@ public class BaseKnxDevice implements KnxDevice
 		// Hardware Type
 		final byte[] hwType = new byte[6];
 		setDeviceProperty(pidHardwareType, hwType);
-		// validity check on mask and hardware type octets
-		// AN059v3, AN089v3
+		// validity check on mask and hardware type octets (AN059v3, AN089v3)
+		final int maskVersion = ((DeviceDescriptor.DD0) dd).getMaskVersion();
 		if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
 			logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
 		}
