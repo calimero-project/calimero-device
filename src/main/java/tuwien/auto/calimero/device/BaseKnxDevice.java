@@ -524,7 +524,7 @@ public class BaseKnxDevice implements KnxDevice
 				tasks.add(task);
 			else {
 				taskSubmitted = true;
-				executor.submit(task);
+				taskExecutor().submit(task);
 			}
 		}
 	}
@@ -535,7 +535,7 @@ public class BaseKnxDevice implements KnxDevice
 			if (tasks.isEmpty())
 				taskSubmitted = false;
 			else
-				executor.submit(tasks.remove(0));
+				taskExecutor().submit(tasks.remove(0));
 		}
 	}
 
