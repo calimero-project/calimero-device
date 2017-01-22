@@ -132,17 +132,24 @@ public class BaseKnxDevice implements KnxDevice
 	private final Logger logger;
 
 	private IndividualAddress self;
+
+	private ProcessCommunicationService process;
+	private ManagementService mgmt;
 	private ProcessServiceNotifier procNotifier;
 	private ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
-	BaseKnxDevice(final String name, final DeviceDescriptor dd)
+	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
+		final ManagementService mgmt) throws KNXPropertyException
 	{
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
 		this.name = name;
 		this.dd = dd;
 		ios = new InterfaceObjectServer(false);
 		logger = LogService.getLogger("calimero.device." + name);
+
+		this.process = process;
+		this.mgmt = mgmt;
 
 		// check property definitions for encoding support before we init basic properties
 		try {
@@ -154,6 +161,9 @@ public class BaseKnxDevice implements KnxDevice
 			// using the default resource ID, we cannot expect to always find the resource
 			logger.info("could not load the Interface Object Server KNX property definitions");
 		}
+
+		addDeviceInfo();
+		initKnxProperties();
 	}
 
 	/**
@@ -183,8 +193,9 @@ public class BaseKnxDevice implements KnxDevice
 	protected BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
 		final KNXNetworkLink link) throws KNXLinkClosedException, KNXPropertyException
 	{
-		this(name, dd);
-		init(device, link, null, null);
+		this(name, dd, (ProcessCommunicationService) null, null);
+		setAddress(device);
+		setDeviceLink(link);
 	}
 
 	/**
@@ -216,8 +227,9 @@ public class BaseKnxDevice implements KnxDevice
 		final KNXNetworkLink link, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException, KNXPropertyException
 	{
-		this(name, DeviceDescriptor.DD0.TYPE_5705);
-		init(device, link, process, mgmt);
+		this(name, DeviceDescriptor.DD0.TYPE_5705, process, mgmt);
+		setAddress(device);
+		setDeviceLink(link);
 	}
 
 	/**
@@ -277,12 +289,12 @@ public class BaseKnxDevice implements KnxDevice
 	public synchronized void setDeviceLink(final KNXNetworkLink link) throws KNXLinkClosedException
 	{
 		this.link = link;
-		procNotifier = null;
-		mgmtNotifier = null;
-		if (link != null) {
-			procNotifier = new ProcessServiceNotifier(this);
-			mgmtNotifier = new ManagementServiceNotifier(this);
+		if (this.link != null) {
+			final IndividualAddress address = this.link.getKNXMedium().getDeviceAddress();
+			if (address.getDevice() != 0)
+				setAddress(address);
 		}
+		resetNotifiers();
 	}
 
 	@Override
@@ -313,23 +325,23 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	/**
-	 * Sets the process communication service handler and management service handler for this
-	 * device.
+	 * Sets the process communication service handler and management service handler for this device.
 	 * <p>
-	 * This method is to be called during device initialization by subtypes of BaseKnxDevice if the
-	 * device uses service handlers, but did not set them during object creation using the supplied
-	 * constructor.
+	 * This method is to be called during device initialization by subtypes of BaseKnxDevice if the device uses service
+	 * handlers, but did not set them during object creation using the supplied constructor.
 	 *
-	 * @param process the device handler for process communication, <code>null</code> if this device
-	 *        does not use such handler
-	 * @param mgmt the device handler for device management services, <code>null</code> if this
-	 *        device does not use such handler
+	 * @param process the device handler for process communication, <code>null</code> if this device does not use such
+	 *        handler
+	 * @param mgmt the device handler for device management services, <code>null</code> if this device does not use such
+	 *        handler
+	 * @throws KNXLinkClosedException on closed network link
 	 */
 	protected synchronized final void setServiceHandler(final ProcessCommunicationService process,
-		final ManagementService mgmt)
+		final ManagementService mgmt) throws KNXLinkClosedException
 	{
-		procNotifier.setServiceInterface(process);
-		mgmtNotifier.setServiceInterface(mgmt);
+		this.process = process;
+		this.mgmt = mgmt;
+		resetNotifiers();
 	}
 
 	void dispatch(final ServiceNotifier<?> sn, final EventObject e)
@@ -375,22 +387,11 @@ public class BaseKnxDevice implements KnxDevice
 		return logger;
 	}
 
-	private void init(final IndividualAddress device, final KNXNetworkLink link,
-		final ProcessCommunicationService process, final ManagementService mgmt)
-			throws KNXLinkClosedException, KNXPropertyException
+	private synchronized void resetNotifiers() throws KNXLinkClosedException
 	{
-		// if we throw here for process == null or mgmt == null,
-		// subclasses always have to supply handlers but cannot supply 'this' if the handlers are
-		// implemented by the class
-		//if (process == null || mgmt == null)
-		//  throw new NullPointerException("handler missing");
+		procNotifier = link != null && process != null ? new ProcessServiceNotifier(this, process) : null;
 
-		setAddress(device);
-		setDeviceLink(link);
-		setServiceHandler(process, mgmt);
-
-		initKnxProperties();
-		addDeviceInfo();
+		mgmtNotifier = link != null && mgmt != null ? new ManagementServiceNotifier(this, mgmt) : null;
 	}
 
 	// taken from KNX server

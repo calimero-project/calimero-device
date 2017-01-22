@@ -115,18 +115,19 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private final BaseKnxDevice device;
 	private final TransportLayer tl;
-	private ManagementService mgmtSvc;
+	private final ManagementService mgmtSvc;
 
 	private final Logger logger;
 
 	private final int lengthDoA;
 
 	// pre-condition: device != null, link != null
-	ManagementServiceNotifier(final BaseKnxDevice device) throws KNXLinkClosedException
+	ManagementServiceNotifier(final BaseKnxDevice device, final ManagementService mgmt) throws KNXLinkClosedException
 	{
 		this.device = device;
 		tl = new TransportLayerImpl(device.getDeviceLink(), true);
 		tl.addTransportListener(this);
+		mgmtSvc = mgmt;
 		logger = device.logger();
 
 		final int medium = device.getDeviceLink().getKNXMedium().getMedium();

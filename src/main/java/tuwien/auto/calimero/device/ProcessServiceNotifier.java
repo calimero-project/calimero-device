@@ -56,16 +56,18 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 	private static final int GROUP_WRITE = 0x80;
 
 	private final BaseKnxDevice device;
-	private ProcessCommunicationService svc;
+	private final ProcessCommunicationService svc;
 	private final ProcessCommunicator recv;
 	private final ProcessCommunicationResponder res;
 
-	// pre-condition: knxDevice != null, link != null
-	ProcessServiceNotifier(final BaseKnxDevice device) throws KNXLinkClosedException
+	// pre-condition: device != null, device.link != null
+	ProcessServiceNotifier(final BaseKnxDevice device, final ProcessCommunicationService service)
+		throws KNXLinkClosedException
 	{
-		if (device == null)
-			throw new NullPointerException("KNX device is required");
+		if (device.getDeviceLink() == null)
+			throw new NullPointerException("KNX device network link is required");
 		this.device = device;
+		svc = service;
 		recv = new ProcessCommunicatorImpl(device.getDeviceLink());
 		recv.addProcessListener(this);
 		res = new ProcessCommunicationResponder(device.getDeviceLink());
@@ -89,8 +91,6 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 
 	public ServiceResult dispatch(final EventObject e)
 	{
-		if (svc == null)
-			return null;
 		final ProcessEvent pe =  (ProcessEvent) e;
 		final int svcCode = pe.getServiceCode();
 		if (svcCode == GROUP_READ)
