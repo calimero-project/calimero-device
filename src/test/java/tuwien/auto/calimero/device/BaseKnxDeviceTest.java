@@ -315,32 +315,17 @@ public class BaseKnxDeviceTest extends TestCase
 	 */
 	public final void testKnxDevice() throws KNXLinkClosedException, KNXPropertyException
 	{
-		try {
-			dev = new BaseKnxDevice("test", addr, link, null, mgmtLogic);
-//			fail("no process handler set");
-		}
-		catch (final Exception e) {
-			// ok
-		}
+		new BaseKnxDevice("test", addr, link, null, mgmtLogic);
 
 		try {
-			dev = new BaseKnxDevice("test", null, link, processLogic, mgmtLogic);
-//			fail("no address set");
+			new BaseKnxDevice("test", null, link, processLogic, mgmtLogic);
+			fail("device address null");
 		}
-		catch (final Exception e) {
-			// ok
-		}
+		catch (final NullPointerException expected) {}
 
-		try {
-			dev = new BaseKnxDevice("test", addr, null, processLogic, mgmtLogic);
-			fail("no link set");
-		}
-		catch (final Exception e) {
-			// ok
-		}
+		new BaseKnxDevice("test", addr, null, processLogic, mgmtLogic);
 
-		// dev = new BaseKnxDevice(addr, link, procHandler, null);
-		dev = new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
+		new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
 	}
 
 	private final class MyKnxDevice extends BaseKnxDevice
@@ -395,8 +380,8 @@ public class BaseKnxDeviceTest extends TestCase
 	public final void testSetNetworkLink() throws KNXLinkClosedException
 	{
 		dev.setDeviceLink(link);
-		//dev.getNetworkLink().getName().equals(link);
+		assertTrue(dev.getDeviceLink() == link);
 		dev.setDeviceLink(null);
-		//assertNull(dev.getNetworkLink());
+		assertNull(dev.getDeviceLink());
 	}
 }
