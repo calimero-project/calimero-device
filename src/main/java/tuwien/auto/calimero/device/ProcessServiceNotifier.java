@@ -86,9 +86,6 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 
 	public void detached(final DetachEvent e) {}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.device.ServiceNotifier#dispatch(java.util.EventObject)
-	 */
 	public ServiceResult dispatch(final EventObject e)
 	{
 		if (svc == null)
@@ -106,10 +103,6 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 		return null;
 	}
 
-	/* (non-Javadoc)
-	 * @see tuwien.auto.calimero.device.ServiceNotifier#response(java.util.EventObject,
-	 * tuwien.auto.calimero.device.ServiceResult)
-	 */
 	public void response(final EventObject event, final ServiceResult sr)
 	{
 		final GroupAddress to = ((ProcessEvent) event).getDestination();

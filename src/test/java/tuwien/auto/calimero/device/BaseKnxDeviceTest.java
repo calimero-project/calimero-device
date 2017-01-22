@@ -293,9 +293,6 @@ public class BaseKnxDeviceTest extends TestCase
 		super(name);
 	}
 
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#setUp()
-	 */
 	@Override
 	protected void setUp() throws Exception
 	{
@@ -303,9 +300,6 @@ public class BaseKnxDeviceTest extends TestCase
 		dev = new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
 	}
 
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#tearDown()
-	 */
 	@Override
 	protected void tearDown() throws Exception
 	{
@@ -365,8 +359,8 @@ public class BaseKnxDeviceTest extends TestCase
 	}
 
 	/**
-	 * Test method for {@link tuwien.auto.calimero.device.BaseKnxDevice
-	 * setAddress(tuwien.auto.calimero.IndividualAddress)}.
+	 * Test method for
+	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setAddress(tuwien.auto.calimero.IndividualAddress)}.
 	 *
 	 * @throws KNXLinkClosedException
 	 * @throws KNXPropertyException
@@ -394,8 +388,7 @@ public class BaseKnxDeviceTest extends TestCase
 
 	/**
 	 * Test method for
-	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setDeviceLink( tuwien.auto.calimero.link.KNXNetworkLink)}
-	 * .
+	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setDeviceLink(tuwien.auto.calimero.link.KNXNetworkLink)}.
 	 *
 	 * @throws KNXLinkClosedException
 	 */

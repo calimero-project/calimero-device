@@ -39,6 +39,7 @@ package tuwien.auto.calimero.device;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.mgmt.Destination;
+import tuwien.auto.calimero.mgmt.ManagementClient;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 
 /**
@@ -119,20 +120,62 @@ public interface ManagementService
 	 */
 	ServiceResult writeMemory(int startAddress, byte[] data);
 
+	/**
+	 * Returns the individual address of this device; only a device in programming mode shall respond to this service.
+	 *
+	 * @return service result with device address, or <code>null</code>
+	 */
 	ServiceResult readAddress();
 
+	/**
+	 * Assigns a new individual address to this device; a device shall only set its address if in programming mode
+	 *
+	 * @param newAddress new device address
+	 * @return <code>null</code>
+	 */
 	ServiceResult writeAddress(IndividualAddress newAddress);
 
+	/**
+	 * Reads the individual address from a device having the requested serial number; a device shall only return a
+	 * service result on matching serial number.
+	 *
+	 * @param serialNo serial number, length = 6 bytes
+	 * @return empty service result on matching serial number, or <code>null</code>
+	 */
 	ServiceResult readAddressSerial(byte[] serialNo);
 
+	/**
+	 * Assigns a new individual address to a device with matching serial number; this device shall only set its address
+	 * on matching serial number.
+	 *
+	 * @param serialNo serial number, length = 6 bytes
+	 * @param newAddress new device address
+	 * @return n/a
+	 */
 	ServiceResult writeAddressSerial(byte[] serialNo, IndividualAddress newAddress);
 
+	/**
+	 * Returns the domain address of this device; only a device in programming mode shall respond to this service.
+	 *
+	 * @return service result with domain address, or <code>null</code>
+	 */
 	ServiceResult readDomainAddress();
 
+	/**
+	 * Returns the domain address of a device; only a device with the requested domain and within the address range
+	 * shall respond to this service.
+	 *
+	 * @param domain domain address, address length is either 2 bytes for KNX-PL110 or 6 bytes for KNX-RF
+	 * @return service result with domain address, or <code>null</code>
+	 */
 	ServiceResult readDomainAddress(byte[] domain, IndividualAddress startAddress, int range);
 
-	// system broadcast to set domain address: a domain address is either 2 bytes for
-	// KNX-PL110 or 6 bytes for KNX-RF
+	/**
+	 * Assigns a new domain address to a device; only a device in programming mode shall set its domain.
+	 *
+	 * @param domain domain address, address length is either 2 bytes for KNX-PL110 or 6 bytes for KNX-RF
+	 * @return n/a
+	 */
 	ServiceResult writeDomainAddress(byte[] domain);
 
 	/**
@@ -153,15 +196,61 @@ public interface ManagementService
 	 */
 	ServiceResult readDescriptor(int type);
 
+	/**
+	 * Reads the value of the A/D converter of this device.
+	 *
+	 * @param channel channel number of the A/D converter
+	 * @param consecutiveReads number of consecutive converter read operations
+	 * @return service result with the calculated A/D conversion value
+	 */
 	ServiceResult readADC(int channel, int consecutiveReads);
 
+	/**
+	 * Modifies or deletes an authorization key associated to an access level of this device.
+	 * <p>
+	 * This request requires a remote communication partner granted equal or higher access rights than the access rights
+	 * of the <code>accessLevel</code> to be modified (i.e. current level &lt;= level to change).
+	 *
+	 * @param accessLevel access level to modify
+	 * @param key new key for the specified access level, or 0xFFFFFFFF to remove key
+	 * @return service result with the specified access level
+	 * @see #authorize(byte[])
+	 */
 	ServiceResult keyWrite(int accessLevel, byte[] key);
 
+	/**
+	 * Authorizes a communication partner providing its authorization key to obtain a certain access level.
+	 *
+	 * @param key authorization key
+	 * @return service result with granted access level, level is between 0 (maximum access rights) and 3 (i.e., minimum
+	 *         access rights) or 0 (maximum access rights) and 15 (minimum access rights)
+	 */
 	ServiceResult authorize(byte[] key);
 
+	/**
+	 * Restarts this device.
+	 *
+	 * @param masterReset perform a master reset of the controller
+	 * @param eraseCode for a master reset, specifies the resources that shall be reset prior to resetting the device
+	 * @param channel for a master reset, specifies the number of the application channel that shall be reset and the
+	 *        application parameters set to default values; 0 is to clear all link information in the group address
+	 *        table and group object association table and reset all application parameters
+	 * @return <code>null</code> for basic reset, a master reset returns service result with error code and process time
+	 * @see ManagementClient#restart(Destination)
+	 * @see ManagementClient#restart(Destination, int, int)
+	 */
 	ServiceResult restart(boolean masterReset, int eraseCode, int channel);
 
-	// a catch-all method for not specifically dispatched management services
+	/**
+	 * A catch-all method for not specifically dispatched management services.
+	 *
+	 * @param svcType management service type
+	 * @param asdu ASDU
+	 * @param dst destination address of the management service
+	 * @param respondTo destination to respond to
+	 * @param tl transport layer processing the management service
+	 * @return service result with service response, or <code>null</code>
+	 */
 	ServiceResult management(int svcType, byte[] asdu, KNXAddress dst, Destination respondTo, TransportLayer tl);
 
 	/**

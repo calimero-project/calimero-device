@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2015 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -86,7 +86,6 @@ public class ServiceResult implements Runnable
 
 	/**
 	 * Returns the result data of this service.
-	 * <p>
 	 *
 	 * @return the service result data (no copy), or <code>null</code> if not set
 	 */
@@ -95,17 +94,11 @@ public class ServiceResult implements Runnable
 		return data;
 	}
 
-	/* (non-Javadoc)
-	 * @see java.lang.Runnable#run()
-	 */
-	public void run()
-	{
-	}
+	@Override
+	public void run() {}
 
 	/**
-	 * Returns the KNX message priority used for this service result.
-	 * <p>
-	 * The default value is {@link Priority#LOW}.
+	 * Returns the KNX message priority used for this service result, the default value is {@link Priority#LOW}.
 	 *
 	 * @return the priority of type {@link Priority}
 	 */

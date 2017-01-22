@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2015 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,17 +49,15 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
 public interface KnxDevice
 {
 	/**
-	 * Returns the currently assigned device individual address or default individual address of
-	 * this device.
-	 * <p>
+	 * Returns the currently assigned device individual address or default individual address of this device.
 	 *
 	 * @return the currently set device address
 	 */
 	IndividualAddress getAddress();
 
 	/**
-	 * Sets the KNX network link over that this device will communicate.
-	 * <p>
+	 * Sets the communication link used by this device; assigns the device address from the link's
+	 * medium settings, if that individual address denotes a device address.
 	 *
 	 * @param link the network link
 	 * @throws KNXLinkClosedException if the supplied link is closed
@@ -68,16 +66,13 @@ public interface KnxDevice
 
 	/**
 	 * Returns the KNX network link this device is attached to.
-	 * <p>
 	 *
 	 * @return the link
 	 */
 	KNXNetworkLink getDeviceLink();
 
 	/**
-	 * Returns the Interface Object Server (IOS) used for KNX property services and device
-	 * information.
-	 * <p>
+	 * Returns the Interface Object Server (IOS) used for KNX property services and device information.
 	 *
 	 * @return the interface object server, or <code>null</code> if none is used
 	 */
