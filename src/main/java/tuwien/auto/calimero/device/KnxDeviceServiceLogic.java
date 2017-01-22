@@ -296,8 +296,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readAddressSerial(final byte[] serialNo)
 	{
 		try {
-			final byte[] myserial = device.getInterfaceObjectServer().getProperty(0,
-					PID.SERIAL_NUMBER, 1, 1);
+			final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
 			if (Arrays.equals(myserial, serialNo)) {
 				return new ServiceResult(new byte[0]);
 			}

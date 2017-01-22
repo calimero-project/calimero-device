@@ -38,6 +38,7 @@ package tuwien.auto.calimero.device;
 
 import java.util.EventObject;
 
+import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DetachEvent;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
@@ -111,11 +112,8 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 				res.setPriority(sr.getPriority());
 				res.write(to, sr.getResult(), sr.compact);
 			}
-			catch (final KNXTimeoutException e) {
-				e.printStackTrace();
-			}
-			catch (final KNXLinkClosedException e) {
-				e.printStackTrace();
+			catch (KNXTimeoutException | KNXLinkClosedException e) {
+				device.logger().error("responding to {}: {}", to, DataUnitBuilder.toHex(sr.getResult(), " "), e);
 			}
 		}
 		else

@@ -64,8 +64,8 @@ import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.mgmt.TransportListener;
 
 /**
- * Listens to TL notifications, dispatches them to the appropriate management services, and answers
- * back to the sender using the service results.
+ * Listens to TL notifications, dispatches them to the appropriate management services, and answers back to the sender
+ * using the service results.
  *
  * @author B. Malinowsky
  */
@@ -196,9 +196,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		final KNXAddress dst = cemi.getDestination();
 
 		if (tpdu.length - 1 > getMaxApduLength()) {
-			logger.error(sender + "->" + cemi.getDestination() + " "
-					+ DataUnitBuilder.decode(tpdu, cemi.getDestination())
-					+ " exceeds max. allowed APDU length of " + getMaxApduLength() + " - ignore");
+			logger.error(
+					sender + "->" + cemi.getDestination() + " " + DataUnitBuilder.decode(tpdu, cemi.getDestination())
+							+ " exceeds max. allowed APDU length of " + getMaxApduLength() + " - ignore");
 			return;
 		}
 
@@ -420,8 +420,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 		final byte[] domain = sr.getResult();
 		if (domain.length != lengthDoA) {
-			logger.error("length of domain address is " + domain.length + " bytes, should be "
-					+ lengthDoA + " - ignore");
+			logger.error(
+					"length of domain address is " + domain.length + " bytes, should be " + lengthDoA + " - ignore");
 			return;
 		}
 		final byte[] apdu = DataUnitBuilder.createAPDU(DOA_RESPONSE, domain);
@@ -544,8 +544,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 		final byte[] propertyData = Arrays.copyOfRange(data, 4, data.length);
 
-		final ServiceResult sr = mgmtSvc.writeProperty(objIndex, pid, start, elements,
-				propertyData);
+		final ServiceResult sr = mgmtSvc.writeProperty(objIndex, pid, start, elements, propertyData);
 		if (sr == null || sr.getResult() == null)
 			return sr;
 		final byte[] res = sr.getResult();
@@ -601,8 +600,8 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		type |= desc.getPDT();
 		final int max = desc.getMaxElements();
 		final int access = desc.getReadLevel() << 4 | desc.getWriteLevel();
-		final byte[] asdu = new byte[/*7*/] { (byte) objIndex, (byte) pid, (byte) index,
-			(byte) type, (byte) (max >>> 8), (byte) max, (byte) access };
+		final byte[] asdu = new byte[/*7*/] { (byte) objIndex, (byte) pid, (byte) index, (byte) type,
+			(byte) (max >>> 8), (byte) max, (byte) access };
 
 		final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_DESC_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority());
@@ -627,8 +626,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 		final byte[] memory = Arrays.copyOfRange(data, 3, data.length);
 		if (memory.length != bytes)
-			logger.warn("ill-formed memory write: number field = {} but memory length = {}", bytes,
-					memory);
+			logger.warn("ill-formed memory write: number field = {} but memory length = {}", bytes, memory);
 		else {
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 			if (sr == null || sr.getResult() == null)
@@ -686,8 +684,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		asdu[0] = (byte) bytesRead;
 		asdu[1] = (byte) (address >> 8);
 		asdu[2] = (byte) address;
-		for (int i = 0; i < bytesRead; ++i)
-			asdu[3 + i] = res[i];
+		if (res != null)
+			for (int i = 0; i < bytesRead; ++i)
+				asdu[3 + i] = res[i];
 
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority());
@@ -704,11 +703,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private boolean verifyLength(final int length, final int minExpected, final int maxExpected, final String svcType)
 	{
 		if (length < minExpected)
-			logger.error(
-					svcType + " SDU of length " + length + " too short, expected " + minExpected);
+			logger.error(svcType + " SDU of length " + length + " too short, expected " + minExpected);
 		else if (length > maxExpected)
-			logger.error(
-					svcType + " SDU of length " + length + " too long, maximum " + maxExpected);
+			logger.error(svcType + " SDU of length " + length + " too long, maximum " + maxExpected);
 		return length >= minExpected && length <= maxExpected;
 	}
 
@@ -761,15 +758,15 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	private int getMaxApduLength()
 	{
 		try {
-			final byte[] length = device.getInterfaceObjectServer()
-					.getProperty(InterfaceObject.DEVICE_OBJECT, PID.MAX_APDULENGTH, 1, 1);
+			final byte[] length = device.getInterfaceObjectServer().getProperty(InterfaceObject.DEVICE_OBJECT,
+					PID.MAX_APDULENGTH, 1, 1);
 			return toUnsigned(length);
 		}
 		catch (final KNXPropertyException e) {
 			if (!missingApduLength) {
 				missingApduLength = true;
-				logger.error("device has no maximum APDU length set (PID.MAX_APDULENGTH), using "
-						+ defaultMaxApduLength);
+				logger.error(
+						"device has no maximum APDU length set (PID.MAX_APDULENGTH), using " + defaultMaxApduLength);
 			}
 			return defaultMaxApduLength;
 		}
@@ -780,7 +777,6 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	{
 		if (data.length == 2)
 			return (data[0] & 0xff) << 8 | data[1] & 0xff;
-		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8
-				| data[3] & 0xff;
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3] & 0xff;
 	}
 };
