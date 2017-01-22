@@ -384,8 +384,12 @@ public class BaseKnxDevice implements KnxDevice
 
 	private synchronized void resetNotifiers() throws KNXLinkClosedException
 	{
+		if (procNotifier != null)
+			procNotifier.close();
 		procNotifier = link != null && process != null ? new ProcessServiceNotifier(this, process) : null;
 
+		if (mgmtNotifier != null)
+			mgmtNotifier.close();
 		mgmtNotifier = link != null && mgmt != null ? new ManagementServiceNotifier(this, mgmt) : null;
 	}
 
