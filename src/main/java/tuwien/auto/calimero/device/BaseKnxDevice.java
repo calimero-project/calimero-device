@@ -43,12 +43,15 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 
@@ -344,15 +347,13 @@ public class BaseKnxDevice implements KnxDevice
 		resetNotifiers();
 	}
 
-	void dispatch(final ServiceNotifier<?> sn, final EventObject e)
+	void dispatch(final EventObject e, final Supplier<ServiceResult> dispatch,
+		final BiConsumer<EventObject, ServiceResult> respond)
 	{
 		if (threadingPolicy == INCOMING_EVENTS_THREADED) {
 			submitTask(() -> {
 				try {
-					final ServiceResult sr = sn.dispatch(e);
-					// mgmt svc notifier always returns null, so don't check here for now
-					if (sn instanceof ManagementServiceNotifier || sr != null)
-						sn.response(e, sr);
+					Optional.ofNullable(dispatch.get()).ifPresent(sr -> respond.accept(e, sr));
 				}
 				finally {
 					taskDone();
@@ -360,20 +361,14 @@ public class BaseKnxDevice implements KnxDevice
 			});
 		}
 		else {
-			// the mgmt svc notifier does processing only in response, therefore it
-			// always returns null here
-			final ServiceResult sr = sn.dispatch(e);
-			// ... because of this, allow null for mgmt svc notifier
-			if (sn instanceof ManagementServiceNotifier || sr != null) {
-				submitTask(() -> {
-					try {
-						sn.response(e, sr);
-					}
-					finally {
-						taskDone();
-					}
-				});
-			}
+			Optional.ofNullable(dispatch.get()).ifPresent(sr -> submitTask(() -> {
+				try {
+					respond.accept(e, sr);
+				}
+				finally {
+					taskDone();
+				}
+			}));
 		}
 	}
 

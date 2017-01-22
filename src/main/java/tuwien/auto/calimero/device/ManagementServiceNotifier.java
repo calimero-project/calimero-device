@@ -181,11 +181,10 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	public ServiceResult dispatch(final EventObject e)
 	{
 		// everything is done in response
-		return null;
+		return new ServiceResult();
 	}
 
-	@Override
-	public void response(final EventObject e, final ServiceResult sr)
+	public void respond(final EventObject e, final ServiceResult sr)
 	{
 		// since our service code is not split up in request/response, just do everything here
 		final FrameEvent fe = (FrameEvent) e;
@@ -226,7 +225,7 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 
 	private void dispatchAndRespond(final FrameEvent e)
 	{
-		device.dispatch(this, e);
+		device.dispatch(e, () -> dispatch(e), this::respond);
 	}
 
 	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo)

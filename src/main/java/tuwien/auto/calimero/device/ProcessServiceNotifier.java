@@ -73,20 +73,24 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 		res = new ProcessCommunicationResponder(device.getDeviceLink());
 	}
 
+	@Override
 	public void groupReadRequest(final ProcessEvent e)
 	{
-		device.dispatch(this, e);
+		device.dispatch(e, () -> dispatch(e), this::respond);
 	}
 
+	@Override
 	public void groupReadResponse(final ProcessEvent e)
 	{
-		device.dispatch(this, e);
+		device.dispatch(e, () -> dispatch(e), this::respond);
 	}
+	@Override
 	public void groupWrite(final ProcessEvent e)
 	{
-		device.dispatch(this, e);
+		device.dispatch(e, () -> dispatch(e), this::respond);
 	}
 
+	@Override
 	public void detached(final DetachEvent e) {}
 
 	public ServiceResult dispatch(final EventObject e)
@@ -104,7 +108,7 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 		return null;
 	}
 
-	public void response(final EventObject event, final ServiceResult sr)
+	public void respond(final EventObject event, final ServiceResult sr)
 	{
 		final GroupAddress to = ((ProcessEvent) event).getDestination();
 		if (sr.getResult() != null) {
