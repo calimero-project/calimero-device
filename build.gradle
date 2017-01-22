@@ -37,7 +37,7 @@ compileTestJava.options*.compilerArgs = [
 
 dependencies {
     compile "com.github.calimero:calimero-core:${version}"
-    compile 'org.slf4j:slf4j-api:1.7.21'
+    compile 'org.slf4j:slf4j-api:1.7.22'
     
     testCompile files("../calimero-core/build/libs/calimero-core-${version}-tests.jar")
     testCompile("org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}")
