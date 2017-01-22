@@ -69,7 +69,7 @@ import tuwien.auto.calimero.mgmt.TransportListener;
  *
  * @author B. Malinowsky
  */
-final class ManagementServiceNotifier implements TransportListener, ServiceNotifier<ManagementService>
+final class ManagementServiceNotifier implements TransportListener, AutoCloseable
 {
 	// service IDs copied over from management client
 	private static final int ADC_READ = 0x0180;
@@ -177,7 +177,6 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 		logger.info("attached link was closed");
 	}
 
-	@Override
 	public ServiceResult dispatch(final EventObject e)
 	{
 		// everything is done in response
@@ -218,9 +217,9 @@ final class ManagementServiceNotifier implements TransportListener, ServiceNotif
 	}
 
 	@Override
-	public void setServiceInterface(final ManagementService svcIf)
+	public void close()
 	{
-		mgmtSvc = svcIf;
+		tl.detach();
 	}
 
 	private void dispatchAndRespond(final FrameEvent e)

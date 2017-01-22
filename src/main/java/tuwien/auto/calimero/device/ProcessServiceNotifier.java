@@ -49,7 +49,7 @@ import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
 import tuwien.auto.calimero.process.ProcessListener;
 
-final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicationService>, ProcessListener
+final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 {
 	private static final int GROUP_READ = 0x00;
 	private static final int GROUP_RESPONSE = 0x40;
@@ -124,8 +124,10 @@ final class ProcessServiceNotifier implements ServiceNotifier<ProcessCommunicati
 			sr.run();
 	}
 
-	public void setServiceInterface(final ProcessCommunicationService svcIf)
+	@Override
+	public void close()
 	{
-		svc = svcIf;
+		recv.close();
+		res.close();
 	}
 }
