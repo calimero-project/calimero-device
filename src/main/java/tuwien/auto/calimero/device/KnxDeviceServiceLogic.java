@@ -57,6 +57,7 @@ import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
+import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.link.medium.PLSettings;
 import tuwien.auto.calimero.link.medium.RFSettings;
@@ -86,8 +87,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	// domain can be 2 or 6 bytes, set in setDevice()
 	private byte[] domainAddress;
 
-	private int mediumTimeFactor; // [ms]
-
 	public void setDevice(final KnxDevice device)
 	{
 		this.device = device;
@@ -95,14 +94,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				: LoggerFactory.getLogger(KnxDeviceServiceLogic.class);
 
 		domainAddress = new byte[0];
-		final int medium = device.getDeviceLink().getKNXMedium().getMedium();
-		if (medium == KNXMediumSettings.MEDIUM_PL110) {
-			domainAddress = ((PLSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
+		final KNXNetworkLink link = device.getDeviceLink();
+		if (link != null) {
+			final KNXMediumSettings settings = link.getKNXMedium();
+			if (settings.getMedium() == KNXMediumSettings.MEDIUM_PL110) {
+				domainAddress = ((PLSettings) settings).getDomainAddress();
+			}
+			else if (settings.getMedium() == KNXMediumSettings.MEDIUM_RF) {
+				domainAddress = ((RFSettings) settings).getDomainAddress();
+			}
 		}
-		else if (medium == KNXMediumSettings.MEDIUM_RF) {
-			domainAddress = ((RFSettings) device.getDeviceLink().getKNXMedium()).getDomainAddress();
-		}
-		mediumTimeFactor = device.getDeviceLink().getKNXMedium().timeFactor();
 	}
 
 	/**
@@ -358,7 +359,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final int raw = device.getAddress().getRawAddress();
 			final int start = startAddress.getRawAddress();
 			if (raw >= start && raw <= (start + range)) {
-				final int wait = (raw - start) * mediumTimeFactor;
+				final int wait = (raw - start) * device.getDeviceLink().getKNXMedium().timeFactor();
 				logger.trace("read domain address: wait " + wait + " ms before sending response");
 				try {
 					Thread.sleep(wait);
