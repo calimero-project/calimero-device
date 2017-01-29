@@ -228,6 +228,12 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
+		public ServiceResult readDomainAddress(final byte[] startDoA, final byte[] endDoA)
+		{
+			return null;
+		}
+
+		@Override
 		public ServiceResult writeDomainAddress(final byte[] domain)
 		{
 			return null;

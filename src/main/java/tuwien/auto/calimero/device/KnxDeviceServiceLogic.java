@@ -36,7 +36,9 @@
 
 package tuwien.auto.calimero.device;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -372,10 +374,39 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
+	public ServiceResult readDomainAddress(final byte[] startDoA, final byte[] endDoA)
+	{
+		final long start = ByteBuffer.wrap(startDoA).getLong();
+		final long end = ByteBuffer.wrap(endDoA).getLong();
+		final long our = ByteBuffer.wrap(domainAddress).getLong();
+		if (our >= start && our <= end) {
+			final int wait = new Random().nextInt(2001);
+			logger.trace("read domain address: wait " + wait + " ms before sending response");
+			try {
+				Thread.sleep(wait);
+				return new ServiceResult(domainAddress);
+			}
+			catch (final InterruptedException e) {
+				logger.warn("read domain address got interrupted, response is canceled");
+				Thread.currentThread().interrupt();
+			}
+		}
+		return null;
+	}
+
+	@Override
 	public ServiceResult writeDomainAddress(final byte[] domain)
 	{
 		if (inProgrammingMode()) {
 			domainAddress = domain;
+			final int pidRFDomainAddress = 82;
+			final int pid = domain.length == 2 ? PID.DOMAIN_ADDRESS : pidRFDomainAddress;
+			try {
+				device.getInterfaceObjectServer().setProperty(0, pid, 1, 1, domain);
+			}
+			catch (final KNXPropertyException e) {
+				logger.error("setting DoA {} in interface object server", DataUnitBuilder.toHex(domain, " "), e);
+			}
 		}
 		return null;
 	}

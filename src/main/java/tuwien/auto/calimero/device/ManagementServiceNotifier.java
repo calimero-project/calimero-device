@@ -401,15 +401,24 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 	private void onDoASelectiveRead(final Destination respondTo, final byte[] data)
 	{
-		// selective read service is only defined for RF (domain length 2)
-		if (!verifyLength(data.length, 5, 5, "domain address selective read"))
+		// selective read service: 5 bytes with PL DoA (length 2 bytes), 14 bytes with RF DoA (length 6 bytes)
+		if (!verifyLength(data.length, 5, 14, "domain address selective read"))
 			return;
-		final byte[] domain = Arrays.copyOfRange(data, 0, 2);
-		final IndividualAddress ia = new IndividualAddress(Arrays.copyOfRange(data, 2, 4));
-		final int range = data[4];
-
-		final ServiceResult sr = mgmtSvc.readDomainAddress(domain, ia, range);
-		sendDoAresponse(respondTo, sr);
+		if (data[0] == 0 && data.length == 5) {
+			// Type 0 – two byte DoA
+			final byte[] domain = Arrays.copyOfRange(data, 0, 2);
+			final IndividualAddress ia = new IndividualAddress(Arrays.copyOfRange(data, 2, 4));
+			final int range = data[4] & 0xff;
+			final ServiceResult sr = mgmtSvc.readDomainAddress(domain, ia, range);
+			sendDoAresponse(respondTo, sr);
+		}
+		else if (data[0] == 1 && data.length == 14) {
+			// Type 1 – six byte DoA
+			final byte[] start = Arrays.copyOfRange(data, 1, 1 + 6);
+			final byte[] end = Arrays.copyOfRange(data, 1 + 6, 1 + 6 + 6);
+			final ServiceResult sr = mgmtSvc.readDomainAddress(start, end);
+			sendDoAresponse(respondTo, sr);
+		}
 	}
 
 	private void sendDoAresponse(final Destination respondTo, final ServiceResult sr)
@@ -419,12 +428,17 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] domain = sr.getResult();
 		if (domain.length != lengthDoA) {
-			logger.error(
-					"length of domain address is " + domain.length + " bytes, should be " + lengthDoA + " - ignore");
+			logger.error("length of domain address is {} bytes, should be {} - ignore", domain.length, lengthDoA);
 			return;
 		}
-		final byte[] apdu = DataUnitBuilder.createAPDU(DOA_RESPONSE, domain);
-		send(respondTo, apdu, sr.getPriority());
+		final byte[] asdu;
+		if (lengthDoA == 2)
+			asdu = domain;
+		else if (lengthDoA == 6)
+			asdu = new byte[] { 1, domain[0], domain[1], domain[2], domain[3], domain[4], domain[5] };
+		else
+			return;
+		send(respondTo, DataUnitBuilder.createAPDU(DOA_RESPONSE, asdu), sr.getPriority());
 	}
 
 	private void onDoAWrite(final Destination respondTo, final byte[] data)

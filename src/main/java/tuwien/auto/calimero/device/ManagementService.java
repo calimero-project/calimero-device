@@ -165,10 +165,22 @@ public interface ManagementService
 	 * Returns the domain address of a device; only a device with the requested domain and within the address range
 	 * shall respond to this service.
 	 *
-	 * @param domain domain address, address length is either 2 bytes for KNX-PL110 or 6 bytes for KNX-RF
+	 * @param domain domain address, address length is 2 bytes (KNX PL110)
+	 * @param startAddress start address, lower bound of checked address range (inclusive)
+	 * @param range address range, <code>(startAddress + range)</code> specifies the upper bound address (inclusive)
 	 * @return service result with domain address, or <code>null</code>
 	 */
 	ServiceResult readDomainAddress(byte[] domain, IndividualAddress startAddress, int range);
+
+	/**
+	 * Returns the domain address of a device; only a device having a domain address within the requested domain address
+	 * range shall respond to this service.
+	 *
+	 * @param startDoA start domain address (inclusive), address length is 6 bytes (KNX RF)
+	 * @param endDoA end domain address (inclusive), address length is 6 bytes (KNX RF)
+	 * @return service result with domain address, or <code>null</code>
+	 */
+	ServiceResult readDomainAddress(byte[] startDoA, byte[] endDoA);
 
 	/**
 	 * Assigns a new domain address to a device; only a device in programming mode shall set its domain.
