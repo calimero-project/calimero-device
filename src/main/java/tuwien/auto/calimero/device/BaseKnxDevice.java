@@ -297,6 +297,8 @@ public class BaseKnxDevice implements KnxDevice
 			if (address.getDevice() != 0)
 				setAddress(address);
 		}
+		if (process instanceof KnxDeviceServiceLogic)
+			((KnxDeviceServiceLogic) process).setDevice(this);
 		resetNotifiers();
 	}
 
