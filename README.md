@@ -1,4 +1,4 @@
-Calimero KNX Device
+Calimero KNX Device [![Build Status](https://travis-ci.org/calimero-project/calimero-device.svg?branch=master)](https://travis-ci.org/calimero-project/calimero-device)
 ===================
 
 KNX network stack to run a KNX device.
