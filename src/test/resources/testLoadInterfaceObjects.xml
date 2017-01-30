@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--Calimero 2 2.1.0-beta interface objects, saved on Sun Dec 23 01:27:49 CET 2012-->
+<interfaceObjects>
+    <object type="0" index="0">
+        <property index="0" pid="1" pdt="0" elements="1" maxElements="100" rw="0/0" writeEnabled="1">
+            <data>00010000</data>
+        </property>
+        <property index="1" pid="29" pdt="0" elements="1" maxElements="100" rw="0/0" writeEnabled="1">
+            <data>00010000</data>
+        </property>
+        <property index="2" pid="71" pdt="0" elements="0" maxElements="0" rw="0/0" writeEnabled="1">
+            <data>000300000008000b</data>
+        </property>
+    </object>
+    <object type="8" index="1">
+        <property index="0" pid="1" pdt="0" elements="1" maxElements="100" rw="0/0" writeEnabled="1">
+            <data>00010008</data>
+        </property>
+        <property index="1" pid="29" pdt="0" elements="1" maxElements="100" rw="0/0" writeEnabled="1">
+            <data>00010001</data>
+        </property>
+    </object>
+    <object type="11" index="2">
+        <property index="0" pid="1" pdt="0" elements="1" maxElements="100" rw="0/0" writeEnabled="1">
+            <data>0001000b</data>
+        </property>
+        <property index="1" pid="29" pdt="0" elements="1" maxElements="100" rw="0/0" writeEnabled="1">
+            <data>00010002</data>
+        </property>
+        <property index="2" pid="53" pdt="0" elements="0" maxElements="0" rw="0/0" writeEnabled="1">
+            <data>00040101020203030404</data>
+        </property>
+    </object>
+</interfaceObjects>
