@@ -41,7 +41,7 @@ import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.cemi.CEMILData;
-import tuwien.auto.calimero.device.ios.KNXPropertyException;
+import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.NetworkLinkListener;
@@ -317,9 +317,9 @@ public class BaseKnxDeviceTest extends TestCase
 	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#BaseKnxDevice(String, IndividualAddress, KNXNetworkLink, ProcessCommunicationService, ManagementService)}.
 	 *
 	 * @throws KNXLinkClosedException
-	 * @throws KNXPropertyException
+	 * @throws KnxPropertyException
 	 */
-	public final void testKnxDevice() throws KNXLinkClosedException, KNXPropertyException
+	public final void testKnxDevice() throws KNXLinkClosedException, KnxPropertyException
 	{
 		new BaseKnxDevice("test", addr, link, null, mgmtLogic);
 
@@ -338,7 +338,7 @@ public class BaseKnxDeviceTest extends TestCase
 	{
 		MyKnxDevice(final String name, final IndividualAddress device, final KNXNetworkLink link,
 			final ProcessCommunicationService processService, final ManagementService mgmtHandler)
-				throws KNXLinkClosedException, KNXPropertyException
+				throws KNXLinkClosedException, KnxPropertyException
 		{
 			super(name, device, link, processService, mgmtHandler);
 		}
@@ -354,9 +354,9 @@ public class BaseKnxDeviceTest extends TestCase
 	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setAddress(tuwien.auto.calimero.IndividualAddress)}.
 	 *
 	 * @throws KNXLinkClosedException
-	 * @throws KNXPropertyException
+	 * @throws KnxPropertyException
 	 */
-	public final void testSetAddress() throws KNXLinkClosedException, KNXPropertyException
+	public final void testSetAddress() throws KNXLinkClosedException, KnxPropertyException
 	{
 		final MyKnxDevice dev2 = new MyKnxDevice("test", addr, link, processLogic, mgmtLogic);
 

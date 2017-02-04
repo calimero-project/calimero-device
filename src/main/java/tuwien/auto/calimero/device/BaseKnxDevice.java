@@ -61,7 +61,7 @@ import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
-import tuwien.auto.calimero.device.ios.KNXPropertyException;
+import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
@@ -143,7 +143,7 @@ public class BaseKnxDevice implements KnxDevice
 	private KNXNetworkLink link;
 
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
-		final ManagementService mgmt) throws KNXPropertyException
+		final ManagementService mgmt) throws KnxPropertyException
 	{
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
 		this.name = name;
@@ -190,11 +190,11 @@ public class BaseKnxDevice implements KnxDevice
 	 *        address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to
 	 * @throws KNXLinkClosedException if the network link is closed
-	 * @throws KNXPropertyException on error setting KNX properties during device initialization
+	 * @throws KnxPropertyException on error setting KNX properties during device initialization
 	 * @see #setServiceHandler(ProcessCommunicationService, ManagementService)
 	 */
 	protected BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
-		final KNXNetworkLink link) throws KNXLinkClosedException, KNXPropertyException
+		final KNXNetworkLink link) throws KNXLinkClosedException, KnxPropertyException
 	{
 		this(name, dd, (ProcessCommunicationService) null, null);
 		setAddress(device);
@@ -224,11 +224,11 @@ public class BaseKnxDevice implements KnxDevice
 	 * @param process the device process communication service handler
 	 * @param mgmt the device management service handler
 	 * @throws KNXLinkClosedException if the network link is closed
-	 * @throws KNXPropertyException on error setting KNX properties during device initialization
+	 * @throws KnxPropertyException on error setting KNX properties during device initialization
 	 */
 	public BaseKnxDevice(final String name, final IndividualAddress device,
 		final KNXNetworkLink link, final ProcessCommunicationService process,
-		final ManagementService mgmt) throws KNXLinkClosedException, KNXPropertyException
+		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
 	{
 		this(name, DeviceDescriptor.DD0.TYPE_5705, process, mgmt);
 		setAddress(device);
@@ -257,10 +257,10 @@ public class BaseKnxDevice implements KnxDevice
 	 * @param link the KNX network link this device is attached to
 	 * @param logic KNX device service logic
 	 * @throws KNXLinkClosedException on closed network link
-	 * @throws KNXPropertyException on error initializing the device properties
+	 * @throws KnxPropertyException on error initializing the device properties
 	 */
 	public BaseKnxDevice(final String name, final IndividualAddress device, final KNXNetworkLink link,
-		final KnxDeviceServiceLogic logic) throws KNXLinkClosedException, KNXPropertyException
+		final KnxDeviceServiceLogic logic) throws KNXLinkClosedException, KnxPropertyException
 	{
 		this(name, device, link, logic, logic);
 		logic.setDevice(this);
@@ -396,7 +396,7 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	// taken from KNX server
-	private void initKnxProperties() throws KNXPropertyException
+	private void initKnxProperties() throws KnxPropertyException
 	{
 		// initialize interface device object properties
 		setDeviceProperty(PID.MAX_APDULENGTH, new byte[] { 0, (byte) maxApduLength });
@@ -448,7 +448,7 @@ public class BaseKnxDevice implements KnxDevice
 	// device descriptor mask version
 	private static final int pidHardwareType = 78; // PDT Generic 6 bytes
 
-	private void addDeviceInfo() throws KNXPropertyException
+	private void addDeviceInfo() throws KnxPropertyException
 	{
 		// in devices without PEI, value is 0
 		// PEI type 1: Illegal adapter
@@ -514,7 +514,7 @@ public class BaseKnxDevice implements KnxDevice
 		ios.setProperty(appProgamObject, objectInstance, PID.PROGRAM_VERSION, 1, 1, applicationVersion);
 	}
 
-	private void setDeviceProperty(final int propertyId, final byte[] data) throws KNXPropertyException
+	private void setDeviceProperty(final int propertyId, final byte[] data) throws KnxPropertyException
 	{
 		ios.setProperty(DEVICE_OBJECT, objectInstance, propertyId, 1, 1, data);
 	}

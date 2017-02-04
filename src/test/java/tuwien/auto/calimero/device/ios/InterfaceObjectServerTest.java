@@ -233,10 +233,10 @@ public class InterfaceObjectServerTest
 	/**
 	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int)} .
 	 *
-	 * @throws KNXPropertyException
+	 * @throws KnxPropertyException
 	 */
 	@Test
-	void getPropertyIntIntIntInt() throws KNXPropertyException
+	void getPropertyIntIntIntInt() throws KnxPropertyException
 	{
 		ios.getProperty(objectIndex , propertyId, 1, 1);
 	}
@@ -244,10 +244,10 @@ public class InterfaceObjectServerTest
 	/**
 	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, byte[])} .
 	 *
-	 * @throws KNXPropertyException
+	 * @throws KnxPropertyException
 	 */
 	@Test
-	void setPropertyIntIntIntIntByteArray() throws KNXPropertyException
+	void setPropertyIntIntIntIntByteArray() throws KnxPropertyException
 	{
 		ios.setProperty(objectIndex, propertyId, 1, 1, new byte[] { 0, 0});
 	}
@@ -255,20 +255,20 @@ public class InterfaceObjectServerTest
 	/**
 	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, int, byte[])}.
 	 *
-	 * @throws KNXPropertyException
+	 * @throws KnxPropertyException
 	 */
 	@Test
-	void setPropertyIntIntIntIntIntByteArray() throws KNXPropertyException
+	void setPropertyIntIntIntIntIntByteArray() throws KnxPropertyException
 	{
 		ios.setProperty(objectType, objectInstance, propertyId, 1, 1, new byte[] { 0, 0 });
 	}
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int, int)} .
-	 * @throws KNXPropertyException
+	 * @throws KnxPropertyException
 	 */
 	@Test
-	void getPropertyIntIntIntIntInt() throws KNXPropertyException
+	void getPropertyIntIntIntIntInt() throws KnxPropertyException
 	{
 		ios.getProperty(objectType, objectInstance , propertyId, 1, 1);
 	}
@@ -300,10 +300,10 @@ public class InterfaceObjectServerTest
 
 	/**
 	 * Test method for {@link InterfaceObjectServer#getDescription(int, int)}.
-	 * @throws KNXPropertyException
+	 * @throws KnxPropertyException
 	 */
 	@Test
-	void getDescription() throws KNXPropertyException
+	void getDescription() throws KnxPropertyException
 	{
 		final Description d = ios.getDescription(0, 1);
 		assertNotNull(d);
@@ -342,7 +342,7 @@ public class InterfaceObjectServerTest
 					PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 2, new byte[] { 0, 0, });
 			fail("only one element allowed");
 		}
-		catch (final KNXException e) {
+		catch (final KnxPropertyException e) {
 			// ok
 		}
 
@@ -351,7 +351,7 @@ public class InterfaceObjectServerTest
 					PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 1, new byte[] { 1, 0, });
 			fail("only 0 value allowed");
 		}
-		catch (final KNXException e) {
+		catch (final KnxPropertyException e) {
 			// ok
 		}
 
@@ -360,7 +360,7 @@ public class InterfaceObjectServerTest
 					PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 1, new byte[] { 0, 0, 0, });
 			fail("only byte array length 2 allowed");
 		}
-		catch (final KNXException e) {
+		catch (final KnxPropertyException e) {
 			// ok
 		}
 

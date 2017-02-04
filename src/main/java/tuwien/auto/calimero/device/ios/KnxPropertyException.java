@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2016 B. Malinowsky
+    Copyright (c) 2010, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,7 +36,6 @@
 
 package tuwien.auto.calimero.device.ios;
 
-import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 
 /**
@@ -44,47 +43,46 @@ import tuwien.auto.calimero.cemi.CEMIDevMgmt;
  *
  * @author B. Malinowsky
  */
-public class KNXPropertyException extends KNXException
+public class KnxPropertyException extends RuntimeException
 {
 	private static final long serialVersionUID = 1L;
 
 	private final int code;
 
 	/**
-	 * Constructs a new <code>KNXPropertyException</code> with the specified detail message, with
-	 * status code 0.
+	 * Constructs a new <code>KnxPropertyException</code> with the specified detail message, with unspecified error code
+	 * ({@link CEMIDevMgmt.ErrorCodes#UNSPECIFIED_ERROR}).
 	 *
 	 * @param s the detail message
 	 */
-	public KNXPropertyException(final String s)
+	public KnxPropertyException(final String s)
 	{
 		super(s);
 		code = 0;
 	}
 
 	/**
-	 * Constructs a new <code>KNXPropertyException</code> with the specified detail message and a
-	 * status or error code indicating the problem during property access.
+	 * Constructs a new <code>KnxPropertyException</code> with the specified detail message and an error code indicating
+	 * the problem during property access.
 	 * <p>
-	 * Within the library, for the status code one of the codes listed in CEMIDevMgmt.ErrorCodes is
-	 * used.
+	 * Within the library, for the status code one of the codes listed in CEMIDevMgmt.ErrorCodes is used.
 	 *
 	 * @param s the detail message
-	 * @param statusCode the status code for the problem
+	 * @param errorCode the error code of this exception
 	 */
-	public KNXPropertyException(final String s, final int statusCode)
+	public KnxPropertyException(final String s, final int errorCode)
 	{
-		super(s + ", " + CEMIDevMgmt.getErrorMessage(statusCode));
-		code = statusCode;
+		super(s + ", " + CEMIDevMgmt.getErrorMessage(errorCode));
+		code = errorCode;
 	}
 
 	/**
-	 * Returns the status code assigned to this exception. If this exception originates from within
-	 * the library, the status code is one of the codes listed in CEMIDevMgmt.ErrorCodes.
+	 * Returns the error code assigned to this exception. If this exception originates from within the library, the
+	 * status code is one of the codes listed in CEMIDevMgmt.ErrorCodes.
 	 *
-	 * @return status code as int
+	 * @return error code as int
 	 */
-	public final int getStatusCode()
+	public final int errorCode()
 	{
 		return code;
 	}

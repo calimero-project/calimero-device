@@ -54,7 +54,7 @@ import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
-import tuwien.auto.calimero.device.ios.KNXPropertyException;
+import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.link.KNXNetworkLink;
@@ -222,7 +222,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					elements);
 			return new ServiceResult(res);
 		}
-		catch (KNXPropertyException | KNXIllegalArgumentException e) {
+		catch (KnxPropertyException | KNXIllegalArgumentException e) {
 			logger.error("read property " + e);
 		}
 		return null;
@@ -243,7 +243,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			// but this is crap to do here, the service notifier should do this
 			return new ServiceResult(data);
 		}
-		catch (KNXPropertyException | KNXIllegalArgumentException e) {
+		catch (KnxPropertyException | KNXIllegalArgumentException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -261,10 +261,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				d = ios.getDescriptionByIndex(objectIndex, propertyIndex);
 			return new ServiceResult(d.toByteArray());
 		}
-		catch (final KNXPropertyException e) {
-			logger.warn("read property description: " + e.getMessage());
-		}
-		catch (final KNXIllegalArgumentException e) {
+		catch (KnxPropertyException | KNXIllegalArgumentException e) {
 			logger.warn("read property description: " + e.getMessage());
 		}
 		return null;
@@ -304,7 +301,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return new ServiceResult(new byte[0]);
 			}
 		}
-		catch (final KNXPropertyException e) {
+		catch (final KnxPropertyException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -337,7 +334,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				settings.setDeviceAddress(newAddress);
 			}
 		}
-		catch (final KNXPropertyException e) {
+		catch (final KnxPropertyException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -405,7 +402,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			try {
 				device.getInterfaceObjectServer().setProperty(0, pid, 1, 1, domain);
 			}
-			catch (final KNXPropertyException e) {
+			catch (final KnxPropertyException e) {
 				logger.error("setting DoA {} in interface object server", DataUnitBuilder.toHex(domain, " "), e);
 			}
 		}
@@ -415,17 +412,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readDescriptor(final int type)
 	{
-		try {
-			if (type == 0)
-				return new ServiceResult(device.getInterfaceObjectServer().getProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1));
-			if (device instanceof BaseKnxDevice) {
-				final DeviceDescriptor dd = ((BaseKnxDevice) device).deviceDescriptor();
-				if (dd instanceof DeviceDescriptor.DD2)
-					return new ServiceResult(dd.toByteArray());
-			}
-		}
-		catch (final KNXPropertyException e) {
-			logger.error("no device descriptor type 0 set");
+		if (type == 0)
+			return new ServiceResult(device.getInterfaceObjectServer().getProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1));
+		if (device instanceof BaseKnxDevice) {
+			final DeviceDescriptor dd = ((BaseKnxDevice) device).deviceDescriptor();
+			if (dd instanceof DeviceDescriptor.DD2)
+				return new ServiceResult(dd.toByteArray());
 		}
 		return null;
 	}

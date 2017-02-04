@@ -51,7 +51,7 @@ import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
-import tuwien.auto.calimero.device.ios.KNXPropertyException;
+import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
@@ -775,7 +775,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 					PID.MAX_APDULENGTH, 1, 1);
 			return toUnsigned(length);
 		}
-		catch (final KNXPropertyException e) {
+		catch (final KnxPropertyException e) {
 			if (!missingApduLength) {
 				missingApduLength = true;
 				logger.error(

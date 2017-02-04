@@ -321,7 +321,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 	@Override
 	public byte[] getProperty(final int objectIndex, final int propertyId, final int start,
-		final int elements) throws KNXPropertyException
+		final int elements) throws KnxPropertyException
 	{
 		return adapter.getProperty(objectIndex, propertyId, start, elements);
 	}
@@ -335,7 +335,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 */
 	@Override
 	public void setProperty(final int objectIndex, final int propertyId, final int start,
-		final int elements, final byte[] data) throws KNXPropertyException
+		final int elements, final byte[] data) throws KnxPropertyException
 	{
 		adapter.setProperty(objectIndex, propertyId, start, elements, data);
 	}
@@ -351,10 +351,10 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * @param start see {@link #setProperty(int, int, int, int, byte[])}
 	 * @param elements see {@link #setProperty(int, int, int, int, byte[])}
 	 * @param data see {@link #setProperty(int, int, int, int, byte[])}
-	 * @throws KNXPropertyException see {@link #setProperty(int, int, int, int, byte[])}
+	 * @throws KnxPropertyException see {@link #setProperty(int, int, int, int, byte[])}
 	 */
 	public void setProperty(final int objectType, final int objectInstance, final int propertyId,
-		final int start, final int elements, final byte[] data) throws KNXPropertyException
+		final int start, final int elements, final byte[] data) throws KnxPropertyException
 	{
 		adapter.setProperty(objectType, objectInstance, propertyId, start, elements, data);
 	}
@@ -370,10 +370,10 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * @param start see {@link #getProperty(int, int, int, int)}
 	 * @param elements see {@link #getProperty(int, int, int, int)}
 	 * @return see {@link #getProperty(int, int, int, int)}
-	 * @throws KNXPropertyException see {@link #getProperty(int, int, int, int)}
+	 * @throws KnxPropertyException see {@link #getProperty(int, int, int, int)}
 	 */
 	public byte[] getProperty(final int objectType, final int objectInstance, final int propertyId,
-		final int start, final int elements) throws KNXPropertyException
+		final int start, final int elements) throws KnxPropertyException
 	{
 		return adapter.getProperty(objectType, objectInstance, propertyId, start, elements);
 	}
@@ -452,7 +452,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			idx = existingIdx;
 			pdt = chk.getPDT();
 		}
-		catch (final KNXPropertyException e) {
+		catch (final KnxPropertyException e) {
 			// no existing description, find an empty position index
 			idx = io.descriptions.indexOf(null);
 			if (idx == -1)
@@ -514,18 +514,18 @@ public class InterfaceObjectServer implements PropertyAccess
 	}
 
 	@Override
-	public Description getDescription(final int objIndex, final int pid) throws KNXPropertyException
+	public Description getDescription(final int objIndex, final int pid) throws KnxPropertyException
 	{
 		try {
 			return client.getDescription(objIndex, pid);
 		}
-		catch (final KNXPropertyException e) {
+		catch (final KnxPropertyException e) {
 			throw e;
 		}
 		catch (final KNXException e) {
 			// KNXException is currently thrown by PropertyClient.getObjectType,
 			// quite unnecessary to use that base type exception (maybe rework).
-			final KNXPropertyException pe = new KNXPropertyException(e.getMessage());
+			final KnxPropertyException pe = new KnxPropertyException(e.getMessage());
 			pe.setStackTrace(e.getStackTrace());
 			throw pe;
 		}
@@ -536,18 +536,18 @@ public class InterfaceObjectServer implements PropertyAccess
 	}
 
 	@Override
-	public Description getDescriptionByIndex(final int objIndex, final int propIndex) throws KNXPropertyException
+	public Description getDescriptionByIndex(final int objIndex, final int propIndex) throws KnxPropertyException
 	{
 		try {
 			return client.getDescriptionByIndex(objIndex, propIndex);
 		}
-		catch (final KNXPropertyException e) {
+		catch (final KnxPropertyException e) {
 			throw e;
 		}
 		catch (final KNXException e) {
 			// KNXException is currently thrown by PropertyClient.getObjectType,
 			// quite unnecessary to use that base type exception (maybe rework).
-			final KNXPropertyException pe = new KNXPropertyException(e.getMessage());
+			final KnxPropertyException pe = new KnxPropertyException(e.getMessage());
 			pe.setStackTrace(e.getStackTrace());
 			throw pe;
 		}
@@ -632,7 +632,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		throw new KNXIllegalArgumentException("interface object index " + objIndex + " past last interface object");
 	}
 
-	private InterfaceObject findByObjectType(final int objectType, final int objectInstance) throws KNXPropertyException
+	private InterfaceObject findByObjectType(final int objectType, final int objectInstance) throws KnxPropertyException
 	{
 		synchronized (objects) {
 			int inst = 0;
@@ -641,7 +641,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				if (io.getType() == objectType && ++inst == objectInstance)
 					return io;
 			}
-			throw new KNXPropertyException("no object instance " + objectInstance + " of "
+			throw new KnxPropertyException("no object instance " + objectInstance + " of "
 					+ PropertyClient.getObjectTypeName(objectType) + " in IOS");
 		}
 	}
@@ -655,37 +655,37 @@ public class InterfaceObjectServer implements PropertyAccess
 		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3] & 0xff;
 	}
 
-	// Adapter only throws KNXPropertyException on get/set property/desc
+	// Adapter only throws KnxPropertyException on get/set property/desc
 	private final class IosAdapter implements PropertyAdapter
 	{
 		@Override
 		public void setProperty(final int objIndex, final int pid, final int start,
-			final int elements, final byte[] data) throws KNXPropertyException
+			final int elements, final byte[] data) throws KnxPropertyException
 		{
 			setProperty(getIfObject(objIndex), pid, start, elements, data);
 		}
 
 		public void setProperty(final int objectType, final int objectInstance, final int propertyId, final int start,
-			final int elements, final byte[] data) throws KNXPropertyException
+			final int elements, final byte[] data) throws KnxPropertyException
 		{
 			setProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements, data);
 		}
 
 		@Override
 		public byte[] getProperty(final int objIndex, final int pid, final int start, final int elements)
-			throws KNXPropertyException
+			throws KnxPropertyException
 		{
 			return getProperty(getIfObject(objIndex), pid, start, elements);
 		}
 
 		public byte[] getProperty(final int objectType, final int objectInstance, final int propertyId, final int start,
-			final int elements) throws KNXPropertyException
+			final int elements) throws KnxPropertyException
 		{
 			return getProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements);
 		}
 
 		@Override
-		public byte[] getDescription(final int objIndex, final int pid, final int propIndex) throws KNXPropertyException
+		public byte[] getDescription(final int objIndex, final int pid, final int propIndex) throws KnxPropertyException
 		{
 			final InterfaceObject io = getIfObject(objIndex);
 			Description d = null;
@@ -700,12 +700,12 @@ public class InterfaceObjectServer implements PropertyAccess
 				try {
 					elems = toInt(getProperty(objIndex, pid, 0, 1));
 				}
-				catch (final KNXPropertyException e) {}
+				catch (final KnxPropertyException e) {}
 				return new Description(objIndex, d.getObjectType(), d.getPID(), d.getPropIndex(),
 						d.getPDT(), d.isWriteEnabled(), elems, d.getMaxElements(), d.getReadLevel(),
 						d.getWriteLevel()).toByteArray();
 			}
-			throw new KNXPropertyException("no description found for "
+			throw new KnxPropertyException("no description found for "
 					+ PropertyClient.getObjectTypeName(io.getType()) + " (" + io.getType() + ")"
 					+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
 		}
@@ -727,7 +727,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		{}
 
 		private void setProperty(final InterfaceObject io, final int pid, final int start,
-			final int elements, final byte[] data) throws KNXPropertyException
+			final int elements, final byte[] data) throws KnxPropertyException
 		{
 			final PropertyKey key = new PropertyKey(io.getType(), pid);
 			byte[] values = io.values.get(key);
@@ -739,7 +739,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					io.truncateValueArray(pid, 0);
 					return;
 				}
-				throw new KNXPropertyException("current number of elements is read-only",
+				throw new KnxPropertyException("current number of elements is read-only",
 						CEMIDevMgmt.ErrorCodes.READ_ONLY);
 			}
 
@@ -760,9 +760,9 @@ public class InterfaceObjectServer implements PropertyAccess
 				d = new Description(io.getType(), getDescription(io, pid, 0));
 				pdt = d.getPDT();
 			}
-			catch (final KNXPropertyException e) {
+			catch (final KnxPropertyException e) {
 				if (strictMode)
-					throw new KNXPropertyException("strict mode: no description found for "
+					throw new KnxPropertyException("strict mode: no description found for "
 							+ io.getTypeName() + " PID " + pid);
 				final Property p = getDefinition(io.getType(), pid);
 				if (p != null) {
@@ -791,7 +791,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (typeSize == 0)
 				typeSize = data.length / elements;
 			else if (typeSize != data.length / elements)
-				throw new KNXPropertyException(
+				throw new KnxPropertyException(
 						"property type size is " + typeSize + ", not " + data.length / elements,
 						CEMIDevMgmt.ErrorCodes.TYPE_CONFLICT);
 
@@ -803,7 +803,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				// max elements of 100 randomly chosen in absence of a user setting
 				final int maxElements = d == null ? 100 : d.getMaxElements();
 				if (size > maxElements)
-					throw new KNXPropertyException(
+					throw new KnxPropertyException(
 							"property values index range [" + start + "..." + size + "] exceeds "
 									+ maxElements + " maximum elements",
 							CEMIDevMgmt.ErrorCodes.PROP_INDEX_RANGE_ERROR);
@@ -827,13 +827,13 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 
 		private byte[] getProperty(final InterfaceObject io, final int pid, final int start, final int elements)
-			throws KNXPropertyException
+			throws KnxPropertyException
 		{
 			final byte[] values = io.values.get(new PropertyKey(io.getType(), pid));
 
 			if (start == 0) {
 				if (elements > 1)
-					throw new KNXPropertyException(
+					throw new KnxPropertyException(
 							"current number of elements consists " + "of 1 element only",
 							CEMIDevMgmt.ErrorCodes.UNSPECIFIED_ERROR);
 
@@ -847,14 +847,14 @@ public class InterfaceObjectServer implements PropertyAccess
 			}
 
 			if (values == null)
-				throw new KNXPropertyException("property ID " + pid + " in " + io.getTypeName()
+				throw new KnxPropertyException("property ID " + pid + " in " + io.getTypeName()
 						+ " (index " + io.getIndex() + ") not found",
 						CEMIDevMgmt.ErrorCodes.VOID_DP);
 
 			final int currElems = (values[0] & 0xff) << 8 | values[1] & 0xff;
 			final int size = start + elements - 1;
 			if (currElems < size)
-				throw new KNXPropertyException("requested elements exceed past last property value",
+				throw new KnxPropertyException("requested elements exceed past last property value",
 						CEMIDevMgmt.ErrorCodes.PROP_INDEX_RANGE_ERROR);
 			final int typeSize = (values.length - 2) / currElems;
 			final byte[] data = new byte[elements * typeSize];
@@ -865,7 +865,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 
 		private byte[] getDescription(final InterfaceObject io, final int pid, final int propIndex)
-			throws KNXPropertyException
+			throws KnxPropertyException
 		{
 			Description d = null;
 			if (pid != 0)
@@ -879,12 +879,12 @@ public class InterfaceObjectServer implements PropertyAccess
 				try {
 					elems = toInt(getProperty(io, pid, 0, 1));
 				}
-				catch (final KNXPropertyException e) {}
+				catch (final KnxPropertyException e) {}
 				return new Description(io.getIndex(), d.getObjectType(), d.getPID(),
 						d.getPropIndex(), d.getPDT(), d.isWriteEnabled(), elems, d.getMaxElements(),
 						d.getReadLevel(), d.getWriteLevel()).toByteArray();
 			}
-			throw new KNXPropertyException(
+			throw new KnxPropertyException(
 					"no description found for " + PropertyClient.getObjectTypeName(io.getType())
 							+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
 		}
@@ -903,7 +903,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			try {
 				elems = toInt(getProperty(objIndex, pid, 0, 1));
 			}
-			catch (final KNXPropertyException e) {}
+			catch (final KnxPropertyException e) {}
 			final int maxElems = 100;
 			// level is between 0 (max. access rights) and 3 (min. rights),
 			// or 0 (max. access rights) and 15 (min. rights)
