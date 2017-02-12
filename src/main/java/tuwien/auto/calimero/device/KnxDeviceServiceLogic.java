@@ -266,19 +266,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId, final int propertyIndex)
 	{
-		try {
-			final InterfaceObjectServer ios = device.getInterfaceObjectServer();
-			final Description d;
-			if (propertyId > 0)
-				d = ios.getDescription(objectIndex, propertyId);
-			else
-				d = ios.getDescriptionByIndex(objectIndex, propertyIndex);
-			return new ServiceResult(d.toByteArray());
-		}
-		catch (KnxPropertyException | KNXIllegalArgumentException e) {
-			logger.warn("read property description: " + e.getMessage());
-		}
-		return null;
+		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
+		final Description d;
+		if (propertyId > 0)
+			d = ios.getDescription(objectIndex, propertyId);
+		else
+			d = ios.getDescriptionByIndex(objectIndex, propertyIndex);
+		return new ServiceResult(d.toByteArray());
 	}
 
 	@Override
@@ -309,14 +303,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readAddressSerial(final byte[] serialNo)
 	{
-		try {
-			final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
-			if (Arrays.equals(myserial, serialNo)) {
-				return new ServiceResult(new byte[0]);
-			}
-		}
-		catch (final KnxPropertyException e) {
-			e.printStackTrace();
+		final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+		if (Arrays.equals(myserial, serialNo)) {
+			return new ServiceResult(new byte[0]);
 		}
 		return null;
 	}
@@ -340,16 +329,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult writeAddressSerial(final byte[] serialNo,
 		final IndividualAddress newAddress)
 	{
-		try {
-			final byte[] myserial = device.getInterfaceObjectServer().getProperty(0,
-					PID.SERIAL_NUMBER, 1, 1);
-			if (Arrays.equals(myserial, serialNo)) {
-				final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
-				settings.setDeviceAddress(newAddress);
-			}
-		}
-		catch (final KnxPropertyException e) {
-			e.printStackTrace();
+		final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+		if (Arrays.equals(myserial, serialNo)) {
+			final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
+			settings.setDeviceAddress(newAddress);
 		}
 		return null;
 	}
