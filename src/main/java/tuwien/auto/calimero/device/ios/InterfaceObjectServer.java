@@ -589,13 +589,13 @@ public class InterfaceObjectServer implements PropertyAccess
 		io.values.put(new PropertyKey(objectType, PID.OBJECT_TYPE),
 				new byte[] { 0, 1, (byte) (objectType >> 8), (byte) objectType });
 		if (createDescription)
-			adapter.createNewDescription(index, PID.OBJECT_TYPE);
+			adapter.createNewDescription(index, PID.OBJECT_TYPE, false);
 
 		// AN104: global property PID.OBJECT_INDEX holds index of the if-object
 		io.values.put(new PropertyKey(objectType, PID.OBJECT_INDEX),
 				new byte[] { 0, 1, (byte) (index >> 8), (byte) index });
 		if (createDescription)
-			adapter.createNewDescription(index, PID.OBJECT_INDEX);
+			adapter.createNewDescription(index, PID.OBJECT_INDEX, false);
 	}
 
 	private void firePropertyChanged(final InterfaceObject io, final int propertyId,
@@ -751,6 +751,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			int pdt = 0;
 			String dptId = null;
 			Description d = null;
+			boolean createDescription = false;
 			try {
 				d = new Description(io.getType(), getDescription(io, pid, 0));
 				pdt = d.getPDT();
@@ -759,6 +760,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				if (strictMode)
 					throw new KnxPropertyException("strict mode: no description found for "
 							+ io.getTypeName() + " PID " + pid);
+				createDescription = true;
 				final Property p = getDefinition(io.getType(), pid);
 				if (p != null) {
 					pdt = p.getPDT();
@@ -814,6 +816,12 @@ public class InterfaceObjectServer implements PropertyAccess
 			int k = 0;
 			for (int i = 2 + (start - 1) * typeSize; i < 2 + size * typeSize; ++i)
 				values[i] = data[k++];
+
+			// make sure we provide a minimum description
+			if (createDescription) {
+				final Description defDesc = createNewDescription(io.getIndex(), pid, true);
+				logger.trace("init description {}", defDesc);
+			}
 
 			firePropertyChanged(io, pid, start, elements, data);
 		}
@@ -880,27 +888,27 @@ public class InterfaceObjectServer implements PropertyAccess
 							+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
 		}
 
-		private Description createNewDescription(final int objIndex, final int pid)
+		private Description createNewDescription(final int objIndex, final int pid, final boolean writeEnabled)
 		{
-			Description d;
-			final int objectType = getObjectType(objIndex);
+			final InterfaceObject io = getIfObject(objIndex);
 			int pdt = 0;
-			final Property p = getDefinition(objectType, pid);
+			final Property p = getDefinition(io.getType(), pid);
 			if (p != null)
 				pdt = p.getPDT();
-			final InterfaceObject io = getIfObject(objIndex);
 			final int pIndex = io.descriptions.size();
 			int elems = 0;
 			try {
 				elems = toInt(getProperty(objIndex, pid, 0, 1));
 			}
 			catch (final KnxPropertyException e) {}
-			final int maxElems = 100;
+			final int maxElems = Math.max(elems, 10);
+			final boolean writable = p != null ? !p.readOnly() : writeEnabled;
 			// level is between 0 (max. access rights) and 3 (min. rights),
 			// or 0 (max. access rights) and 15 (min. rights)
-			final int readLevel = 0;
-			final int writeLevel = 0;
-			d = new Description(objIndex, objectType, pid, pIndex, pdt, true, elems, maxElems,
+			// TODO assign read/write access level of property
+			final int readLevel = p != null ? 3 : 0;
+			final int writeLevel = p != null ? 3 : 0;
+			final Description d = new Description(objIndex, io.getType(), pid, pIndex, pdt, writable, elems, maxElems,
 					readLevel, writeLevel);
 			io.descriptions.add(d);
 			return d;
@@ -1094,14 +1102,12 @@ public class InterfaceObjectServer implements PropertyAccess
 							final int index = toInt(r.getAttributeValue(null, ATTR_INDEX));
 							final int elems = toInt(r.getAttributeValue(null, ATTR_ELEMS));
 							final int maxElems = toInt(r.getAttributeValue(null, ATTR_MAXELEMS));
-							final int rw = parseRW(r.getAttributeValue(null, ATTR_RW));
-							final int rLevel = rw >> 8;
-							final int wLevel = rw & 0xff;
+							final int[] rw = parseRW(r.getAttributeValue(null, ATTR_RW));
 							final Description d = new Description(oi, type,
 									toInt(r.getAttributeValue(null, ATTR_PID)), index,
 									toInt(r.getAttributeValue(null, ATTR_PDT)),
 									toInt(r.getAttributeValue(null, ATTR_WRITE)) == 1, elems,
-									maxElems, rLevel, wLevel);
+									maxElems, rw[0], rw[1]);
 							descriptions.add(d);
 							if (valueExpected)
 								values.add(emptyValue);
@@ -1166,7 +1172,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			}
 		}
 
-		private static int parseRW(final String rw)
+		private static int[] parseRW(final String rw)
 		{
 			final String s = rw.toLowerCase();
 			int read = 0;
@@ -1182,7 +1188,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					else
 						read = read * 10 + c - '0';
 			}
-			return read << 8 | write;
+			return new int[] { read, write };
 		}
 
 		private static int toInt(final String s) throws NumberFormatException
