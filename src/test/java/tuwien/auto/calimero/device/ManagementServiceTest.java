@@ -123,6 +123,18 @@ public class ManagementServiceTest
 	}
 
 	@Test
+	void tryWriteReadOnlyProperty()
+	{
+		ServiceResult r = mgmt.readProperty(objectIndex, propertyId, 1, 1);
+		byte[] data = r.getResult();
+		assertNull(mgmt.writeProperty(objectIndex, propertyId, 1, 1, data));
+
+		r = mgmt.readProperty(1, propertyId, 1, 1);
+		data = r.getResult();
+		assertNull(mgmt.writeProperty(1, propertyId, 1, 1, data));
+	}
+
+	@Test
 	void readPropertyDescription()
 	{
 		ServiceResult r = mgmt.readPropertyDescription(objectIndex, propertyId, 0);

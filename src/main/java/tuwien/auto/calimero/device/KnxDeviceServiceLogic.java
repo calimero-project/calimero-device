@@ -49,7 +49,8 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
-import tuwien.auto.calimero.KNXIllegalArgumentException;
+import tuwien.auto.calimero.cemi.CEMIDevMgmt;
+import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
@@ -86,6 +87,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	// domain can be 2 or 6 bytes, set in setDevice()
 	private byte[] domainAddress;
+
+	// TODO implement access level per endpoint/connection
+	private final int accessLevel = 0;
 
 	public void setDevice(final KnxDevice device)
 	{
@@ -217,36 +221,46 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readProperty(final int objectIndex, final int propertyId,
 		final int startIndex, final int elements)
 	{
+		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		try {
-			final byte[] res = device.getInterfaceObjectServer().getProperty(objectIndex, propertyId, startIndex,
-					elements);
-			return new ServiceResult(res);
+			final Description d = ios.getDescription(objectIndex, propertyId);
+			if (accessLevel > d.getReadLevel()) {
+				logger.warn("deny read access to property {}|{} (access level {}, requires {})", objectIndex,
+						propertyId, accessLevel, d.getReadLevel());
+				return null;
+			}
 		}
-		catch (KnxPropertyException | KNXIllegalArgumentException e) {
-			logger.error("read property " + e);
+		catch (final KnxPropertyException ignore) {
+			// getProperty will fail and provide a more accurate error
 		}
-		return null;
+		final byte[] res = ios.getProperty(objectIndex, propertyId, startIndex, elements);
+		return new ServiceResult(res);
 	}
 
 	@Override
 	public ServiceResult writeProperty(final int objectIndex, final int propertyId,
 		final int startIndex, final int elements, final byte[] data)
 	{
+		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		try {
-			device.getInterfaceObjectServer().setProperty(objectIndex, propertyId, startIndex, elements, data);
-			// handle some special cases
-			if (propertyId == PID.PROGMODE)
-				setProgrammingMode((data[0] & 0x01) == 0x01);
-
-			// TODO on error we return 0 elements and no data, otherwise we return the
-			// written elements, as in a property read response
-			// but this is crap to do here, the service notifier should do this
-			return new ServiceResult(data);
+			final Description d = ios.getDescription(objectIndex, propertyId);
+			if (!d.isWriteEnabled()) {
+				logger.warn("property {}|{} is {}", objectIndex, propertyId,
+						CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
+				return null;
+			}
+			if (accessLevel > d.getWriteLevel()) {
+				logger.warn("deny write access to property {}/{} (access level {}, requires {})", objectIndex,
+						propertyId, accessLevel, d.getWriteLevel());
+				return null;
+			}
 		}
-		catch (KnxPropertyException | KNXIllegalArgumentException e) {
-			e.printStackTrace();
-		}
-		return null;
+		catch (final KnxPropertyException ignore) {logger.error("get description", ignore);}
+		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
+		// handle some special cases
+		if (propertyId == PID.PROGMODE)
+			setProgrammingMode((data[0] & 0x01) == 0x01);
+		return new ServiceResult(data);
 	}
 
 	@Override
