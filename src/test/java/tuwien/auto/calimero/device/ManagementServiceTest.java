@@ -139,7 +139,7 @@ public class ManagementServiceTest
 	}
 
 	@Test
-	public final void readMemory()
+	void readMemory()
 	{
 		final ServiceResult r = mgmt.readMemory(0x60, 1);
 		assertNotNull(r);
@@ -149,7 +149,7 @@ public class ManagementServiceTest
 	}
 
 	@Test
-	public final void writeMemory()
+	void writeMemory()
 	{
 		final int start = 0x22;
 		final byte[] data = new byte[] { 1, 2, 3, 4 };
@@ -166,7 +166,7 @@ public class ManagementServiceTest
 	}
 
 	@Test
-	public final void readDescriptor()
+	void readDescriptor()
 	{
 		ServiceResult r = mgmt.readDescriptor(0);
 		assertNotNull(r);

@@ -160,17 +160,6 @@ public class ProcessCommunicationServiceTest extends TestCase
 	private BaseKnxDevice device1;
 	private BaseKnxDevice device2;
 
-	/**
-	 * @param name
-	 */
-	public ProcessCommunicationServiceTest(final String name)
-	{
-		super(name);
-	}
-
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#setUp()
-	 */
 	protected void setUp() throws Exception
 	{
 		super.setUp();
@@ -205,9 +194,6 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see junit.framework.TestCase#tearDown()
-	 */
 	protected void tearDown() throws Exception
 	{
 		device1.getDeviceLink().close();
@@ -222,7 +208,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * .
 	 *
 	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException
+	 * @throws KNXException on test failure
 	 */
 	public final void testGroupReadRequestRunnable() throws KNXException, InterruptedException
 	{
@@ -245,7 +231,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * .
 	 *
 	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException
+	 * @throws KNXException on test failure
 	 */
 	public final void testGroupReadRequest() throws KNXException, InterruptedException
 	{
@@ -265,7 +251,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
 	 *
 	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException
+	 * @throws KNXException on test failure
 	 */
 	public final void testGroupWriteRunnable() throws KNXException, InterruptedException
 	{
@@ -287,7 +273,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
 	 *
 	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException
+	 * @throws KNXException on test failure
 	 */
 	public final void testGroupWrite() throws KNXException, InterruptedException
 	{

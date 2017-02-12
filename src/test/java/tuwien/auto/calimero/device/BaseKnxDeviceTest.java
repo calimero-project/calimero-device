@@ -291,14 +291,6 @@ public class BaseKnxDeviceTest extends TestCase
 
 	private static final ManagementService mgmtLogic = new DefaultMgmtLogic();
 
-	/**
-	 * @param name
-	 */
-	public BaseKnxDeviceTest(final String name)
-	{
-		super(name);
-	}
-
 	@Override
 	protected void setUp() throws Exception
 	{
@@ -314,12 +306,12 @@ public class BaseKnxDeviceTest extends TestCase
 
 	/**
 	 * Test method for
-	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#BaseKnxDevice(String, IndividualAddress, KNXNetworkLink, ProcessCommunicationService, ManagementService)}.
+	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#BaseKnxDevice(String, IndividualAddress, KNXNetworkLink,
+	 * ProcessCommunicationService, ManagementService)}.
 	 *
-	 * @throws KNXLinkClosedException
-	 * @throws KnxPropertyException
+	 * @throws KNXLinkClosedException on closed link
 	 */
-	public final void testKnxDevice() throws KNXLinkClosedException, KnxPropertyException
+	public final void testKnxDevice() throws KNXLinkClosedException
 	{
 		new BaseKnxDevice("test", addr, link, null, mgmtLogic);
 
@@ -353,10 +345,9 @@ public class BaseKnxDeviceTest extends TestCase
 	 * Test method for
 	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setAddress(tuwien.auto.calimero.IndividualAddress)}.
 	 *
-	 * @throws KNXLinkClosedException
-	 * @throws KnxPropertyException
+	 * @throws KNXLinkClosedException on closed link
 	 */
-	public final void testSetAddress() throws KNXLinkClosedException, KnxPropertyException
+	public final void testSetAddress() throws KNXLinkClosedException
 	{
 		final MyKnxDevice dev2 = new MyKnxDevice("test", addr, link, processLogic, mgmtLogic);
 
@@ -381,7 +372,7 @@ public class BaseKnxDeviceTest extends TestCase
 	 * Test method for
 	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setDeviceLink(tuwien.auto.calimero.link.KNXNetworkLink)}.
 	 *
-	 * @throws KNXLinkClosedException
+	 * @throws KNXLinkClosedException on closed link
 	 */
 	public final void testSetNetworkLink() throws KNXLinkClosedException
 	{

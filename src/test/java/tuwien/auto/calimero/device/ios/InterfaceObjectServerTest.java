@@ -52,11 +52,7 @@ import tuwien.auto.calimero.device.ios.InterfaceObjectServer.IosResourceHandler;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
-import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
-import tuwien.auto.calimero.xml.KNXMLException;
-import tuwien.auto.calimero.xml.XmlReader;
-import tuwien.auto.calimero.xml.XmlWriter;
 
 /**
  * @author B. Malinowsky
@@ -94,36 +90,22 @@ public class InterfaceObjectServerTest
 	{
 		ios.setResourceHandler(null);
 		ios.setResourceHandler(new IosResourceHandler() {
-			public void save(final String resource, final Collection<Property> definitions) throws KNXMLException
-			{}
-
 			@Override
-			public void save(final XmlWriter writer, final Collection<Property> definitions) throws KNXMLException
-			{}
-
-			public Collection<Property> load(final String resource) throws KNXMLException
-			{
-				return null;
-			}
-
-			@Override
-			public Collection<Property> load(final XmlReader reader) throws KNXMLException
-			{
-				return null;
-			}
-
 			public void saveProperties(final String resource, final Collection<Description> descriptions,
 				final Collection<byte[]> values) throws KNXException
 			{}
 
+			@Override
 			public void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects)
 				throws KNXException
 			{}
 
+			@Override
 			public void loadProperties(final String resource, final Collection<Description> descriptions,
 				final Collection<byte[]> values) throws KNXException
 			{}
 
+			@Override
 			public Collection<InterfaceObject> loadInterfaceObjects(final String resource) throws KNXException
 			{
 				return null;
@@ -164,7 +146,7 @@ public class InterfaceObjectServerTest
 				assertNotNull(interfaceObject.values.get(key));
 			}
 		}
-		assertEquals(0, d.getPDT());
+		assertEquals(4, d.getPDT());
 	}
 
 	/**
@@ -173,7 +155,7 @@ public class InterfaceObjectServerTest
 	 * @throws KNXException
 	 */
 	@Test
-	void SaveInterfaceObjects() throws KNXException
+	void saveInterfaceObjects() throws KNXException
 	{
 		ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
@@ -249,7 +231,7 @@ public class InterfaceObjectServerTest
 	@Test
 	void setPropertyIntIntIntIntByteArray() throws KnxPropertyException
 	{
-		ios.setProperty(objectIndex, propertyId, 1, 1, new byte[] { 0, 0});
+		ios.setProperty(objectIndex, propertyId, 1, 1, new byte[] { 0 });
 	}
 
 	/**
@@ -260,7 +242,7 @@ public class InterfaceObjectServerTest
 	@Test
 	void setPropertyIntIntIntIntIntByteArray() throws KnxPropertyException
 	{
-		ios.setProperty(objectType, objectInstance, propertyId, 1, 1, new byte[] { 0, 0 });
+		ios.setProperty(objectType, objectInstance, propertyId, 1, 1, new byte[] { 0 });
 	}
 
 	/**
@@ -284,7 +266,7 @@ public class InterfaceObjectServerTest
 	/**
 	 * Test method for {@link InterfaceObjectServer#getPropertyTranslated(int, int, int, int)}.
 	 */
-	@Test void GetPropertyTranslated()
+	@Test void getPropertyTranslated()
 	{
 	}
 

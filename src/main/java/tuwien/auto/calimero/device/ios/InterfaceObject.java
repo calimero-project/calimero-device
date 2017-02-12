@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2015 B. Malinowsky
+    Copyright (c) 2010, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -191,19 +191,7 @@ public class InterfaceObject
 		return idx;
 	}
 
-//	/**
-//	 * Returns the list of all KNX properties currently contained in this interface
-//	 * object.
-//	 * <p>
-//	 *
-//	 * @return a list with all KNX properties
-//	 */
-//	public Collection getProperties()
-//	{
-//		return values.values();
-//	}
-
-	/*public*/void load(final IosResourceHandler rh, final String resource) throws KNXException
+	void load(final IosResourceHandler rh, final String resource) throws KNXException
 	{
 		final List<Description> loadDescriptions = new ArrayList<>();
 		final List<byte[]> loadValues = new ArrayList<>();
@@ -220,7 +208,7 @@ public class InterfaceObject
 		}
 	}
 
-	/*public*/void save(final IosResourceHandler rh, final String resource) throws KNXException
+	void save(final IosResourceHandler rh, final String resource) throws KNXException
 	{
 		// list to save with descriptions, containing no null entries
 		final List<Description> saveDesc = new ArrayList<>(descriptions);
@@ -246,8 +234,7 @@ public class InterfaceObject
 		// add values where no description was set, creating a default description
 		for (final Iterator<PropertyKey> i = remaining.keySet().iterator(); i.hasNext();) {
 			final PropertyKey key = i.next();
-			saveDesc.add(new Description(idx, type, key.getPID(), saveVal.size(), 0, true, 0, 0, 0,
-					0));
+			saveDesc.add(new Description(idx, type, key.getPID(), saveVal.size(), 0, true, 0, 0, 0, 0));
 			saveVal.add(remaining.get(key).clone());
 		}
 		// save them
