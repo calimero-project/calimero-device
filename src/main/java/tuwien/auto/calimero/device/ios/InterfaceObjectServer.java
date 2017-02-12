@@ -145,6 +145,17 @@ public class InterfaceObjectServer implements PropertyAccess
 			throw new KNXIllegalArgumentException("cannot create property client", e);
 		}
 
+		try {
+			final String propertyDefinitions = "/properties.xml";
+			final URL resource = getClass().getResource(propertyDefinitions);
+			if (resource != null)
+				loadDefinitions(resource.toString());
+		}
+		catch (KNXException | KNXMLException e) {
+			// using the default resource ID, we cannot expect to always find the resource
+			logger.info("could not load the Interface Object Server KNX property definitions");
+		}
+
 		// AN033 3.2.6: minimum required interface objects for a cEMI server
 		// are a device object and a cEMI server object
 		addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
