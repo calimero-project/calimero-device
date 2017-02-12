@@ -47,6 +47,7 @@ import tuwien.auto.calimero.DetachEvent;
 import tuwien.auto.calimero.FrameEvent;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
+import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.cemi.CEMILData;
@@ -196,7 +197,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		if (tpdu.length - 1 > getMaxApduLength()) {
 			logger.error(
-					sender + "->" + cemi.getDestination() + " " + DataUnitBuilder.decode(tpdu, cemi.getDestination())
+					sender + "->" + dst + " " + DataUnitBuilder.decode(tpdu, dst)
 							+ " exceeds max. allowed APDU length of " + getMaxApduLength() + " - ignore");
 			return;
 		}
@@ -211,8 +212,8 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			dispatchToService(svc, asdu, dst, d);
 		}
 		catch (final RuntimeException rte) {
-			logger.error("executing service " + DataUnitBuilder.decodeAPCI(svc), rte);
-			throw rte;
+			logger.error("executing service {}->{} {}: {}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
+					DataUnitBuilder.toHex(asdu, " "), rte);
 		}
 	}
 
@@ -516,20 +517,30 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		send(d, apdu, sr.getPriority());
 	}
 
-	private ServiceResult onPropertyRead(final Destination d, final byte[] data)
+	private void onPropertyRead(final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 4, 4, "property-read"))
-			return null;
+			return;
 		final int objIndex = data[0] & 0xff;
 		final int pid = data[1] & 0xff;
 		int elements = (data[2] & 0xff) >> 4;
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 
-		// to indicate an (illegal) access problem, or protected memory,
-		// set number of elements 0, with no property values included
-		final ServiceResult sr = mgmtSvc.readProperty(objIndex, pid, start, elements);
-		if (sr == null || sr.getResult() == null)
-			return sr;
+		ServiceResult sr;
+		try {
+			sr = mgmtSvc.readProperty(objIndex, pid, start, elements);
+			// service result might be null to indicate an (illegal) access problem, or protected memory;
+			// in that case, set number of elements 0, with no property values included
+			if (sr == null)
+				sr = new ServiceResult(new byte[0]);
+			if (ignoreOrSchedule(sr))
+				return;
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("{}", e.getMessage());
+			sr = new ServiceResult(new byte[0]);
+		}
+
 		final byte[] res = sr.getResult();
 		final byte[] asdu = new byte[4 + res.length];
 		if (res.length == 0)
@@ -543,27 +554,35 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority());
-		return sr;
 	}
 
-	private ServiceResult onPropertyWrite(final Destination d, final byte[] data)
+	private void onPropertyWrite(final Destination d, final byte[] data)
 	{
 		// the max ASDU upper length would be 254 - (2 bytes APCI)
 		if (!verifyLength(data.length, 5, getMaxApduLength() - 2, "property-write"))
-			return null;
+			return;
 		final int objIndex = data[0] & 0xff;
 		final int pid = data[1] & 0xff;
 		int elements = (data[2] & 0xff) >> 4;
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 		final byte[] propertyData = Arrays.copyOfRange(data, 4, data.length);
 
-		final ServiceResult sr = mgmtSvc.writeProperty(objIndex, pid, start, elements, propertyData);
-		if (sr == null || sr.getResult() == null)
-			return sr;
-		final byte[] res = sr.getResult();
+		ServiceResult sr = null;
+		try {
+			sr = mgmtSvc.writeProperty(objIndex, pid, start, elements, propertyData);
+			// service result might be null to indicate an (illegal) access problem, or protected memory;
+			// in that case, set number of elements 0, with no property values included
+			if (sr == null)
+				sr = new ServiceResult(new byte[0]);
+			if (ignoreOrSchedule(sr))
+				return;
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("{}", e.getMessage());
+			sr = new ServiceResult(new byte[0]);
+		}
 
-		// to indicate an (illegal) access problem, or protected memory,
-		// set number of elements 0, with no property values included
+		final byte[] res = sr.getResult();
 		int written = res.length;
 		if (res.length != propertyData.length) {
 			elements = 0;
@@ -579,18 +598,24 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority());
-		return sr;
 	}
 
-	private ServiceResult onPropDescRead(final Destination d, final byte[] data)
+	private void onPropDescRead(final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 3, 3, "property description read"))
-			return null;
+			return;
 		final int objIndex = data[0] & 0xff;
 		int pid = data[1] & 0xff;
 		final int propIndex = data[2] & 0xff;
 
-		final ServiceResult sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
+		ServiceResult sr = null;
+		try {
+			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("read property description: {}", e.getMessage());
+		}
+
 		// answer with non-existent property description on no result
 		if (sr == null) {
 			final byte[] asdu = new byte[7];
@@ -599,10 +624,10 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			asdu[2] = (byte) propIndex;
 			final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_DESC_RESPONSE, asdu);
 			send(d, apdu, Priority.LOW);
-			return sr;
+			return;
 		}
 		if (ignoreOrSchedule(sr))
-			return sr;
+			return;
 
 		final int typeDontCare = 0;
 		final Description desc = new Description(typeDontCare, sr.getResult());
@@ -618,13 +643,12 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_DESC_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority());
-		return sr;
 	}
 
-	private ServiceResult onMemoryWrite(final Destination d, final byte[] data)
+	private void onMemoryWrite(final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 4, 66, "memory-write"))
-			return null;
+			return;
 
 		// write between 1 and 63 bytes
 		int bytes = data[0];
@@ -634,7 +658,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		// the value of the parameter number is greater than maximum APDU length – 3
 		if (bytes > getMaxApduLength() - 3) {
 			logger.error("memory-write too much data - ignore");
-			return null;
+			return;
 		}
 
 		final byte[] memory = Arrays.copyOfRange(data, 3, data.length);
@@ -642,8 +666,8 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			logger.warn("ill-formed memory write: number field = {} but memory length = {}", bytes, memory);
 		else {
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
-			if (sr == null || sr.getResult() == null)
-				return sr;
+			if (ignoreOrSchedule(sr))
+				return;
 			final byte[] written = sr.getResult();
 			// check for unreachable/illegal/protected memory access
 			if (written.length == 0)
@@ -666,13 +690,12 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 				send(d, apdu, sr.getPriority());
 			}
 		}
-		return null;
 	}
 
-	private ServiceResult onMemoryRead(final Destination d, final byte[] data)
+	private void onMemoryRead(final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 3, 3, "memory-read"))
-			return null;
+			return;
 		final int length = data[0];
 		final int address = data[1] & 0xff << 8 | data[2] & 0xff;
 
@@ -680,11 +703,11 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		// ignored by the application
 		if (length > getMaxApduLength() - 3) {
 			logger.warn("memory-read request length too long - ignored");
-			return null;
+			return;
 		}
 		final ServiceResult sr = mgmtSvc.readMemory(address, length);
-		if (sr == null || sr.getResult() == null)
-			return sr;
+		if (ignoreOrSchedule(sr))
+			return;
 
 		final byte[] res = sr.getResult();
 		// res null or length 0 indicate memory access problems, i.e.,
@@ -703,7 +726,6 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority());
-		return sr;
 	}
 
 	private void onManagement(final int svcType, final byte[] data, final KNXAddress dst, final Destination respondTo)
