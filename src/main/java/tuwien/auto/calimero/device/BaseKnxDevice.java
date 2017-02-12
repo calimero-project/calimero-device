@@ -267,6 +267,20 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	/**
+	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument, the device's communication link (and
+	 * address) has to be subsequently assigned.
+	 *
+	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param logic KNX device service logic
+	 * @throws KnxPropertyException on error initializing the device KNX properties
+	 */
+	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic) throws KnxPropertyException
+	{
+		this(name, DeviceDescriptor.DD0.TYPE_5705, logic, logic);
+		logic.setDevice(this);
+	}
+
+	/**
 	 * Assigns a new KNX individual address to this device.
 	 * <p>
 	 * This method sets the new address, and does <i>not</i> perform any other management or
