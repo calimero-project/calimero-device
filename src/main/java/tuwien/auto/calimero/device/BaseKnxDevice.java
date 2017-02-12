@@ -440,7 +440,7 @@ public class BaseKnxDevice implements KnxDevice
 
 		// a device should set PID_MAX_APDULENGTH (Chapter 3/5/1 Resources)
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)
-		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, true, 0, 10, 0, 0), true);
+		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, true, 0, 1, 0, 0), true);
 		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(maxApduLength));
 	}
 
