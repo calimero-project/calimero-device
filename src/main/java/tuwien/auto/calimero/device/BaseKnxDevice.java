@@ -42,6 +42,8 @@ import java.util.StringTokenizer;
 
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.Settings;
+import tuwien.auto.calimero.exception.KNXFormatException;
+import tuwien.auto.calimero.exception.KNXIllegalArgumentException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogManager;
@@ -323,7 +325,12 @@ public class BaseKnxDevice implements KnxDevice
 	private void initKnxProperties() throws KNXPropertyException
 	{
 		if (ios == null) {
-			ios = new InterfaceObjectServer(false);
+			try {
+				ios = new InterfaceObjectServer(false);
+			}
+			catch (final KNXFormatException e) {
+				throw new KNXIllegalArgumentException("cannot create interface object server", e);
+			}
 		}
 
 		// initialize interface device object properties
