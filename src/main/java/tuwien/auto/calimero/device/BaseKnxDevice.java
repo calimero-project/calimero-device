@@ -413,7 +413,7 @@ public class BaseKnxDevice implements KnxDevice
 	private void initKnxProperties() throws KnxPropertyException
 	{
 		// initialize interface device object properties
-		setDeviceProperty(PID.MAX_APDULENGTH, new byte[] { 0, (byte) maxApduLength });
+
 		final byte[] defDesc = new String("KNX Device").getBytes(Charset.forName("ISO-8859-1"));
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, defDesc.length, defDesc);
 
