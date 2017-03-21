@@ -467,6 +467,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			return;
 
 		final byte[] asdu = sr.getResult();
+		logger.info("authorize {} for access level {}", respondTo.getAddress(), asdu[0]);
 		final byte[] apdu = DataUnitBuilder.createAPDU(AUTHORIZE_RESPONSE, asdu);
 		send(respondTo, apdu, sr.getPriority());
 	}
@@ -657,7 +658,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		// the remote application layer shall ignore a memory-write.ind if
 		// the value of the parameter number is greater than maximum APDU length – 3
 		if (bytes > getMaxApduLength() - 3) {
-			logger.error("memory-write too much data - ignore");
+			logger.error("memory-write of length {} > max. {} bytes - ignore", bytes, getMaxApduLength() - 3);
 			return;
 		}
 
@@ -702,7 +703,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		// requests with a length exceeding the maximum APDU size shall be
 		// ignored by the application
 		if (length > getMaxApduLength() - 3) {
-			logger.warn("memory-read request length too long - ignored");
+			logger.warn("memory-read request of length {} > max. {} bytes - ignored", length, getMaxApduLength() - 3);
 			return;
 		}
 		final ServiceResult sr = mgmtSvc.readMemory(address, length);
