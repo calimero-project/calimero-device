@@ -35,7 +35,7 @@
 */
 
 import org.junit.platform.runner.JUnitPlatform;
-import org.junit.platform.runner.SelectPackages;
+import org.junit.platform.suite.api.SelectPackages;
 import org.junit.runner.RunWith;
 
 // Required to use JUnit 5 in Eclipse with its JUnit 4 runner
