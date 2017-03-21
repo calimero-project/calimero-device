@@ -559,8 +559,8 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 	private void onPropertyWrite(final Destination d, final byte[] data)
 	{
-		// the max ASDU upper length would be 254 - (2 bytes APCI)
-		if (!verifyLength(data.length, 5, getMaxApduLength() - 2, "property-write"))
+		// the max ASDU upper length would be 253 (254 - 1 byte APCI)
+		if (!verifyLength(data.length, 5, getMaxApduLength() - 1, "property-write"))
 			return;
 		final int objIndex = data[0] & 0xff;
 		final int pid = data[1] & 0xff;
