@@ -38,7 +38,6 @@ package tuwien.auto.calimero.device;
 
 import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 
-import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EventObject;
@@ -57,7 +56,6 @@ import org.slf4j.Logger;
 
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
-import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
@@ -67,7 +65,6 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
-import tuwien.auto.calimero.xml.KNXMLException;
 
 /**
  * Implementation of a KNX device for common device tasks. This type can either be used directly, with the device logic
@@ -153,17 +150,6 @@ public class BaseKnxDevice implements KnxDevice
 
 		this.process = process;
 		this.mgmt = mgmt;
-
-		// check property definitions for encoding support before we init basic properties
-		try {
-			final URL resource = this.getClass().getResource(propDefinitionsResource);
-			if (resource != null)
-				ios.loadDefinitions(resource.toString());
-		}
-		catch (KNXException | KNXMLException e) {
-			// using the default resource ID, we cannot expect to always find the resource
-			logger.info("could not load the Interface Object Server KNX property definitions");
-		}
 
 		addDeviceInfo();
 		initKnxProperties();
