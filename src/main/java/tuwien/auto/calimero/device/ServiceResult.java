@@ -52,6 +52,8 @@ import tuwien.auto.calimero.Priority;
  */
 public class ServiceResult implements Runnable
 {
+	static final ServiceResult Empty = new ServiceResult(new byte[0]);
+
 	private final byte[] data;
 	final boolean compact;
 
@@ -71,7 +73,7 @@ public class ServiceResult implements Runnable
 	 *        <code>result.length</code> equal to the length as expected by the
 	 *        application layer service
 	 */
-	public ServiceResult(final byte[] result)
+	public ServiceResult(final byte... result)
 	{
 		this(result, false);
 	}
