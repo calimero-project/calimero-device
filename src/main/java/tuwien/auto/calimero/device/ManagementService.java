@@ -222,22 +222,24 @@ public interface ManagementService
 	 * <p>
 	 * This request requires a remote communication partner granted equal or higher access rights than the access rights
 	 * of the <code>accessLevel</code> to be modified (i.e. current level &lt;= level to change).
-	 *
+	 * @param remote remote endpoint
 	 * @param accessLevel access level to modify
 	 * @param key new key for the specified access level, or 0xFFFFFFFF to remove key
+	 *
 	 * @return service result with the specified access level
-	 * @see #authorize(byte[])
+	 * @see #authorize(Destination, byte[])
 	 */
-	ServiceResult keyWrite(int accessLevel, byte[] key);
+	ServiceResult writeAuthKey(Destination remote, int accessLevel, byte[] key);
 
 	/**
 	 * Authorizes a communication partner providing its authorization key to obtain a certain access level.
 	 *
+	 * @param remote remote endpoint
 	 * @param key authorization key
 	 * @return service result with granted access level, level is between 0 (maximum access rights) and 3 (i.e., minimum
 	 *         access rights) or 0 (maximum access rights) and 15 (minimum access rights)
 	 */
-	ServiceResult authorize(byte[] key);
+	ServiceResult authorize(Destination remote, byte[] key);
 
 	/**
 	 * Restarts this device.

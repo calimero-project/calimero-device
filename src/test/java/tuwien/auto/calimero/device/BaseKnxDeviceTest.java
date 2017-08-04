@@ -271,7 +271,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult keyWrite(final int accessLevel, final byte[] key)
+		public ServiceResult writeAuthKey(Destination remote, final int accessLevel, final byte[] key)
 		{
 			return null;
 		}
@@ -283,7 +283,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult authorize(final byte[] key)
+		public ServiceResult authorize(final Destination remote, final byte[] key)
 		{
 			return null;
 		}

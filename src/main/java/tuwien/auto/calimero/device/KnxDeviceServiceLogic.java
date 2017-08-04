@@ -38,7 +38,9 @@ package tuwien.auto.calimero.device;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
+import java.util.WeakHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +88,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	// TODO implement access level per endpoint/connection
 	private final int accessLevel = 0;
+	// authentication
+	private static byte[] defaultAuthKey = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
+	final byte[][] authKeys = new byte[16][4];
+	final WeakHashMap<Destination, Integer> accessLevels = new WeakHashMap<>();
+	int minAccessLevel = 3; // or 15
 
 	public void setDevice(final KnxDevice device)
 	{
@@ -104,6 +111,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				domainAddress = ((RFSettings) settings).getDomainAddress();
 			}
 		}
+
+		for (int i = 0; i < 16; i++)
+			authKeys[i] = defaultAuthKey;
 	}
 
 	/**
@@ -421,34 +431,32 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult keyWrite(final int accessLevel, final byte[] key)
+	public ServiceResult writeAuthKey(final Destination remote, final int accessLevel, final byte[] key)
 	{
-		return new ServiceResult(new byte[] { (byte) accessLevel });
+		if (accessLevel >= minAccessLevel)
+			return new ServiceResult((byte) minAccessLevel);
+		if (accessLevel(remote) > accessLevel)
+			return new ServiceResult((byte) 0xff);
+		authKeys[accessLevel] = key;
+		return new ServiceResult((byte) accessLevel);
 	}
 
 	@Override
-	public ServiceResult authorize(final byte[] key)
+	public ServiceResult authorize(final Destination remote, final byte[] key)
 	{
 		// possible access levels [max .. min]: [0 .. 3] or [0 .. 15]
-		// clients with invalid auth always get minimum level 3/15
-		final int levelInvalidAuth = 15;
+		// give minimum level of access to unauthorized clients, or clients with invalid auth
+		int currentLevel = minAccessLevel;
+		if (!Arrays.equals(key, defaultAuthKey)) {
+			for (int i = 0; i < authKeys.length; i++)
+				if (Arrays.equals(key, authKeys[i])) {
+					currentLevel = i;
+					break;
+				}
+		}
 
-		// choose the maximum access level an unauthorized client gets
-		final int maxLevelNoAuth = 14;
-		// the default auth key used for levels providing unauthorized access
-		final byte[] defaultKey = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
-
-		// XXX replaced with dummy value for porting to device package, make configurable
-		final byte[] validKey = new byte[] { 0x10, 0x20, 0x30, 0x40 };
-		final int levelValid = 2;
-
-		int currentLevel = levelInvalidAuth;
-		if (Arrays.equals(key, validKey))
-			currentLevel = levelValid;
-		else if (Arrays.equals(key, defaultKey))
-			currentLevel = maxLevelNoAuth;
-
-		return new ServiceResult(new byte[] { (byte) currentLevel });
+		setAccessLevel(remote, currentLevel);
+		return new ServiceResult((byte) currentLevel);
 	}
 
 	@Override
@@ -472,5 +480,21 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public boolean isVerifyModeEnabled()
 	{
 		return false;
+	}
+
+	void destinationDisconnected(final Destination remote) {
+		final Integer level = accessLevels.remove(remote);
+		if (level != null)
+			logger.info("endpoint {} disconnected, reset access level {} to {}", remote.getAddress(), level,
+					minAccessLevel);
+	}
+
+	protected int accessLevel(final Destination remote) {
+		return accessLevels.getOrDefault(remote, minAccessLevel);
+	}
+
+	private void setAccessLevel(final Destination remote, final int accessLevel) {
+		accessLevels.put(remote, accessLevel);
+		logger.info("authorize {} for access level {}", remote.getAddress(), accessLevel);
 	}
 }

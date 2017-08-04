@@ -162,6 +162,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	public void disconnected(final Destination d)
 	{
 		d.destroy();
+		((KnxDeviceServiceLogic) mgmtSvc).destinationDisconnected(d);
 	}
 
 	@Override
@@ -304,14 +305,12 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	{
 		if (!verifyLength(data.length, 5, 5, "key write (access level)"))
 			return;
+		if (!respondTo.isConnectionOriented())
+			return;
 		final int level = data[0] & 0xff;
-
 		final byte[] key = Arrays.copyOfRange(data, 1, 5);
-		// if key equals 0xFFFFFFFF, the key of the level shall be reset
-		// current access level has to be equal or less to level requested in this write
-		// if not, keyWrite shall return 0xff
 		// result is one byte containing the set level
-		final ServiceResult sr = mgmtSvc.keyWrite(level, key);
+		final ServiceResult sr = mgmtSvc.writeAuthKey(respondTo, level, key);
 		if (ignoreOrSchedule(sr))
 			return;
 
@@ -455,20 +454,20 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	{
 		if (!verifyLength(data.length, 5, 5, "authorize request"))
 			return;
-		final int reserved = data[0] & 0xff;
+		if (respondTo.getState() != Destination.State.OpenIdle)
+			return;
 
+		final int reserved = data[0] & 0xff;
 		if (reserved != 0) {
 			logger.warn("first byte in authorize request not zero");
 			return;
 		}
 		final byte[] key = Arrays.copyOfRange(data, 1, 5);
-		final ServiceResult sr = mgmtSvc.authorize(key);
+		final ServiceResult sr = mgmtSvc.authorize(respondTo, key);
 		if (ignoreOrSchedule(sr))
 			return;
 
-		final byte[] asdu = sr.getResult();
-		logger.info("authorize {} for access level {}", respondTo.getAddress(), asdu[0]);
-		final byte[] apdu = DataUnitBuilder.createAPDU(AUTHORIZE_RESPONSE, asdu);
+		final byte[] apdu = DataUnitBuilder.createAPDU(AUTHORIZE_RESPONSE, sr.getResult());
 		send(respondTo, apdu, sr.getPriority());
 	}
 

@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -52,10 +53,14 @@ import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.link.AbstractLink;
+import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.medium.TPSettings;
 import tuwien.auto.calimero.mgmt.Description;
+import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.mgmt.TransportLayer;
+import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 
 /**
  * @author B. Malinowsky
@@ -65,8 +70,13 @@ public class ManagementServiceTest
 	private static final int objectIndex = 0;
 	private static final int propertyId = PID.OBJECT_TYPE;
 
-	private ManagementService mgmt;
-	private KnxDevice device;
+	private KnxDeviceServiceLogic mgmt;
+	private BaseKnxDevice device;
+	private TransportLayer tl;
+	private Destination dst;
+
+	private static final byte[] authKey = new byte[] { 0x10, 0x20, 0x30, 0x40 };
+	private static final byte[] defaultAuthKey = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
 
 	@BeforeEach
 	void init() throws Exception
@@ -95,7 +105,18 @@ public class ManagementServiceTest
 		};
 
 		device = new BaseKnxDevice("test", new IndividualAddress(0, 0x02, 0xff), link, null, mgmt);
-		((KnxDeviceServiceLogic) mgmt).setDevice(device);
+		mgmt.setDevice(device);
+		mgmt.authKeys[3] = authKey;
+		mgmt.minAccessLevel = 15;
+
+		tl = new TransportLayerImpl(link);
+		dst = tl.createDestination(new IndividualAddress(1), true);
+		tl.connect(dst);
+	}
+
+	@AfterEach
+	void cleanup() throws KNXLinkClosedException {
+		device.setDeviceLink(null);
 	}
 
 	@Test
@@ -186,5 +207,57 @@ public class ManagementServiceTest
 		assertEquals(2, r.getResult().length);
 		r = mgmt.readDescriptor(2);
 		assertNull(r);
+	}
+
+	@Test
+	void authorizeInvalidKey()
+	{
+		assertAuthResult(mgmt.authorize(dst, new byte[] { 3, 3, 3, 3 }), 0xf);
+	}
+
+	@Test
+	void authorizeFreeAccess()
+	{
+		assertAuthResult(mgmt.authorize(dst, defaultAuthKey), 0xf);
+	}
+
+	@Test
+	void modifyAuthKey()
+	{
+		assertAuthResult(mgmt.authorize(dst, authKey), 3);
+		assertAuthResult(mgmt.writeAuthKey(dst, 4, new byte[] { 4, 4, 4, 4 }), 4);
+		assertAuthResult(mgmt.authorize(dst, new byte[] { 4, 4, 4, 4 }), 4);
+	}
+
+	@Test
+	void modifyAuthKeyForCurrentAccessLevel()
+	{
+		assertAuthResult(mgmt.authorize(dst, authKey), 3);
+		assertAuthResult(mgmt.writeAuthKey(dst, 3, new byte[] { 4, 4, 4, 4 }), 3);
+		assertAuthResult(mgmt.authorize(dst, new byte[] { 4, 4, 4, 4 }), 3);
+	}
+
+	@Test
+	void resetAuthKey()
+	{
+		mgmt.authorize(dst, authKey);
+		assertAuthResult(mgmt.writeAuthKey(dst, 4, new byte[] { 4, 4, 4, 4 }), 4);
+		assertAuthResult(mgmt.writeAuthKey(dst, 4, defaultAuthKey), 4);
+		assertAuthResult(mgmt.authorize(dst, new byte[] { 4, 4, 4, 4 }), 0xf);
+	}
+
+	@Test
+	void writeAuthKeyWithoutAuthorization()
+	{
+		assertAuthResult(mgmt.writeAuthKey(dst, 5, new byte[] { 5, 5, 5, 5 }), 0xff);
+		assertAuthResult(mgmt.authorize(dst, new byte[] { 5, 5, 5, 5 }), 0xf);
+	}
+
+	private void assertAuthResult(final ServiceResult r, final int level)
+	{
+		assertNotNull(r);
+		assertNotNull(r.getResult());
+		assertEquals(1, r.getResult().length);
+		assertEquals(level, r.getResult()[0] & 0xff);
 	}
 }
