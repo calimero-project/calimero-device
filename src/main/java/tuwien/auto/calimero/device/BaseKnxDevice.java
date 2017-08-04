@@ -40,6 +40,7 @@ import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EventObject;
 import java.util.List;
 import java.util.Optional;
@@ -541,9 +542,21 @@ public class BaseKnxDevice implements KnxDevice
 		}
 	}
 
-	private void setMemory(final int i, final int j)
+	private static final int deviceMemorySize = 10_000;
+	// XXX memory operations are not thread-safe
+	private final byte[] memory = new byte[deviceMemorySize];
+
+	byte[] deviceMemory() {
+		return memory;
+	}
+
+	byte[] deviceMemory(final int startAddress, final int bytes) {
+		return Arrays.copyOfRange(deviceMemory(), startAddress, startAddress + bytes);
+	}
+
+	private void setMemory(final int startAddress, final int value)
 	{
-		// TODO Auto-generated method stub
+		memory[startAddress] = (byte) value;
 	}
 
 	private static byte[] fromWord(final int word)

@@ -79,10 +79,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	protected KnxDevice device;
 	private Logger logger;
 
-	// XXX memory operations are not thread-safe
-	private static final int MEMORY_SIZE = 5000;
-	private byte[] memory;
-
 	private final DatapointModel<Datapoint> datapoints = new DatapointMap<>();
 
 	// domain can be 2 or 6 bytes, set in setDevice()
@@ -147,11 +143,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 *
 	 * @return the device memory
 	 */
-	public byte[] getDeviceMemory()
+	protected byte[] getDeviceMemory()
 	{
-		if (memory == null)
-			memory = new byte[MEMORY_SIZE];
-		return memory;
+		return ((BaseKnxDevice) device).deviceMemory();
 	}
 
 	/**
