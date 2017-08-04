@@ -161,8 +161,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	/**
-	 * @return whether the device is in programming mode (<code>true</code>) or not (
-	 *         <code>false</code>)
+	 * @return whether the device is in programming mode (<code>true</code>) or not (<code>false</code>)
 	 */
 	public final boolean inProgrammingMode()
 	{
@@ -182,7 +181,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				if (t != null)
 					return new ServiceResult(t.getData(), t.getTypeSize() == 0);
 			}
-			catch (final KNXException | RuntimeException ex) {
+			catch (KNXException | RuntimeException ex) {
 				ex.printStackTrace();
 			}
 		}
@@ -201,7 +200,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			t.setData(e.getASDU());
 			updateDatapointValue(dp, t);
 		}
-		catch (final KNXException | RuntimeException ex) {
+		catch (KNXException | RuntimeException ex) {
 			logger.warn("on group write {}->{}: {}", e.getSourceAddr(), e.getDestination(),
 					DataUnitBuilder.toHex(e.getASDU(), " "), ex);
 		}
@@ -249,7 +248,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return null;
 			}
 		}
-		catch (final KnxPropertyException ignore) {logger.error("get description", ignore);}
+		catch (final KnxPropertyException ignore) { logger.error("get description", ignore); }
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases
 		if (propertyId == PID.PROGMODE)
@@ -290,7 +289,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readAddress()
 	{
 		if (inProgrammingMode())
-			return new ServiceResult(new byte[0]);
+			return ServiceResult.Empty;
 		return null;
 	}
 
@@ -299,7 +298,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
 		if (Arrays.equals(myserial, serialNo)) {
-			return new ServiceResult(new byte[0]);
+			return ServiceResult.Empty;
 		}
 		return null;
 	}
@@ -350,6 +349,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				final int wait = (raw - start) * device.getDeviceLink().getKNXMedium().timeFactor();
 				logger.trace("read domain address: wait " + wait + " ms before sending response");
 				try {
+					// NYI iff range < 0xff and we receive a response from another device while waiting, we should
+					// cancel our own response
 					Thread.sleep(wait);
 					return new ServiceResult(domainAddress);
 				}

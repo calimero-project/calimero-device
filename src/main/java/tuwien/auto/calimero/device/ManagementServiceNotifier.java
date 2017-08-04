@@ -533,13 +533,13 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			// service result might be null to indicate an (illegal) access problem, or protected memory;
 			// in that case, set number of elements 0, with no property values included
 			if (sr == null)
-				sr = new ServiceResult(new byte[0]);
+				sr = ServiceResult.Empty;
 			if (ignoreOrSchedule(sr))
 				return;
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
 			logger.warn("{}", e.getMessage());
-			sr = new ServiceResult(new byte[0]);
+			sr = ServiceResult.Empty;
 		}
 
 		final byte[] res = sr.getResult();
@@ -574,13 +574,13 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			// service result might be null to indicate an (illegal) access problem, or protected memory;
 			// in that case, set number of elements 0, with no property values included
 			if (sr == null)
-				sr = new ServiceResult(new byte[0]);
+				sr = ServiceResult.Empty;
 			if (ignoreOrSchedule(sr))
 				return;
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
 			logger.warn("{}", e.getMessage());
-			sr = new ServiceResult(new byte[0]);
+			sr = ServiceResult.Empty;
 		}
 
 		final byte[] res = sr.getResult();
@@ -666,6 +666,8 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		if (memory.length != bytes)
 			logger.warn("ill-formed memory write: number field = {} but memory length = {}", bytes, memory);
 		else {
+			logger.trace("write memory: start address 0x{}, {} bytes: {}", Integer.toHexString(address), bytes,
+					DataUnitBuilder.toHex(memory, " "));
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 			if (ignoreOrSchedule(sr))
 				return;
@@ -698,7 +700,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		if (!verifyLength(data.length, 3, 3, "memory-read"))
 			return;
 		final int length = data[0];
-		final int address = data[1] & 0xff << 8 | data[2] & 0xff;
+		final int address = (data[1] & 0xff) << 8 | data[2] & 0xff;
 
 		// requests with a length exceeding the maximum APDU size shall be
 		// ignored by the application
@@ -706,6 +708,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			logger.warn("memory-read request of length {} > max. {} bytes - ignored", length, getMaxApduLength() - 3);
 			return;
 		}
+		logger.trace("read memory: start address 0x{}, {} bytes", Integer.toHexString(address), length);
 		final ServiceResult sr = mgmtSvc.readMemory(address, length);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -745,7 +748,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		return length >= minExpected && length <= maxExpected;
 	}
 
-	private boolean ignoreOrSchedule(final ServiceResult svc)
+	private static boolean ignoreOrSchedule(final ServiceResult svc)
 	{
 		if (svc == null)
 			return true;
@@ -815,4 +818,4 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			return (data[0] & 0xff) << 8 | data[1] & 0xff;
 		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3] & 0xff;
 	}
-};
+}

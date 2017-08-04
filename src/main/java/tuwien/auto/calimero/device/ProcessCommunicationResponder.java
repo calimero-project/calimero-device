@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2016 B. Malinowsky
+    Copyright (c) 2011, 2017 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -87,7 +87,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 	/**
 	 * Creates a new process communicator attached to the supplied KNX network link.
 	 * <p>
-	 * The log service used by this process communicator is named "process " +
+	 * The log service used by this process communicator is named "calimero.device.process " +
 	 * <code>link.getName()</code>.
 	 *
 	 * @param link network link used for communication with a KNX network

@@ -85,7 +85,6 @@ public class BaseKnxDevice implements KnxDevice
 	// can be between 15 and 254 bytes (255 is Escape code for extended L_Data frames)
 	private static final int maxApduLength = 15;
 
-	private static final String propDefinitionsResource = "/properties.xml";
 	// The object instance determines which instance of an object type is
 	// queried for properties. Always defaults to 1.
 	private static final int objectInstance = 1;
@@ -125,7 +124,7 @@ public class BaseKnxDevice implements KnxDevice
 
 	private boolean taskSubmitted;
 	// local queue if a task is currently submitted to our executor service
-	private final List<Runnable> tasks = new ArrayList<>(5);
+	private final List<Runnable> tasks = new ArrayList<>();
 
 	private final String name;
 	private final DeviceDescriptor dd;
