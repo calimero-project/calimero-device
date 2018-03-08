@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2017 B. Malinowsky
+    Copyright (c) 2011, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -44,7 +44,6 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXFormatException;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
-import tuwien.auto.calimero.KNXIllegalStateException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.datapoint.Datapoint;
@@ -203,7 +202,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		throws KNXTimeoutException, KNXLinkClosedException
 	{
 		if (detached)
-			throw new KNXIllegalStateException("process communicator detached");
+			throw new IllegalStateException("process communicator detached");
 
 		final byte[] buf = lengthOptimizedApdu
 				? DataUnitBuilder.createLengthOptimizedAPDU(GROUP_RESPONSE, asdu)
@@ -244,7 +243,7 @@ public class ProcessCommunicationResponder implements ProcessCommunicationBase
 		throws KNXTimeoutException, KNXLinkClosedException
 	{
 		if (detached)
-			throw new KNXIllegalStateException("process communicator detached");
+			throw new IllegalStateException("process communicator detached");
 		lnk.sendRequest(dst, p, createGroupAPDU(GROUP_RESPONSE, t));
 	}
 

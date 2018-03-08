@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2017 B. Malinowsky
+    Copyright (c) 2010, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -52,7 +52,6 @@ import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXFormatException;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
-import tuwien.auto.calimero.KNXIllegalStateException;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
@@ -540,8 +539,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			throw pe;
 		}
 		catch (final InterruptedException e) {
-			e.printStackTrace();
-			throw new KNXIllegalStateException("IOS adapter does not throw InterruptedException");
+			throw new IllegalStateException("IOS adapter does not throw InterruptedException", e);
 		}
 	}
 
@@ -559,8 +557,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			throw pe;
 		}
 		catch (final InterruptedException e) {
-			e.printStackTrace();
-			throw new KNXIllegalStateException("IOS adapter does not throw InterruptedException");
+			throw new IllegalStateException("IOS adapter does not throw InterruptedException", e);
 		}
 	}
 
@@ -568,7 +565,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	{
 		final InterfaceObject io = objects.get(0);
 		if (io == null || io.getType() != InterfaceObject.DEVICE_OBJECT)
-			throw new KNXIllegalStateException("IOS is missing mandatory device object");
+			throw new IllegalStateException("IOS is missing mandatory device object");
 		// the IO_LIST property values have to be in ascending order
 		// first, read the object types out
 		final int items = objects.size();
