@@ -1,10 +1,13 @@
 Calimero KNX Device [![Build Status](https://travis-ci.org/calimero-project/calimero-device.svg?branch=master)](https://travis-ci.org/calimero-project/calimero-device)
 ===================
 
-The Calimero KNX network stack to run a KNX device on Java SE, specifically Java SE Embedded 8. The minimum required runtime environment is 
-the profile [compact1](http://www.oracle.com/technetwork/java/embedded/resources/tech/compact-profiles-overview-2157132.html) (i.e., only a subset of the full SE API).
+The Calimero KNX network stack to run a KNX device on Java SE. This library allows you to implement your own KNX device on any platform that supports a JRE. The minimum required runtime environment is Java SE Embedded 8 with the profile [compact1](http://www.oracle.com/technetwork/java/embedded/resources/tech/compact-profiles-overview-2157132.html) (i.e., only a subset of the full SE API). 
 
-This library allows you to implement your own KNX device on any platform that supports a JRE.
+A code example for using this library is shown in [introduction](https://github.com/calimero-project/introduction):
+
+* [KNX 2-state push-button device](https://github.com/calimero-project/introduction/blob/master/src/main/java/PushButtonDevice.java) 
+* [Quick how-to for interacting](https://github.com/calimero-project/introduction) with the KNX device
+
 
 Supported Features
 ----
@@ -25,11 +28,6 @@ $ git clone https://github.com/calimero-project/calimero-device.git
 $ hub clone calimero-project/calimero-device
 ~~~
 
-
-Example
--------
-
-Example code of a [KNX 2-state push-button device](https://github.com/calimero-project/introduction/blob/master/src/main/java/PushButtonDevice.java) with a [quick how-to for interacting](https://github.com/calimero-project/introduction) with that KNX device.
 
 Library Dependencies
 ----
