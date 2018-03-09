@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2015, 2016 B. Malinowsky
+    Copyright (c) 2015, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -143,11 +143,16 @@ public final class LinkProcedure implements Runnable
 
 	// LinkResponse Status Flags
 	// Bits 0-1, 2 bit status - one of:
+	/** Status flag for the link response service: the requested link was added. */
 	public static final int LinkAdded = 0;
+	/** Status flag for the link response service: use existing address. */
 	public static final int UseExistingAddress = 1;
+	/** Status flag for the link response service: the requested link was deleted. */
 	public static final int LinkDeleted = 2;
+	/** Status flag for the link response service: the requested link was not added. */
 	public static final int LinkNotAdded = 3;
-	// Bit 2, error indication (setting error bit will stop link procedure)
+	// Bit 2, error indication
+	/** Link response status flag: error indication, setting the error bit will stop link procedure. */
 	public static final int Error = 4;
 
 	// StopLink
@@ -220,7 +225,7 @@ public final class LinkProcedure implements Runnable
 	 */
 	public static boolean isEnterConfigMode(final byte[] asdu)
 	{
-		final int iot = (asdu[0] & 0xff << 8) | asdu[1] & 0xff;
+		final int iot = (asdu[0] & 0xff << 8) | (asdu[1] & 0xff);
 		final int pid = asdu[2] & 0xff;
 		if (iot == deviceObjectType && pid == pidConfigLink) {
 			final int command = (asdu[3] & 0xff) >> 4;
@@ -390,7 +395,7 @@ public final class LinkProcedure implements Runnable
 				return;
 			}
 			final byte[] asdu = DataUnitBuilder.extractASDU(apdu);
-			final int iot = (asdu[0] & 0xff << 8) | asdu[1] & 0xff;
+			final int iot = (asdu[0] & 0xff << 8) | (asdu[1] & 0xff);
 			final int pid = asdu[2] & 0xff;
 //			logger.trace("network parameter write IOT {} PID {}", iot, pid);
 			if (iot == deviceObjectType && pid == pidConfigLink) {
@@ -412,7 +417,7 @@ public final class LinkProcedure implements Runnable
 		final int flags = asdu[3] & 0x0f;
 		switch (action) {
 		case StartLink:
-			final int code = (asdu[4] & 0xff) << 8 | asdu[5] & 0xff;
+			final int code = (asdu[4] & 0xff) << 8 | (asdu[5] & 0xff);
 			final int objects = asdu[6] & 0xff;
 			final boolean unidirectional = (flags & 0x08) == 0x08;
 			final boolean params = (flags & 0x04) == 0x04;
@@ -423,13 +428,13 @@ public final class LinkProcedure implements Runnable
 			break;
 		case ChannelFunctionActuator:
 		case ChannelFunctionSensor:
-			final int channel = (asdu[4] & 0xff) << 8 | asdu[5] & 0xff;
+			final int channel = (asdu[4] & 0xff) << 8 | (asdu[5] & 0xff);
 			logger.debug("received {}: E-mode channel code {}", action, channel);
 			break;
 		case SetDeleteLink:
 		case LinkResponse:
 			final int cc = asdu[4] & 0xff;
-			final GroupAddress ga = new GroupAddress((asdu[5] & 0xff) << 8 | asdu[6] & 0xff);
+			final GroupAddress ga = new GroupAddress((asdu[5] & 0xff) << 8 | (asdu[6] & 0xff));
 			groupObjects.put(cc, ga);
 			logger.info("received {}: flags {}, connection code {} ==> {}", action, flags, cc, ga);
 

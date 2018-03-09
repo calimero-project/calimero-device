@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2017 B. Malinowsky
+    Copyright (c) 2012, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -112,7 +112,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	private static final int RESTART = 0x0380;
 
 	private static final int defaultMaxApduLength = 15;
-	private boolean missingApduLength = false;
+	private boolean missingApduLength;
 
 	private final BaseKnxDevice device;
 	private final TransportLayer tl;
@@ -652,7 +652,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		// write between 1 and 63 bytes
 		int bytes = data[0];
-		final int address = ((data[1] & 0xff) << 8) | data[2] & 0xff;
+		final int address = ((data[1] & 0xff) << 8) | (data[2] & 0xff);
 
 		// the remote application layer shall ignore a memory-write.ind if
 		// the value of the parameter number is greater than maximum APDU length – 3
@@ -699,7 +699,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		if (!verifyLength(data.length, 3, 3, "memory-read"))
 			return;
 		final int length = data[0];
-		final int address = (data[1] & 0xff) << 8 | data[2] & 0xff;
+		final int address = (data[1] & 0xff) << 8 | (data[2] & 0xff);
 
 		// requests with a length exceeding the maximum APDU size shall be
 		// ignored by the application
@@ -765,11 +765,8 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		try {
 			tl.broadcast(system, p, apdu);
 		}
-		catch (final KNXLinkClosedException e) {
-			e.printStackTrace();
-		}
-		catch (final KNXTimeoutException e) {
-			e.printStackTrace();
+		catch (KNXLinkClosedException | KNXTimeoutException e) {
+			logger.error("{}->[{}-broadcast]: {}", device.getAddress(), type, DataUnitBuilder.toHex(apdu, " "), e);
 		}
 	}
 
@@ -814,7 +811,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	private static int toUnsigned(final byte[] data)
 	{
 		if (data.length == 2)
-			return (data[0] & 0xff) << 8 | data[1] & 0xff;
-		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3] & 0xff;
+			return (data[0] & 0xff) << 8 | (data[1] & 0xff);
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | (data[3] & 0xff);
 	}
 }

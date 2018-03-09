@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2017 B. Malinowsky
+    Copyright (c) 2012, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,7 +38,6 @@ package tuwien.auto.calimero.device;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Random;
 import java.util.WeakHashMap;
 
@@ -78,6 +77,7 @@ import tuwien.auto.calimero.process.ProcessEvent;
  */
 public abstract class KnxDeviceServiceLogic implements ProcessCommunicationService, ManagementService
 {
+	/** The KNX device associated with this service logic. */
 	protected KnxDevice device;
 	private Logger logger;
 
@@ -124,7 +124,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return datapoints;
 	}
 
-	public abstract void updateDatapointValue(final Datapoint ofDp, final DPTXlator update);
+	public abstract void updateDatapointValue(Datapoint ofDp, DPTXlator update);
 
 	/**
 	 * Implement this method to provide a requested datapoint value. A subtype might implement this method as follows:
@@ -145,7 +145,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 * @return the created DPT translator for the requested datapoint
 	 * @throws KNXException if the datapoint value cannot be provided
 	 */
-	public abstract DPTXlator requestDatapointValue(final Datapoint ofDp) throws KNXException;
+	public abstract DPTXlator requestDatapointValue(Datapoint ofDp) throws KNXException;
 
 	/**
 	 * Returns the device memory this KNX device should use for any memory-related operations, e.g.,
@@ -192,7 +192,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					return new ServiceResult(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (KNXException | RuntimeException ex) {
-				ex.printStackTrace();
+				logger.warn("on group read request {}->{}: {}", e.getSourceAddr(), dst,
+						DataUnitBuilder.toHex(e.getASDU(), " "), ex);
 			}
 		}
 		return null;
@@ -211,8 +212,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
-			logger.warn("on group write {}->{}: {}", e.getSourceAddr(), e.getDestination(),
-					DataUnitBuilder.toHex(e.getASDU(), " "), ex);
+			logger.warn("on group write {}->{}: {}", e.getSourceAddr(), dst, DataUnitBuilder.toHex(e.getASDU(), " "),
+					ex);
 		}
 	}
 

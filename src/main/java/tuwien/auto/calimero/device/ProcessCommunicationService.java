@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2012 B. Malinowsky
+    Copyright (c) 2011, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ public interface ProcessCommunicationService
 	 * @return a service result containing information to proceed with a group-read
 	 *         response
 	 */
-	ServiceResult groupReadRequest(final ProcessEvent e);
+	ServiceResult groupReadRequest(ProcessEvent e);
 
 	/**
 	 * Indicates a received process communication group-write service.
@@ -67,8 +67,8 @@ public interface ProcessCommunicationService
 	 *
 	 * @param e the process communication event holding the group-write information
 	 */
-	void groupWrite(final ProcessEvent e);
+	void groupWrite(ProcessEvent e);
 
 	// ??? required?  i didn't have it in the first place
-	void groupResponse(final ProcessEvent e);
+	void groupResponse(ProcessEvent e);
 }

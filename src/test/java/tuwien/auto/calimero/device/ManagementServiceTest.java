@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2017 B. Malinowsky
+    Copyright (c) 2011, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ public class ManagementServiceTest
 	@BeforeEach
 	void init() throws Exception
 	{
-		final KNXNetworkLink link = new AbstractLink("test link", TPSettings.TP1) {
+		final KNXNetworkLink link = new AbstractLink<AutoCloseable>("test link", TPSettings.TP1) {
 			@Override
 			protected void onSend(final CEMILData msg, final boolean waitForCon) {}
 

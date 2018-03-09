@@ -655,8 +655,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		if (data.length == 1)
 			return data[0] & 0xff;
 		if (data.length == 2)
-			return (data[0] & 0xff) << 8 | data[1] & 0xff;
-		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | data[3] & 0xff;
+			return (data[0] & 0xff) << 8 | (data[1] & 0xff);
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | (data[3] & 0xff);
 	}
 
 	// Adapter only throws KnxPropertyException on get/set property/desc
@@ -858,7 +858,7 @@ public class InterfaceObjectServer implements PropertyAccess
 						"property ID " + pid + " in " + io.getTypeName() + " (index " + io.getIndex() + ") not found",
 						ErrorCodes.VOID_DP);
 
-			final int currElems = (values[0] & 0xff) << 8 | values[1] & 0xff;
+			final int currElems = (values[0] & 0xff) << 8 | (values[1] & 0xff);
 			final int size = start + elements - 1;
 			if (currElems < size)
 				throw new KnxPropertyException("requested elements exceed past last property value",
@@ -943,7 +943,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * element values.<br>
 	 * The resource format used to persist the data is implementation specific.
 	 */
-	public static interface IosResourceHandler
+	public interface IosResourceHandler
 	{
 		/**
 		 * Reads interface object data from a resource identified by <code>resource</code> , and
@@ -955,7 +955,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		 * @throws KNXException on errors accessing the resource, parsing the data, or creating the
 		 *         interface objects
 		 */
-		Collection<InterfaceObject> loadInterfaceObjects(final String resource) throws KNXException;
+		Collection<InterfaceObject> loadInterfaceObjects(String resource) throws KNXException;
 
 		/**
 		 * Saves interface objects to a resource identified by <code>resource</code>.
@@ -967,8 +967,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		 * @param ifObjects a collection of interface objects, type {@link InterfaceObject}, to save
 		 * @throws KNXException on errors accessing the resource, or saving the data
 		 */
-		void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects)
-			throws KNXException;
+		void saveInterfaceObjects(String resource, Collection<InterfaceObject> ifObjects) throws KNXException;
 
 		/**
 		 * Reads KNX property data from a resource identified by <code>resource</code>, and loads
@@ -985,8 +984,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		 * @throws KNXException on errors accessing the resource, parsing the data, or object
 		 *         creation
 		 */
-		void loadProperties(final String resource, final Collection<Description> descriptions,
-			final Collection<byte[]> values) throws KNXException;
+		void loadProperties(String resource, Collection<Description> descriptions,
+			Collection<byte[]> values) throws KNXException;
 
 		/**
 		 * Saves KNX property information to a resource identified by <code>resource</code>.
@@ -1004,8 +1003,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		 *        aligned by the {@link Iterator#next()} behavior of the supplied collections
 		 * @throws KNXException on errors accessing the resource, or saving the data
 		 */
-		void saveProperties(final String resource, final Collection<Description> descriptions,
-			final Collection<byte[]> values) throws KNXException;
+		void saveProperties(String resource, Collection<Description> descriptions,
+			Collection<byte[]> values) throws KNXException;
 	}
 
 	private static class XmlSerializer implements IosResourceHandler
@@ -1040,7 +1039,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		public Collection<InterfaceObject> loadInterfaceObjects(final String resource) throws KNXException
 		{
 			final List<InterfaceObject> list = new ArrayList<>();
-			try (XmlReader reader = r = XmlInputFactory.newInstance().createXMLReader(resource);) {
+			try (XmlReader reader = XmlInputFactory.newInstance().createXMLReader(resource);) {
+				r = reader;
 				if (reader.nextTag() != XmlReader.START_ELEMENT || !r.getLocalName().equals(TAG_IOS))
 					throw new KNXMLException("no interface objects");
 				while (r.next() != XmlReader.END_DOCUMENT) {
@@ -1069,7 +1069,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		public void saveInterfaceObjects(final String resource,
 			final Collection<InterfaceObject> objects) throws KNXException
 		{
-			try (XmlWriter writer = w = XmlOutputFactory.newInstance().createXMLWriter(resource)) {
+			try (XmlWriter writer = XmlOutputFactory.newInstance().createXMLWriter(resource)) {
+				w = writer;
 				writer.writeStartDocument("UTF-8", "1.0");
 				w.writeComment("Calimero v" + Settings.getLibraryVersion() + " interface objects, saved on "
 						+ ZonedDateTime.now().format(DateTimeFormatter.RFC_1123_DATE_TIME));

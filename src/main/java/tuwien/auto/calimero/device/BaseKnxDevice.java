@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2017 B. Malinowsky
+    Copyright (c) 2011, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -341,7 +341,7 @@ public class BaseKnxDevice implements KnxDevice
 	 *        handler
 	 * @throws KNXLinkClosedException on closed network link
 	 */
-	protected synchronized final void setServiceHandler(final ProcessCommunicationService process,
+	protected final synchronized void setServiceHandler(final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException
 	{
 		this.process = process;
@@ -403,7 +403,7 @@ public class BaseKnxDevice implements KnxDevice
 		final byte[] defDesc = new String("KNX Device").getBytes(Charset.forName("ISO-8859-1"));
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, defDesc.length, defDesc);
 
-		final String[] sver = Settings.getLibraryVersion().split("\\.| |-");
+		final String[] sver = Settings.getLibraryVersion().split("\\.| |-", -1);
 		int last = 0;
 		try {
 			last = sver.length > 2 ? Integer.parseInt(sver[2]) : 0;
@@ -459,7 +459,7 @@ public class BaseKnxDevice implements KnxDevice
 		final int requiredPeiType = 0; // unsigned char
 		final int manufacturerId = 0xffff; // unsigned word
 
-		final int[] RunStateEnum = {
+		final int[] runStateEnum = {
 			0, // Halted or not loaded
 			1, // Running
 			2, // Ready for being executed
@@ -468,7 +468,7 @@ public class BaseKnxDevice implements KnxDevice
 			5, // Shutting down
 		};
 		// TODO format is usage dependent: 1 byte read / 10 bytes write
-		final int runState = RunStateEnum[1];
+		final int runState = runStateEnum[1];
 		final int firmwareRev = 3;
 
 		// Physical PEI

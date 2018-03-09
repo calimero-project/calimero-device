@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2017 B. Malinowsky
+    Copyright (c) 2011, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -271,7 +271,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult writeAuthKey(Destination remote, final int accessLevel, final byte[] key)
+		public ServiceResult writeAuthKey(final Destination remote, final int accessLevel, final byte[] key)
 		{
 			return null;
 		}
@@ -326,7 +326,7 @@ public class BaseKnxDeviceTest extends TestCase
 		new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
 	}
 
-	private final class MyKnxDevice extends BaseKnxDevice
+	private static final class MyKnxDevice extends BaseKnxDevice
 	{
 		MyKnxDevice(final String name, final IndividualAddress device, final KNXNetworkLink link,
 			final ProcessCommunicationService processService, final ManagementService mgmtHandler)

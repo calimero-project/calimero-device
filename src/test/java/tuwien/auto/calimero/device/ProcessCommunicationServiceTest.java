@@ -83,13 +83,15 @@ public class ProcessCommunicationServiceTest extends TestCase
 
 	// test Runnable return in ServiceResult
 	private final ProcessCommunicationService processLogicRunnable = new ProcessCommunicationService() {
+		@Override
 		public ServiceResult groupReadRequest(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp.getMainAddress()))
 				return new ServiceResult() {
+					@Override
 					public void run()
 					{
-						try (final ProcessCommunicationBase responder = new ProcessCommunicationResponder(
+						try (ProcessCommunicationBase responder = new ProcessCommunicationResponder(
 								device1.getDeviceLink())) {
 							responder.write(dp.getMainAddress(), dpState);
 						}
@@ -104,6 +106,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 			return new ServiceResult();
 		}
 
+		@Override
 		public void groupWrite(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp.getMainAddress())) {
@@ -118,12 +121,14 @@ public class ProcessCommunicationServiceTest extends TestCase
 			}
 		}
 
+		@Override
 		public void groupResponse(final ProcessEvent e)
 		{}
 	};
 
 	// test return data byte[] in ServiceResult
 	private final ProcessCommunicationService processLogic = new ProcessCommunicationService() {
+		@Override
 		public ServiceResult groupReadRequest(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp2.getMainAddress())) {
@@ -139,6 +144,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 			return new ServiceResult();
 		}
 
+		@Override
 		public void groupWrite(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp2.getMainAddress())) {
@@ -153,6 +159,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 			}
 		}
 
+		@Override
 		public void groupResponse(final ProcessEvent e)
 		{}
 	};
@@ -160,6 +167,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 	private BaseKnxDevice device1;
 	private BaseKnxDevice device2;
 
+	@Override
 	protected void setUp() throws Exception
 	{
 		super.setUp();
@@ -194,6 +202,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 	}
 
+	@Override
 	protected void tearDown() throws Exception
 	{
 		device1.getDeviceLink().close();

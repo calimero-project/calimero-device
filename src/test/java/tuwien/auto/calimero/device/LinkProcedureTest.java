@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2016, 2017 B. Malinowsky
+    Copyright (c) 2016, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -82,8 +82,8 @@ class LinkProcedureTest
 	void runActuator()
 	{
 		final Destination d = mgmt.createDestination(Util.getKnxDevice(), false);
-		final int CH_PB_Toggle = 2;
-		final LinkProcedure lp = LinkProcedure.forActuator(mgmt, self, d, CH_PB_Toggle);
+		final int chPBToggle = 2;
+		final LinkProcedure lp = LinkProcedure.forActuator(mgmt, self, d, chPBToggle);
 		lp.setLinkFunction(this::onSetDeleteLink);
 		lp.run();
 	}
@@ -99,10 +99,10 @@ class LinkProcedureTest
 	{
 		final Destination d = mgmt.createDestination(Util.getKnxDevice(), false);
 		final Map<Integer, GroupAddress> groupObjects = new HashMap<>();
-		final int CC_Switch_OnOff = 1;
-		final int CC_Dimming_Ctrl = 5;
-		groupObjects.put(CC_Switch_OnOff, new GroupAddress(7, 3, 10));
-		groupObjects.put(CC_Dimming_Ctrl, new GroupAddress(7, 3, 11));
+		final int ccSwitchOnOff = 1;
+		final int ccDimmingCtrl = 5;
+		groupObjects.put(ccSwitchOnOff, new GroupAddress(7, 3, 10));
+		groupObjects.put(ccDimmingCtrl, new GroupAddress(7, 3, 11));
 		final LinkProcedure lp = LinkProcedure.forSensor(mgmt, self, d, false, 0xbeef, groupObjects);
 		lp.setLinkFunction(this::onLinkResponse);
 		lp.run();

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2017 B. Malinowsky
+    Copyright (c) 2010, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -274,7 +274,7 @@ public class InterfaceObject
 				return;
 			}
 			// extract first two bytes
-			final int elems = (v[0] & 0xff) << 8 | v[1] & 0xff;
+			final int elems = (v[0] & 0xff) << 8 | (v[1] & 0xff);
 			if (elems > maxElements) {
 				final int elemsFieldSize = 2;
 				final int typeSize = (v.length - elemsFieldSize) / elems;
