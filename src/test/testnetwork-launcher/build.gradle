@@ -1,0 +1,25 @@
+repositories {		
+	mavenCentral()
+	mavenLocal()
+	maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+}
+
+apply plugin:'application'
+
+mainClassName = 'tuwien.auto.calimero.TestNetwork'
+group = 'com.github.calimero'
+version = '2.4-SNAPSHOT'
+
+run {
+	// for attaching to debugger, start with -Ddebug=true
+	if (System.getProperty('debug', 'false') == 'true') {
+		jvmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8000'
+	}
+	systemProperties System.getProperties()
+	args 'server-config.xml'
+	standardInput = System.in
+}
+
+dependencies {
+	compile group:group, name:'calimero-testnetwork', version:version
+}
