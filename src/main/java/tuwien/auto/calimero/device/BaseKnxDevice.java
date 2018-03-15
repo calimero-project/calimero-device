@@ -498,7 +498,7 @@ public class BaseKnxDevice implements KnxDevice
 		final byte[] hwType = new byte[6];
 		setDeviceProperty(pidHardwareType, hwType);
 		// validity check on mask and hardware type octets (AN059v3, AN089v3)
-		final int maskVersion = ((DeviceDescriptor.DD0) dd).getMaskVersion();
+		final int maskVersion = ((DeviceDescriptor.DD0) dd).maskVersion();
 		if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
 			logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
 		}
