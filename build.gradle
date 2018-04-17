@@ -40,7 +40,7 @@ test {
 
 dependencies {
 	api "com.github.calimero:calimero-core:${version}"
-	implementation 'org.slf4j:slf4j-api:1.8.0-beta1'
+	implementation 'org.slf4j:slf4j-api:1.8.0-beta2'
 	
 	testImplementation "com.github.calimero:calimero-core:${version}:tests"
 
