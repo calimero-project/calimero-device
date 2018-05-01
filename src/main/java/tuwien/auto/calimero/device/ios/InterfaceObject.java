@@ -129,6 +129,9 @@ public class InterfaceObject
 	/** Interface object type 'file server object' ({@value FILE_SERVER_OBJECT}). */
 	public static final int FILE_SERVER_OBJECT = 13;
 
+	/** Interface object type 'security' ({@value SECURITY_OBJECT}). */
+	public static final int SECURITY_OBJECT = 17;
+
 	/** Interface object type 'RF medium object' ({@value RF_MEDIUM_OBJECT}). */
 	public static final int RF_MEDIUM_OBJECT = 19;
 
