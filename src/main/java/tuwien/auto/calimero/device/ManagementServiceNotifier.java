@@ -197,9 +197,8 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		final KNXAddress dst = cemi.getDestination();
 
 		if (tpdu.length - 1 > getMaxApduLength()) {
-			logger.error(
-					sender + "->" + dst + " " + DataUnitBuilder.decode(tpdu, dst)
-							+ " exceeds max. allowed APDU length of " + getMaxApduLength() + " - ignore");
+			logger.error("discard {}->{} {}: exceeds max. allowed APDU length of {}", sender, dst,
+					DataUnitBuilder.decode(tpdu, dst), getMaxApduLength());
 			return;
 		}
 
@@ -213,7 +212,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			dispatchToService(svc, asdu, dst, d);
 		}
 		catch (final RuntimeException rte) {
-			logger.error("executing service {}->{} {}: {}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
+			logger.error("failed to execute service {}->{} {}: {}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
 					DataUnitBuilder.toHex(asdu, " "), rte);
 		}
 	}
@@ -701,8 +700,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		final int length = data[0];
 		final int address = (data[1] & 0xff) << 8 | (data[2] & 0xff);
 
-		// requests with a length exceeding the maximum APDU size shall be
-		// ignored by the application
+		// requests with a length exceeding the maximum APDU size shall be ignored by the application
 		if (length > getMaxApduLength() - 3) {
 			logger.warn("memory-read request of length {} > max. {} bytes - ignored", length, getMaxApduLength() - 3);
 			return;

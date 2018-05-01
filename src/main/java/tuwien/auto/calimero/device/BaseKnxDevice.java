@@ -541,7 +541,7 @@ public class BaseKnxDevice implements KnxDevice
 		}
 	}
 
-	private static final int deviceMemorySize = 10_000;
+	private static final int deviceMemorySize = 50_000;
 	// XXX memory operations are not thread-safe
 	private final byte[] memory = new byte[deviceMemorySize];
 

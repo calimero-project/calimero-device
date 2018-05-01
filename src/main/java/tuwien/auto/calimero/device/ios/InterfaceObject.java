@@ -254,7 +254,7 @@ public class InterfaceObject
 		final int index = d.getPropIndex();
 		while (index >= descriptions.size())
 			descriptions.add(null);
-		descriptions.add(index, d);
+		descriptions.set(index, d);
 		// truncate property elements based on max. allowed elements
 		truncateValueArray(d.getPID(), d.getMaxElements());
 	}
