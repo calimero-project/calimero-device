@@ -38,6 +38,7 @@ package tuwien.auto.calimero.device;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
 import java.util.WeakHashMap;
 
@@ -280,11 +281,23 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return new ServiceResult(d.toByteArray());
 	}
 
+	private static final int addrGroupAddrTable = 0x0116; // max. length 233
+
 	@Override
 	public ServiceResult readMemory(final int startAddress, final int bytes)
 	{
 		if (startAddress >= getDeviceMemory().length)
 			return ServiceResult.Empty;
+		final Collection<Datapoint> c = ((DatapointMap<Datapoint>) datapoints).getDatapoints();
+		final int groupAddrTableSize = 3 + c.size() * 2;
+		if (startAddress >= addrGroupAddrTable && startAddress < addrGroupAddrTable + groupAddrTableSize) {
+			final ByteBuffer bb = ByteBuffer.allocate(groupAddrTableSize);
+			bb.put((byte) c.size());
+			bb.put(device.getAddress().toByteArray());
+			c.forEach(dp -> bb.put(dp.getMainAddress().toByteArray()));
+			final int from = startAddress - addrGroupAddrTable;
+			return new ServiceResult(Arrays.copyOfRange(bb.array(), from, from + bytes));
+		}
 		return new ServiceResult(Arrays.copyOfRange(getDeviceMemory(), startAddress, startAddress + bytes));
 	}
 
