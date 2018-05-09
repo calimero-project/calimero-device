@@ -347,7 +347,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 */
 	@Override
 	public void setProperty(final int objectIndex, final int propertyId, final int start,
-		final int elements, final byte[] data) throws KnxPropertyException
+		final int elements, final byte... data) throws KnxPropertyException
 	{
 		adapter.setProperty(objectIndex, propertyId, start, elements, data);
 	}
@@ -366,7 +366,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * @throws KnxPropertyException see {@link #setProperty(int, int, int, int, byte[])}
 	 */
 	public void setProperty(final int objectType, final int objectInstance, final int propertyId,
-		final int start, final int elements, final byte[] data) throws KnxPropertyException
+		final int start, final int elements, final byte... data) throws KnxPropertyException
 	{
 		adapter.setProperty(objectType, objectInstance, propertyId, start, elements, data);
 	}
@@ -392,15 +392,19 @@ public class InterfaceObjectServer implements PropertyAccess
 
 	@Override
 	public void setProperty(final int objIndex, final int propertyId, final int position,
-		final String value) throws KNXException, InterruptedException
+		final String value) throws KNXException
 	{
-		client.setProperty(objIndex, propertyId, position, value);
+		try {
+			client.setProperty(objIndex, propertyId, position, value);
+		}
+		catch (final InterruptedException e) {
+			throw new IllegalStateException("IOS adapter does not throw InterruptedException", e);
+		}
 	}
 
 	/**
 	 * Gets one or more elements of a property with the returned data set in a DPT translator of the
 	 * associated data type.
-	 * <p>
 	 *
 	 * @param objIndex interface object index in the device
 	 * @param pid property identifier
@@ -409,13 +413,17 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * @return a DPT translator containing the returned the element data
 	 * @throws KNXException on adapter errors while querying the property element or data type
 	 *         translation problems
-	 * @throws InterruptedException on thread interrupt
 	 */
 	@Override
 	public DPTXlator getPropertyTranslated(final int objIndex, final int pid, final int start,
-		final int elements) throws KNXException, InterruptedException
+		final int elements) throws KNXException
 	{
-		return client.getPropertyTranslated(objIndex, pid, start, elements);
+		try {
+			return client.getPropertyTranslated(objIndex, pid, start, elements);
+		}
+		catch (final InterruptedException e) {
+			throw new IllegalStateException("IOS adapter does not throw InterruptedException", e);
+		}
 	}
 
 	/**
@@ -743,7 +751,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					io.truncateValueArray(pid, 0);
 					return;
 				}
-				throw new KnxPropertyException("current number of elements is read-only", ErrorCodes.READ_ONLY);
+				throw new KnxPropertyException("set current number of elements", ErrorCodes.READ_ONLY);
 			}
 
 			// try to get property type size, using the following order:
@@ -841,7 +849,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 			if (start == 0) {
 				if (elements > 1)
-					throw new KnxPropertyException("current number of elements consists " + "of 1 element only",
+					throw new KnxPropertyException("current number of elements consists of only 1 element",
 							ErrorCodes.UNSPECIFIED_ERROR);
 
 				if (values != null)
@@ -855,7 +863,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 			if (values == null)
 				throw new KnxPropertyException(
-						"property ID " + pid + " in " + io.getTypeName() + " (index " + io.getIndex() + ") not found",
+						"no property ID " + pid + " in " + io.getTypeName() + " (index " + io.getIndex() + ")",
 						ErrorCodes.VOID_DP);
 
 			final int currElems = (values[0] & 0xff) << 8 | (values[1] & 0xff);
