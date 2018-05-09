@@ -37,6 +37,8 @@
 package tuwien.auto.calimero.device.ios;
 
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -606,6 +608,12 @@ public class InterfaceObjectServer implements PropertyAccess
 				new byte[] { 0, 1, (byte) (objectType >> 8), (byte) objectType });
 		if (createDescription)
 			adapter.createNewDescription(index, PID.OBJECT_TYPE, false);
+
+		final byte[] name = io.getTypeName().getBytes(Charset.forName("ISO-8859-1"));
+		final byte[] value = ByteBuffer.allocate(2 + name.length).put((byte) 0).put((byte) name.length).put(name).array();
+		io.values.put(new PropertyKey(objectType, PID.OBJECT_NAME), value);
+		if (createDescription)
+			adapter.createNewDescription(index, PID.OBJECT_NAME, false);
 
 		// AN104: global property PID.OBJECT_INDEX holds index of the if-object
 		io.values.put(new PropertyKey(objectType, PID.OBJECT_INDEX),
