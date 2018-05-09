@@ -527,7 +527,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		ServiceResult sr;
 		try {
-			sr = mgmtSvc.readProperty(objIndex, pid, start, elements);
+			sr = mgmtSvc.readProperty(d, objIndex, pid, start, elements);
 			// service result might be null to indicate an (illegal) access problem, or protected memory;
 			// in that case, set number of elements 0, with no property values included
 			if (sr == null)
@@ -568,7 +568,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		ServiceResult sr = null;
 		try {
-			sr = mgmtSvc.writeProperty(objIndex, pid, start, elements, propertyData);
+			sr = mgmtSvc.writeProperty(d, objIndex, pid, start, elements, propertyData);
 			// service result might be null to indicate an (illegal) access problem, or protected memory;
 			// in that case, set number of elements 0, with no property values included
 			if (sr == null)

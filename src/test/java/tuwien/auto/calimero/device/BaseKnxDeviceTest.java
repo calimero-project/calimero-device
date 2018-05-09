@@ -164,8 +164,8 @@ public class BaseKnxDeviceTest extends TestCase
 	private static class DefaultMgmtLogic implements ManagementService
 	{
 		@Override
-		public ServiceResult writeProperty(final int objectIndex, final int propertyId, final int startIndex,
-			final int elements, final byte[] data)
+		public ServiceResult writeProperty(final Destination remote, final int objectIndex, final int propertyId,
+			final int startIndex, final int elements, final byte[] data)
 		{
 			return null;
 		}
@@ -202,8 +202,8 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult readProperty(final int objectIndex, final int propertyId, final int startIndex,
-			final int elements)
+		public ServiceResult readProperty(final Destination remote, final int objectIndex, final int propertyId,
+			final int startIndex, final int elements)
 		{
 			return null;
 		}

@@ -86,8 +86,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	// domain can be 2 or 6 bytes, set in setDevice()
 	private byte[] domainAddress;
 
-	// TODO implement access level per endpoint/connection
-	private final int accessLevel = 0;
 	// authentication
 	private static byte[] defaultAuthKey = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
 	final byte[][] authKeys = new byte[16][4];
@@ -222,15 +220,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{}
 
 	@Override
-	public ServiceResult readProperty(final int objectIndex, final int propertyId,
-		final int startIndex, final int elements)
+	public ServiceResult readProperty(final Destination remote, final int objectIndex,
+		final int propertyId, final int startIndex, final int elements)
 	{
 		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		try {
 			final Description d = ios.getDescription(objectIndex, propertyId);
-			if (accessLevel > d.getReadLevel()) {
-				logger.warn("deny read access to property {}|{} (access level {}, requires {})", objectIndex,
-						propertyId, accessLevel, d.getReadLevel());
+			final Integer level = accessLevel(remote);
+			if (level > d.getReadLevel()) {
+				logger.warn("deny {} read access to property {}|{} (access level {}, requires {})", remote.getAddress(),
+						objectIndex, propertyId, level, d.getReadLevel());
 				return null;
 			}
 		}
@@ -242,8 +241,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult writeProperty(final int objectIndex, final int propertyId,
-		final int startIndex, final int elements, final byte[] data)
+	public ServiceResult writeProperty(final Destination remote, final int objectIndex,
+		final int propertyId, final int startIndex, final int elements, final byte[] data)
 	{
 		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		try {
@@ -253,9 +252,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 						CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
 				return null;
 			}
-			if (accessLevel > d.getWriteLevel()) {
-				logger.warn("deny write access to property {}/{} (access level {}, requires {})", objectIndex,
-						propertyId, accessLevel, d.getWriteLevel());
+			final Integer level = accessLevel(remote);
+			if (level > d.getWriteLevel()) {
+				logger.warn("deny {} write access to property {}/{} (access level {}, requires {})",
+						remote.getAddress(), objectIndex, propertyId, level, d.getWriteLevel());
 				return null;
 			}
 		}

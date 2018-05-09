@@ -122,7 +122,8 @@ public class ManagementServiceTest
 	@Test
 	void readProperty()
 	{
-		final ServiceResult r = mgmt.readProperty(objectIndex, propertyId, 1, 1);
+		mgmt.authorize(dst, authKey);
+		final ServiceResult r = mgmt.readProperty(dst, objectIndex, propertyId, 1, 1);
 		assertNotNull(r);
 		assertNotNull(r.getResult());
 		assertEquals(2, r.getResult().length);
@@ -131,13 +132,14 @@ public class ManagementServiceTest
 	@Test
 	void writeProperty()
 	{
+		mgmt.authorize(dst, authKey);
 		final byte[] data = new byte[] { 1, 2, 3, 4 };
-		ServiceResult r = mgmt.writeProperty(objectIndex, 110, 1, 1, data);
+		ServiceResult r = mgmt.writeProperty(dst, objectIndex, 110, 1, 1, data);
 		assertNotNull(r);
 		assertNotNull(r.getResult());
 		assertArrayEquals(data, r.getResult());
 
-		r = mgmt.readProperty(objectIndex, 110, 1, 1);
+		r = mgmt.readProperty(dst, objectIndex, 110, 1, 1);
 		assertNotNull(r);
 		assertNotNull(r.getResult());
 		assertArrayEquals(data, r.getResult());
@@ -146,13 +148,14 @@ public class ManagementServiceTest
 	@Test
 	void tryWriteReadOnlyProperty()
 	{
-		ServiceResult r = mgmt.readProperty(objectIndex, propertyId, 1, 1);
+		mgmt.authorize(dst, authKey);
+		ServiceResult r = mgmt.readProperty(dst, objectIndex, propertyId, 1, 1);
 		byte[] data = r.getResult();
-		assertNull(mgmt.writeProperty(objectIndex, propertyId, 1, 1, data));
+		assertNull(mgmt.writeProperty(null, objectIndex, propertyId, 1, 1, data));
 
-		r = mgmt.readProperty(1, propertyId, 1, 1);
+		r = mgmt.readProperty(dst, 1, propertyId, 1, 1);
 		data = r.getResult();
-		assertNull(mgmt.writeProperty(1, propertyId, 1, 1, data));
+		assertNull(mgmt.writeProperty(dst, 1, propertyId, 1, 1, data));
 	}
 
 	@Test

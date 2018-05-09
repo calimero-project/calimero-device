@@ -65,26 +65,28 @@ public interface ManagementService
 	 * For data result, expects the requested number of property values as byte array.<br>
 	 * To indicate an (illegal) access problem, or protected memory, use a service result with a
 	 * data byte array of length 0.
-	 *
+	 * @param remote remote endpoint
 	 * @param objectIndex interface object index
 	 * @param propertyId property identifier
 	 * @param startIndex start index in the property value to start reading from
 	 * @param elements number of elements to read
+	 *
 	 * @return the service result with the requested property values
 	 */
-	ServiceResult readProperty(int objectIndex, int propertyId, int startIndex, int elements);
+	ServiceResult readProperty(Destination remote, int objectIndex, int propertyId, int startIndex, int elements);
 
 	/**
 	 * Invoked for an application layer property write service.
-	 *
+	 * @param remote remote endpoint
 	 * @param objectIndex interface object index
 	 * @param propertyId property identifier
 	 * @param startIndex start index in the property value to start writing to
 	 * @param elements number of elements to write
 	 * @param data byte array containing property value data to write
+	 *
 	 * @return the service result of writing the property values
 	 */
-	ServiceResult writeProperty(int objectIndex, int propertyId, int startIndex, int elements, byte[] data);
+	ServiceResult writeProperty(Destination remote, int objectIndex, int propertyId, int startIndex, int elements, byte[] data);
 
 	/**
 	 * Invoked for an application layer property description read service.
