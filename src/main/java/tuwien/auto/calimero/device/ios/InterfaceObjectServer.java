@@ -927,11 +927,9 @@ public class InterfaceObjectServer implements PropertyAccess
 			catch (final KnxPropertyException e) {}
 			final int maxElems = Math.max(elems, 10);
 			final boolean writable = p != null ? !p.readOnly() : writeEnabled;
-			// level is between 0 (max. access rights) and 3 (min. rights),
-			// or 0 (max. access rights) and 15 (min. rights)
-			// TODO assign read/write access level of property
-			final int readLevel = p != null ? 3 : 0;
-			final int writeLevel = p != null ? 3 : 0;
+			// level is between 0 (max. access rights required) and 3 or 15 (min. rights required)
+			final int readLevel = p != null ? p.readLevel() : 0;
+			final int writeLevel = p != null ? Math.max(0, p.writeLevel()) : 0;
 			final Description d = new Description(objIndex, io.getType(), pid, pIndex, pdt, writable, elems, maxElems,
 					readLevel, writeLevel);
 			io.descriptions.add(d);
