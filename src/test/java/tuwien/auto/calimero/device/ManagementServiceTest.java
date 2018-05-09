@@ -46,6 +46,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
@@ -104,7 +105,7 @@ public class ManagementServiceTest
 			}
 		};
 
-		device = new BaseKnxDevice("test", new IndividualAddress(0, 0x02, 0xff), link, null, mgmt);
+		device = new BaseKnxDevice("test", DeviceDescriptor.DD0.TYPE_5705, new IndividualAddress(0, 0x02, 0xff), link, null, mgmt);
 		mgmt.setDevice(device);
 		mgmt.authKeys[3] = authKey;
 		mgmt.minAccessLevel = 15;

@@ -37,6 +37,7 @@
 package tuwien.auto.calimero.device;
 
 import junit.framework.TestCase;
+import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.Priority;
@@ -58,6 +59,7 @@ public class BaseKnxDeviceTest extends TestCase
 {
 	private KnxDevice dev;
 	private final IndividualAddress addr = new IndividualAddress(1, 1, 1);
+	private static final DeviceDescriptor.DD0 dd0 = DeviceDescriptor.DD0.TYPE_5705;
 
 	// dummy link and handlers for basic tests
 
@@ -295,7 +297,7 @@ public class BaseKnxDeviceTest extends TestCase
 	protected void setUp() throws Exception
 	{
 		super.setUp();
-		dev = new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
+		dev = new BaseKnxDevice("test", dd0, addr, link, processLogic, mgmtLogic);
 	}
 
 	@Override
@@ -313,17 +315,17 @@ public class BaseKnxDeviceTest extends TestCase
 	 */
 	public final void testKnxDevice() throws KNXLinkClosedException
 	{
-		new BaseKnxDevice("test", addr, link, null, mgmtLogic);
+		new BaseKnxDevice("test", dd0, addr, link, null, mgmtLogic);
 
 		try {
-			new BaseKnxDevice("test", null, link, processLogic, mgmtLogic);
+			new BaseKnxDevice("test", dd0, null, link, processLogic, mgmtLogic);
 			fail("device address null");
 		}
 		catch (final NullPointerException expected) {}
 
-		new BaseKnxDevice("test", addr, null, processLogic, mgmtLogic);
+		new BaseKnxDevice("test", dd0, addr, null, processLogic, mgmtLogic);
 
-		new BaseKnxDevice("test", addr, link, processLogic, mgmtLogic);
+		new BaseKnxDevice("test", dd0, addr, link, processLogic, mgmtLogic);
 	}
 
 	private static final class MyKnxDevice extends BaseKnxDevice
@@ -332,7 +334,7 @@ public class BaseKnxDeviceTest extends TestCase
 			final ProcessCommunicationService processService, final ManagementService mgmtHandler)
 				throws KNXLinkClosedException, KnxPropertyException
 		{
-			super(name, device, link, processService, mgmtHandler);
+			super(name, dd0, device, link, processService, mgmtHandler);
 		}
 
 		void mySetAddress(final IndividualAddress address)

@@ -215,6 +215,7 @@ public class BaseKnxDevice implements KnxDevice
 	 * </ul>
 	 *
 	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param dd device descriptor
 	 * @param device the device address, or the default individual address; if a device address is
 	 *        assigned, this address shall be unique in the subnetwork the device resides
 	 * @param link the KNX network link this device is attached to
@@ -223,44 +224,13 @@ public class BaseKnxDevice implements KnxDevice
 	 * @throws KNXLinkClosedException if the network link is closed
 	 * @throws KnxPropertyException on error setting KNX properties during device initialization
 	 */
-	public BaseKnxDevice(final String name, final IndividualAddress device,
+	public BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
 		final KNXNetworkLink link, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
 	{
-		this(name, DeviceDescriptor.DD0.TYPE_5705, process, mgmt);
+		this(name, dd, process, mgmt);
 		setDeviceLink(link);
 		setAddress(device);
-	}
-
-	/**
-	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument.
-	 * <p>
-	 * The device address is either a configured subnetwork unique device address, or the default
-	 * individual address if no address was assigned to the device yet. The default individual
-	 * device address consists of a medium dependent default subnetwork address and the device
-	 * address for unregistered devices. Unregistered devices are identified by using the device
-	 * address 0xff, a value reserved for this purpose. The subnetwork address part describes the
-	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is
-	 * as follows, listed as <i>Medium</i>: <i>Subnetwork address</i>:
-	 * <ul>
-	 * <li>TP 1: 0x02</li>
-	 * <li>PL 110: 0x04</li>
-	 * <li>RF: 0x05</li>
-	 * </ul>
-	 *
-	 * @param name KNX device name, used for human readable naming or device identification
-	 * @param device the device address, or the default individual address; if a device address is
-	 *        assigned, this address shall be unique in the subnetwork the device resides
-	 * @param link the KNX network link this device is attached to
-	 * @param logic KNX device service logic
-	 * @throws KNXLinkClosedException on closed network link
-	 * @throws KnxPropertyException on error initializing the device properties
-	 */
-	public BaseKnxDevice(final String name, final IndividualAddress device, final KNXNetworkLink link,
-		final KnxDeviceServiceLogic logic) throws KNXLinkClosedException, KnxPropertyException
-	{
-		this(name, device, link, logic, logic);
-		logic.setDevice(this);
 	}
 
 	/**
@@ -274,6 +244,26 @@ public class BaseKnxDevice implements KnxDevice
 	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic) throws KnxPropertyException
 	{
 		this(name, DeviceDescriptor.DD0.TYPE_5705, logic, logic);
+		logic.setDevice(this);
+	}
+
+	/**
+	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} and a network link argument.
+	 * <p>
+	 * The device address is supplied by the link's medium settings, and is only used if the address is not 0.0.0. An
+	 * address should be a subnetwork unique device address or a default individual address (see
+	 * {@link #BaseKnxDevice(String, DeviceDescriptor, IndividualAddress, KNXNetworkLink, ProcessCommunicationService, ManagementService)}).
+	 *
+	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param logic KNX device service logic
+	 * @param link the KNX network link this device is attached to
+	 * @throws KNXLinkClosedException on closed network link
+	 * @throws KnxPropertyException on error initializing the device properties
+	 */
+	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic, final KNXNetworkLink link)
+		throws KNXLinkClosedException, KnxPropertyException
+	{
+		this(name, DeviceDescriptor.DD0.TYPE_5705, link.getKNXMedium().getDeviceAddress(), link, logic, logic);
 		logic.setDevice(this);
 	}
 
