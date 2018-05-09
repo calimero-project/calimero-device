@@ -77,6 +77,7 @@ public class ManagementServiceTest
 	private Destination dst;
 
 	private static final byte[] authKey = new byte[] { 0x10, 0x20, 0x30, 0x40 };
+	private static final byte[] highestAuthKey = new byte[] { 0x50, 0x60, 0x70, (byte) 0x80 };
 	private static final byte[] defaultAuthKey = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
 
 	@BeforeEach
@@ -107,6 +108,7 @@ public class ManagementServiceTest
 
 		device = new BaseKnxDevice("test", DeviceDescriptor.DD0.TYPE_5705, new IndividualAddress(0, 0x02, 0xff), link, null, mgmt);
 		mgmt.setDevice(device);
+		mgmt.authKeys[0] = highestAuthKey;
 		mgmt.authKeys[3] = authKey;
 		mgmt.minAccessLevel = 15;
 
@@ -140,6 +142,7 @@ public class ManagementServiceTest
 		assertNotNull(r.getResult());
 		assertArrayEquals(data, r.getResult());
 
+		mgmt.authorize(dst, highestAuthKey);
 		r = mgmt.readProperty(dst, objectIndex, 110, 1, 1);
 		assertNotNull(r);
 		assertNotNull(r.getResult());

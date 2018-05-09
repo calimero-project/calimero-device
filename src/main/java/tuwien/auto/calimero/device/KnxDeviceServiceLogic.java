@@ -260,6 +260,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			}
 		}
 		catch (final KnxPropertyException ignore) { logger.error("get description", ignore); }
+		// if we set a non-existing property, we won't have a description (it won't show up in a property editor)
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases
 		if (propertyId == PID.PROGMODE)
