@@ -139,6 +139,9 @@ public class BaseKnxDevice implements KnxDevice
 	private ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
+	private static final int deviceMemorySize = 50_000;
+	private final byte[] memory = new byte[deviceMemorySize];
+
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KnxPropertyException
 	{
@@ -541,11 +544,7 @@ public class BaseKnxDevice implements KnxDevice
 		}
 	}
 
-	private static final int deviceMemorySize = 50_000;
-	// XXX memory operations are not thread-safe
-	private final byte[] memory = new byte[deviceMemorySize];
-
-	byte[] deviceMemory() {
+	synchronized byte[] deviceMemory() {
 		return memory;
 	}
 
@@ -553,9 +552,9 @@ public class BaseKnxDevice implements KnxDevice
 		return Arrays.copyOfRange(deviceMemory(), startAddress, startAddress + bytes);
 	}
 
-	private void setMemory(final int startAddress, final int value)
+	private synchronized void setMemory(final int startAddress, final byte... data)
 	{
-		memory[startAddress] = (byte) value;
+		System.arraycopy(data, 0, memory, startAddress, data.length);
 	}
 
 	private static byte[] fromWord(final int word)
