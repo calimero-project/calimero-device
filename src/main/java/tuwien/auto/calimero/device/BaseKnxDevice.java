@@ -37,7 +37,17 @@
 package tuwien.auto.calimero.device;
 
 import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
+import static tuwien.auto.calimero.device.ios.InterfaceObject.KNXNETIP_PARAMETER_OBJECT;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,8 +71,12 @@ import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
+import tuwien.auto.calimero.knxnetip.ConnectionBase;
+import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
+import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
+import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
@@ -82,20 +96,11 @@ import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
  */
 public class BaseKnxDevice implements KnxDevice
 {
-	// can be between 15 and 254 bytes (255 is Escape code for extended L_Data frames)
-	private static final int maxApduLength = 15;
-
 	// The object instance determines which instance of an object type is
 	// queried for properties. Always defaults to 1.
 	private static final int objectInstance = 1;
 
-	// PID.PROGMODE
-	private static final int defDeviceStatus = 0;
-	// PID.SERIAL_NUMBER
-	private static final byte[] defSerialNumber = new byte[6];
-
 	// Values used for manufacturer data DIB
-
 	// PID.MANUFACTURER_ID
 	private static final int defMfrId = 0;
 	// PID.MANUFACTURER_DATA
@@ -103,6 +108,9 @@ public class BaseKnxDevice implements KnxDevice
 	// defaults to 'bm2011  '
 	private static final byte[] defMfrData = new byte[] { 'b', 'm', '2', '0', '1', '1', ' ', ' ' };
 
+	// property id to distinguish hardware types which are using the same
+	// device descriptor mask version
+	private static final int pidHardwareType = 78; // PDT Generic 6 bytes
 
 	// service event threading
 	static final int INCOMING_EVENTS_THREADED = 1;
@@ -127,11 +135,12 @@ public class BaseKnxDevice implements KnxDevice
 	private final List<Runnable> tasks = new ArrayList<>();
 
 	private final String name;
-	private final DeviceDescriptor dd;
+	private final DeviceDescriptor dd; // kept as variable in case it's DD2
 	private final InterfaceObjectServer ios;
 	private final Logger logger;
 
-	private IndividualAddress self;
+	// default TP1 address
+	private IndividualAddress self = new IndividualAddress(new byte[] { 0x02, (byte) 0xff});
 
 	private ProcessCommunicationService process;
 	private ManagementService mgmt;
@@ -154,8 +163,7 @@ public class BaseKnxDevice implements KnxDevice
 		this.process = process;
 		this.mgmt = mgmt;
 
-		addDeviceInfo();
-		initKnxProperties();
+		initDeviceInfo();
 	}
 
 	/**
@@ -186,8 +194,8 @@ public class BaseKnxDevice implements KnxDevice
 		final KNXNetworkLink link) throws KNXLinkClosedException, KnxPropertyException
 	{
 		this(name, dd, (ProcessCommunicationService) null, null);
-		setAddress(device);
 		setDeviceLink(link);
+		setAddress(device);
 	}
 
 	/**
@@ -220,8 +228,8 @@ public class BaseKnxDevice implements KnxDevice
 		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
 	{
 		this(name, DeviceDescriptor.DD0.TYPE_5705, process, mgmt);
-		setAddress(device);
 		setDeviceLink(link);
+		setAddress(device);
 	}
 
 	/**
@@ -282,7 +290,20 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		if (address == null)
 			throw new NullPointerException("device address cannot be null");
+		if (address.getRawAddress() == 0)
+			return;
 		self = address;
+
+		final byte[] addr = self.toByteArray();
+		setDeviceProperty(PID.SUBNET_ADDRESS, addr[0]);
+		setDeviceProperty(PID.DEVICE_ADDRESS, addr[1]);
+
+		try {
+			setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, addr);
+		}
+		catch (final KnxPropertyException ignore) {
+			// fails if we don't have a KNX IP object
+		}
 	}
 
 	@Override
@@ -292,14 +313,23 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	@Override
-	public synchronized void setDeviceLink(final KNXNetworkLink link) throws KNXLinkClosedException
+	public final synchronized void setDeviceLink(final KNXNetworkLink link) throws KNXLinkClosedException
 	{
 		this.link = link;
-		if (this.link != null) {
-			final IndividualAddress address = this.link.getKNXMedium().getDeviceAddress();
-			if (address.getDevice() != 0)
-				setAddress(address);
-		}
+		// ??? necessary
+		if (link == null)
+			return;
+
+		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(link.getKNXMedium().maxApduLength()));
+		final int medium = link.getKNXMedium().getMedium();
+		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, (byte) 0, (byte) medium);
+		if (medium == KNXMediumSettings.MEDIUM_KNXIP)
+			initKnxipProperties();
+
+		final IndividualAddress address = link.getKNXMedium().getDeviceAddress();
+		if (address.getDevice() != 0)
+			setAddress(address);
+
 		if (process instanceof KnxDeviceServiceLogic)
 			((KnxDeviceServiceLogic) process).setDevice(this);
 		resetNotifiers();
@@ -398,13 +428,12 @@ public class BaseKnxDevice implements KnxDevice
 		mgmtNotifier = link != null && mgmt != null ? new ManagementServiceNotifier(this, mgmt) : null;
 	}
 
-	// taken from KNX server
-	private void initKnxProperties() throws KnxPropertyException
+	private void initDeviceInfo() throws KnxPropertyException
 	{
-		// initialize interface device object properties
+		// Device Object settings
 
-		final byte[] defDesc = new String("KNX Device").getBytes(Charset.forName("ISO-8859-1"));
-		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, defDesc.length, defDesc);
+		final byte[] desc = name.getBytes(Charset.forName("ISO-8859-1"));
+		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, desc.length, desc);
 
 		final String[] sver = Settings.getLibraryVersion().split("\\.| |-", -1);
 		int last = 0;
@@ -413,54 +442,75 @@ public class BaseKnxDevice implements KnxDevice
 		}
 		catch (final NumberFormatException e) {}
 		final int ver = Integer.parseInt(sver[0]) << 12 | Integer.parseInt(sver[1]) << 6 | last;
-		setDeviceProperty(PID.VERSION, new byte[] { (byte) (ver >>> 8), (byte) (ver & 0xff) });
+		setDeviceProperty(PID.VERSION, fromWord(ver));
 
-		// revision counting is not aligned with library version for now
-		setDeviceProperty(PID.FIRMWARE_REVISION, new byte[] { 1 });
+		// Firmware Revision
+		final int firmwareRev = 1;
+		setDeviceProperty(PID.FIRMWARE_REVISION, (byte) firmwareRev);
 
-		//
-		// set properties used in device DIB for search response during discovery
-		//
+		// Serial Number
+		final byte[] sno = new byte[6];
+		setDeviceProperty(PID.SERIAL_NUMBER, sno);
+
 		// device status is not in programming mode
-		setDeviceProperty(PID.PROGMODE, new byte[] { defDeviceStatus });
-		setDeviceProperty(PID.SERIAL_NUMBER, defSerialNumber);
-		// server KNX device address, since we don't know about routing at this time
-		// address is always 0.0.0; might be updated later or by routing configuration
-		final byte[] device = new IndividualAddress(0).toByteArray();
+		setDeviceProperty(PID.PROGMODE, (byte) 0);
+		// Programming Mode (memory address 0x60) set off
+		setMemory(0x60, (byte) 0);
 
-		// equal to PID.KNX_INDIVIDUAL_ADDRESS
-		setDeviceProperty(PID.SUBNET_ADDRESS, new byte[] { device[0] });
-		setDeviceProperty(PID.DEVICE_ADDRESS, new byte[] { device[1] });
-
-		//
-		// set properties used in manufacturer data DIB for discovery self description
-		//
 		setDeviceProperty(PID.MANUFACTURER_ID, fromWord(defMfrId));
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.MANUFACTURER_DATA, 1, defMfrData.length / 4, defMfrData);
 
-		// set default medium to TP1 (Bit 1 set)
-		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, new byte[] { 0, 2 });
+		// Hardware Type
+		final byte[] hwType = new byte[6];
+		setDeviceProperty(pidHardwareType, hwType);
 
-		// a device should set PID_MAX_APDULENGTH (Chapter 3/5/1 Resources)
+		// device descriptor
+		if (dd instanceof DeviceDescriptor.DD0) {
+			setDeviceProperty(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
+
+			// validity check on mask and hardware type octets (AN059v3, AN089v3)
+			final DeviceDescriptor.DD0 dd0 = (DeviceDescriptor.DD0) dd;
+			final int maskVersion = dd0.maskVersion();
+			if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
+				logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
+			}
+		}
+
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)
-		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, true, 0, 1, 0, 0), true);
-		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(maxApduLength));
-	}
+		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, false, 0, 1, 3, 0), true);
+		// can be between 15 and 254 bytes (255 is Escape code for extended L_Data frames)
+		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(15));
 
-	// property id to distinguish hardware types which are using the same
-	// device descriptor mask version
-	private static final int pidHardwareType = 78; // PDT Generic 6 bytes
+		// Order Info
+		final byte[] orderInfo = new byte[10]; // PDT Generic 10 bytes
+		setDeviceProperty(PID.ORDER_INFO, orderInfo);
 
-	private void addDeviceInfo() throws KnxPropertyException
-	{
+		// PEI Types
 		// in devices without PEI, value is 0
 		// PEI type 1: Illegal adapter
 		// PEI type 10, 12, 14 and 16: serial interface to application module
 		// PEI type 10: protocol on top of FT1.2
 		// PEI type 2, 4, 6, 8, 17: parallel I/O (17 = programmable I/O)
 		final int peiType = 0; // unsigned char
+
+		// Physical PEI
+		setDeviceProperty(PID.PEI_TYPE, (byte) peiType);
+
+
+		// cEMI server object setttings
+
+		// set default medium to TP1 (Bit 1 set)
+		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, new byte[] { 0, 2 });
+
+
+		// Application Program Object settings
+
+		final int appProgamObject = InterfaceObject.APPLICATIONPROGRAM_OBJECT;
+		ios.addInterfaceObject(appProgamObject);
+
+		// Required PEI Type
 		final int requiredPeiType = 0; // unsigned char
-		final int manufacturerId = 0xffff; // unsigned word
+		ios.setProperty(appProgamObject, objectInstance, PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
 
 		final int[] runStateEnum = {
 			0, // Halted or not loaded
@@ -472,54 +522,128 @@ public class BaseKnxDevice implements KnxDevice
 		};
 		// TODO format is usage dependent: 1 byte read / 10 bytes write
 		final int runState = runStateEnum[1];
-		final int firmwareRev = 3;
-
-		// Physical PEI
-		setDeviceProperty(PID.PEI_TYPE, fromByte(peiType));
-
-		// application program object
-		final int appProgamObject = InterfaceObject.APPLICATIONPROGRAM_OBJECT;
-		ios.addInterfaceObject(appProgamObject);
-
-		// Required PEI Type (Application Program Object)
-		ios.setProperty(appProgamObject, objectInstance, PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
-
-		setDeviceProperty(PID.MANUFACTURER_ID, fromWord(manufacturerId));
-		setDeviceProperty(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
-
-		// Programming Mode (memory address 0x60)
-		final boolean programmingMode = false;
-		setMemory(0x60, programmingMode ? 1 : 0);
-
-		// Run State (Application Program Object)
+		// Run State
 		ios.setProperty(appProgamObject, objectInstance, PID.RUN_STATE_CONTROL, 1, 1, fromWord(runState));
 
-		// Firmware Revision
-		setDeviceProperty(PID.FIRMWARE_REVISION, fromByte(firmwareRev));
-
-		// Hardware Type
-		final byte[] hwType = new byte[6];
-		setDeviceProperty(pidHardwareType, hwType);
-		// validity check on mask and hardware type octets (AN059v3, AN089v3)
-		final int maskVersion = ((DeviceDescriptor.DD0) dd).maskVersion();
-		if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
-			logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
-		}
-		// Serial Number
-		final byte[] sno = new byte[6]; // PDT Generic 10 bytes
-		setDeviceProperty(PID.SERIAL_NUMBER, sno);
-		// Order Info
-		final byte[] orderInfo = new byte[10]; // PDT Generic 10 bytes
-		setDeviceProperty(PID.ORDER_INFO, orderInfo);
-
-		// Application ID (Application Program Object)
+		// Application ID
 		final byte[] applicationVersion = new byte[5]; // PDT Generic 5 bytes
 		ios.setProperty(appProgamObject, objectInstance, PID.PROGRAM_VERSION, 1, 1, applicationVersion);
 	}
 
-	private void setDeviceProperty(final int propertyId, final byte[] data) throws KnxPropertyException
+	private void setDeviceProperty(final int propertyId, final byte... data) throws KnxPropertyException
 	{
 		ios.setProperty(DEVICE_OBJECT, objectInstance, propertyId, 1, 1, data);
+	}
+
+	private void setIpProperty(final int propertyId, final byte... data)
+	{
+		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, propertyId, 1, 1, data);
+	}
+
+	// [InetAddress, MulticastSocket]
+	private Object[] ipInfo() throws ReflectiveOperationException {
+		final KNXnetIPRouting conn = accessField(AbstractLink.class, "conn", link);
+		final MulticastSocket socket = accessField(ConnectionBase.class, "socket", conn);
+		return new Object[] { socket, conn.getRemoteAddress().getAddress() };
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T, U> T accessField(final Class<? extends U> clazz, final String field, final U obj)
+		throws ReflectiveOperationException, SecurityException {
+		Class<? extends U> cl = (Class<? extends U>) obj.getClass();
+		while (!clazz.equals(cl))
+			cl = (Class<? extends U>) cl.getSuperclass();
+		final Field f = cl.getDeclaredField(field);
+		f.setAccessible(true);
+		return (T) f.get(obj);
+	}
+
+	// PID.KNXNETIP_DEVICE_CAPABILITIES
+	// Bits LSB to MSB: 0 Device Management, 1 Tunneling, 2 Routing, 3 Remote Logging,
+	// 4 Remote Configuration and Diagnosis, 5 Object Server
+	private static final int defDeviceCaps = 4;
+
+	private void initKnxipProperties() {
+		boolean found = false;
+		for (final InterfaceObject io : ios.getInterfaceObjects())
+			found |= io.getType() == KNXNETIP_PARAMETER_OBJECT;
+		if (!found)
+			ios.addInterfaceObject(KNXNETIP_PARAMETER_OBJECT);
+
+		setIpProperty(PID.PROJECT_INSTALLATION_ID, fromWord(0));
+		setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, self.toByteArray());
+		setIpProperty(PID.CURRENT_IP_ASSIGNMENT_METHOD, (byte) 1);
+		setIpProperty(PID.IP_ASSIGNMENT_METHOD, (byte) 1);
+		setIpProperty(PID.IP_CAPABILITIES, (byte) 0);
+
+		// pull out IP info from KNX IP protocol
+		byte[] ip = new byte[4];
+		final byte[] mask = new byte[4];
+		byte[] mac = new byte[6];
+		int ttl = 0;
+		byte[] mcast = new byte[4];
+		try {
+			final Object[] objects = ipInfo();
+			final MulticastSocket socket = (MulticastSocket) objects[0];
+			mcast = ((InetAddress) objects[1]).getAddress();
+
+			final NetworkInterface netif = socket.getNetworkInterface();
+
+			final List<InterfaceAddress> addresses = netif.getInterfaceAddresses();
+			final Optional<InterfaceAddress> addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
+			if (addr.isPresent()) {
+				ip = addr.get().getAddress().getAddress();
+
+				final int prefixLength = addr.get().getNetworkPrefixLength();
+				final long defMask = 0xffffffffL;
+				final long intMask = defMask ^ (defMask >> prefixLength);
+				ByteBuffer.wrap(mask).putInt((int) intMask);
+			}
+			else {
+				ip = InetAddress.getLocalHost().getAddress();
+			}
+
+			mac = Optional.ofNullable(netif.getHardwareAddress()).orElse(mac);
+			ttl = socket.getTimeToLive();
+		}
+		catch (ReflectiveOperationException | IOException | RuntimeException e) {
+			logger.warn("initializing KNX IP properties, {}", e.toString());
+		}
+
+		setIpProperty(PID.CURRENT_IP_ADDRESS, ip);
+		setIpProperty(PID.CURRENT_SUBNET_MASK, mask);
+
+		final byte[] gw = new byte[4];
+		setIpProperty(PID.CURRENT_DEFAULT_GATEWAY, gw);
+		setIpProperty(PID.IP_ADDRESS, ip);
+		setIpProperty(PID.SUBNET_MASK, mask);
+		setIpProperty(PID.DEFAULT_GATEWAY, gw);
+		setIpProperty(PID.MAC_ADDRESS, mac);
+
+		try {
+			final InetAddress defMcast = InetAddress.getByName(KNXnetIPRouting.DEFAULT_MULTICAST);
+			setIpProperty(PID.SYSTEM_SETUP_MULTICAST_ADDRESS, defMcast.getAddress());
+		}
+		catch (final UnknownHostException ignore) {}
+
+
+		setIpProperty(PID.ROUTING_MULTICAST_ADDRESS, mcast);
+		setIpProperty(PID.TTL, (byte) ttl);
+
+		final int deviceCaps = defDeviceCaps; // defDeviceCaps - 4;
+		setIpProperty(PID.KNXNETIP_DEVICE_CAPABILITIES, fromWord(deviceCaps));
+		setIpProperty(PID.KNXNETIP_DEVICE_STATE, (byte) 0);
+
+		setIpProperty(PID.QUEUE_OVERFLOW_TO_IP, fromWord(0));
+		// reset transmit counter to 0, 4 byte unsigned
+		setIpProperty(PID.MSG_TRANSMIT_TO_IP, new byte[4]);
+
+		// friendly name property entry is an array of 30 characters
+		final byte[] data = Arrays.copyOf(name.getBytes(Charset.forName("ISO-8859-1")), 30);
+		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, PID.FRIENDLY_NAME, 1, data.length, data);
+
+		// 100 ms is the default busy wait time
+		setIpProperty(PID.ROUTING_BUSY_WAIT_TIME, fromWord(100));
 	}
 
 	private void submitTask(final Runnable task)
