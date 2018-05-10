@@ -139,14 +139,15 @@ public class BaseKnxDevice implements KnxDevice
 	private final InterfaceObjectServer ios;
 	private final Logger logger;
 
-	// default TP1 address
-	private IndividualAddress self = new IndividualAddress(new byte[] { 0x02, (byte) 0xff});
+	private final ProcessCommunicationService process;
+	private final ManagementService mgmt;
 
-	private ProcessCommunicationService process;
-	private ManagementService mgmt;
 	private ProcessServiceNotifier procNotifier;
 	private ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
+
+	// default TP1 address
+	private IndividualAddress self = new IndividualAddress(new byte[] { 0x02, (byte) 0xff });
 
 	private static final int deviceMemorySize = 50_000;
 	private final byte[] memory = new byte[deviceMemorySize];
@@ -188,9 +189,8 @@ public class BaseKnxDevice implements KnxDevice
 	 * @param link the KNX network link this device is attached to
 	 * @throws KNXLinkClosedException if the network link is closed
 	 * @throws KnxPropertyException on error setting KNX properties during device initialization
-	 * @see #setServiceHandler(ProcessCommunicationService, ManagementService)
 	 */
-	protected BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
+	BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
 		final KNXNetworkLink link) throws KNXLinkClosedException, KnxPropertyException
 	{
 		this(name, dd, (ProcessCommunicationService) null, null);
@@ -350,26 +350,6 @@ public class BaseKnxDevice implements KnxDevice
 	public String toString()
 	{
 		return name + " " + self;
-	}
-
-	/**
-	 * Sets the process communication service handler and management service handler for this device.
-	 * <p>
-	 * This method is to be called during device initialization by subtypes of BaseKnxDevice if the device uses service
-	 * handlers, but did not set them during object creation using the supplied constructor.
-	 *
-	 * @param process the device handler for process communication, <code>null</code> if this device does not use such
-	 *        handler
-	 * @param mgmt the device handler for device management services, <code>null</code> if this device does not use such
-	 *        handler
-	 * @throws KNXLinkClosedException on closed network link
-	 */
-	protected final synchronized void setServiceHandler(final ProcessCommunicationService process,
-		final ManagementService mgmt) throws KNXLinkClosedException
-	{
-		this.process = process;
-		this.mgmt = mgmt;
-		resetNotifiers();
 	}
 
 	void dispatch(final EventObject e, final Supplier<ServiceResult> dispatch,
