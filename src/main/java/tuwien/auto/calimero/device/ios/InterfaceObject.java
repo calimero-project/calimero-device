@@ -247,7 +247,7 @@ public class InterfaceObject
 	@Override
 	public String toString()
 	{
-		return PropertyClient.getObjectTypeName(type) + ", object index " + idx;
+		return PropertyClient.getObjectTypeName(type) + " (index " + idx + ")";
 	}
 
 	// this method also ensures the value array is truncated accordingly
