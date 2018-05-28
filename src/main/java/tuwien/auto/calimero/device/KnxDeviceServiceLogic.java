@@ -152,7 +152,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 *
 	 * @return the device memory
 	 */
-	protected byte[] getDeviceMemory()
+	byte[] getDeviceMemory()
 	{
 		return ((BaseKnxDevice) device).deviceMemory();
 	}
