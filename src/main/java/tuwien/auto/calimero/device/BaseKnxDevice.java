@@ -65,12 +65,14 @@ import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 
+import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
+import tuwien.auto.calimero.device.ios.PropertyEvent;
 import tuwien.auto.calimero.knxnetip.ConnectionBase;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.link.AbstractLink;
@@ -159,6 +161,7 @@ public class BaseKnxDevice implements KnxDevice
 		this.name = name;
 		this.dd = dd;
 		ios = new InterfaceObjectServer(false);
+		ios.addServerListener(this::propertyChanged);
 		logger = LogService.getLogger("calimero.device." + name);
 
 		this.process = process;
@@ -280,9 +283,12 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		if (address == null)
 			throw new NullPointerException("device address cannot be null");
-		if (address.getRawAddress() == 0)
+		if (address.getRawAddress() == 0 || self.equals(address))
 			return;
 		self = address;
+
+		final KNXMediumSettings settings = getDeviceLink().getKNXMedium();
+		settings.setDeviceAddress(address);
 
 		final byte[] addr = self.toByteArray();
 		setDeviceProperty(PID.SUBNET_ADDRESS, addr[0]);
@@ -510,11 +516,11 @@ public class BaseKnxDevice implements KnxDevice
 		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, propertyId, 1, 1, data);
 	}
 
-	// [InetAddress, MulticastSocket]
+	// [KNXnetIPRouting, InetAddress, MulticastSocket]
 	private Object[] ipInfo() throws ReflectiveOperationException {
 		final KNXnetIPRouting conn = accessField(AbstractLink.class, "conn", link);
 		final MulticastSocket socket = accessField(ConnectionBase.class, "socket", conn);
-		return new Object[] { socket, conn.getRemoteAddress().getAddress() };
+		return new Object[] { conn, socket, conn.getRemoteAddress().getAddress() };
 	}
 
 	@SuppressWarnings("unchecked")
@@ -527,11 +533,6 @@ public class BaseKnxDevice implements KnxDevice
 		f.setAccessible(true);
 		return (T) f.get(obj);
 	}
-
-	// PID.KNXNETIP_DEVICE_CAPABILITIES
-	// Bits LSB to MSB: 0 Device Management, 1 Tunneling, 2 Routing, 3 Remote Logging,
-	// 4 Remote Configuration and Diagnosis, 5 Object Server
-	private static final int defDeviceCaps = 4;
 
 	private void initKnxipProperties() {
 		boolean found = false;
@@ -550,31 +551,31 @@ public class BaseKnxDevice implements KnxDevice
 		byte[] ip = new byte[4];
 		final byte[] mask = new byte[4];
 		byte[] mac = new byte[6];
-		int ttl = 0;
 		byte[] mcast = new byte[4];
 		try {
+			ip = InetAddress.getLocalHost().getAddress();
+
 			final Object[] objects = ipInfo();
-			final MulticastSocket socket = (MulticastSocket) objects[0];
-			mcast = ((InetAddress) objects[1]).getAddress();
+//			final KNXnetIPRouting conn = (KNXnetIPRouting) objects[0];
+			final MulticastSocket socket = (MulticastSocket) objects[1];
+			mcast = ((InetAddress) objects[2]).getAddress();
 
 			final NetworkInterface netif = socket.getNetworkInterface();
+			// workaround to verify that interface is actually configured
+			if (NetworkInterface.getByName(netif.getName()) != null) {
+				final List<InterfaceAddress> addresses = netif.getInterfaceAddresses();
+				final Optional<InterfaceAddress> addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
+				if (addr.isPresent()) {
+					ip = addr.get().getAddress().getAddress();
 
-			final List<InterfaceAddress> addresses = netif.getInterfaceAddresses();
-			final Optional<InterfaceAddress> addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
-			if (addr.isPresent()) {
-				ip = addr.get().getAddress().getAddress();
-
-				final int prefixLength = addr.get().getNetworkPrefixLength();
-				final long defMask = 0xffffffffL;
-				final long intMask = defMask ^ (defMask >> prefixLength);
-				ByteBuffer.wrap(mask).putInt((int) intMask);
-			}
-			else {
-				ip = InetAddress.getLocalHost().getAddress();
+					final int prefixLength = addr.get().getNetworkPrefixLength();
+					final long defMask = 0xffffffffL;
+					final long intMask = defMask ^ (defMask >> prefixLength);
+					ByteBuffer.wrap(mask).putInt((int) intMask);
+				}
 			}
 
 			mac = Optional.ofNullable(netif.getHardwareAddress()).orElse(mac);
-			ttl = socket.getTimeToLive();
 		}
 		catch (ReflectiveOperationException | IOException | RuntimeException e) {
 			logger.warn("initializing KNX IP properties, {}", e.toString());
@@ -598,9 +599,13 @@ public class BaseKnxDevice implements KnxDevice
 
 
 		setIpProperty(PID.ROUTING_MULTICAST_ADDRESS, mcast);
-		setIpProperty(PID.TTL, (byte) ttl);
+		// set default ttl
+		setIpProperty(PID.TTL, (byte) 16);
 
-		final int deviceCaps = defDeviceCaps; // defDeviceCaps - 4;
+		// PID.KNXNETIP_DEVICE_CAPABILITIES
+		// Bits LSB to MSB: 0 Device Management, 1 Tunneling, 2 Routing, 3 Remote Logging,
+		// 4 Remote Configuration and Diagnosis, 5 Object Server
+		final int deviceCaps = 4;
 		setIpProperty(PID.KNXNETIP_DEVICE_CAPABILITIES, fromWord(deviceCaps));
 		setIpProperty(PID.KNXNETIP_DEVICE_STATE, (byte) 0);
 
@@ -614,6 +619,24 @@ public class BaseKnxDevice implements KnxDevice
 
 		// 100 ms is the default busy wait time
 		setIpProperty(PID.ROUTING_BUSY_WAIT_TIME, fromWord(100));
+	}
+
+	private void propertyChanged(final PropertyEvent pe) {
+		try {
+			if (pe.getInterfaceObject().getType() == InterfaceObject.KNXNETIP_PARAMETER_OBJECT) {
+				final int pid = pe.getPropertyId();
+				if (pid == PID.TTL) {
+					final KNXnetIPRouting conn = (KNXnetIPRouting) ipInfo()[0];
+					conn.setHopCount(pe.getNewData()[0]);
+				}
+				else if (pid == PID.KNX_INDIVIDUAL_ADDRESS)
+					setAddress(new IndividualAddress(pe.getNewData()));
+			}
+		}
+		catch (ReflectiveOperationException | RuntimeException e) {
+			logger.warn("updating {} PID {} with [{}]: {}", pe.getInterfaceObject(), pe.getPropertyId(),
+					DataUnitBuilder.toHex(pe.getNewData(), ""), e.toString());
+		}
 	}
 
 	private void submitTask(final Runnable task)
