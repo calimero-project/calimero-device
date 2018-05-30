@@ -36,6 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import junit.framework.TestCase;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
@@ -323,7 +325,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 		catch (final NullPointerException expected) {}
 
-		new BaseKnxDevice("test", dd0, addr, null, processLogic, mgmtLogic);
+		assertThrows(NullPointerException.class, () -> new BaseKnxDevice("test", dd0, addr, null, processLogic, mgmtLogic), "link is null");
 
 		new BaseKnxDevice("test", dd0, addr, link, processLogic, mgmtLogic);
 	}
