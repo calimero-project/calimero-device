@@ -680,13 +680,13 @@ public class InterfaceObjectServer implements PropertyAccess
 	{
 		@Override
 		public void setProperty(final int objIndex, final int pid, final int start,
-			final int elements, final byte[] data) throws KnxPropertyException
+			final int elements, final byte... data) throws KnxPropertyException
 		{
 			setProperty(getIfObject(objIndex), pid, start, elements, data);
 		}
 
 		public void setProperty(final int objectType, final int objectInstance, final int propertyId, final int start,
-			final int elements, final byte[] data) throws KnxPropertyException
+			final int elements, final byte... data) throws KnxPropertyException
 		{
 			setProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements, data);
 		}
