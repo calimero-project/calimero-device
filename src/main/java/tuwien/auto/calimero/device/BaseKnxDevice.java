@@ -518,6 +518,8 @@ public class BaseKnxDevice implements KnxDevice
 	// [KNXnetIPRouting, InetAddress, MulticastSocket]
 	private Object[] ipInfo() throws ReflectiveOperationException {
 		final KNXnetIPRouting conn = accessField(AbstractLink.class, "conn", link);
+		if (conn == null)
+			throw new RuntimeException("no KNX IP routing connection found in link " + link.getName());
 		final MulticastSocket socket = accessField(ConnectionBase.class, "socket", conn);
 		return new Object[] { conn, socket, conn.getRemoteAddress().getAddress() };
 	}
@@ -526,8 +528,10 @@ public class BaseKnxDevice implements KnxDevice
 	private <T, U> T accessField(final Class<? extends U> clazz, final String field, final U obj)
 		throws ReflectiveOperationException, SecurityException {
 		Class<? extends U> cl = (Class<? extends U>) obj.getClass();
-		while (!clazz.equals(cl))
+		while (cl != null && !clazz.equals(cl))
 			cl = (Class<? extends U>) cl.getSuperclass();
+		if (cl == null)
+			return null;
 		final Field f = cl.getDeclaredField(field);
 		f.setAccessible(true);
 		return (T) f.get(obj);
