@@ -267,7 +267,6 @@ public class BaseKnxDevice implements KnxDevice
 		throws KNXLinkClosedException, KnxPropertyException
 	{
 		this(name, DeviceDescriptor.DD0.TYPE_5705, link.getKNXMedium().getDeviceAddress(), link, logic, logic);
-		logic.setDevice(this);
 	}
 
 	/**
