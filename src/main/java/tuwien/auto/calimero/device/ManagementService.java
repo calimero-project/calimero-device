@@ -133,9 +133,8 @@ public interface ManagementService
 	 * Assigns a new individual address to this device; a device shall only set its address if in programming mode.
 	 *
 	 * @param newAddress new device address
-	 * @return <code>null</code>
 	 */
-	ServiceResult writeAddress(IndividualAddress newAddress);
+	void writeAddress(IndividualAddress newAddress);
 
 	/**
 	 * Reads the individual address from a device having the requested serial number; a device shall only return a
@@ -152,9 +151,8 @@ public interface ManagementService
 	 *
 	 * @param serialNo serial number, length = 6 bytes
 	 * @param newAddress new device address
-	 * @return n/a
 	 */
-	ServiceResult writeAddressSerial(byte[] serialNo, IndividualAddress newAddress);
+	void writeAddressSerial(byte[] serialNo, IndividualAddress newAddress);
 
 	/**
 	 * Returns the domain address of this device; only a device in programming mode shall respond to this service.
@@ -188,9 +186,8 @@ public interface ManagementService
 	 * Assigns a new domain address to a device; only a device in programming mode shall set its domain.
 	 *
 	 * @param domain domain address, address length is either 2 bytes for KNX-PL110 or 6 bytes for KNX-RF
-	 * @return n/a
 	 */
-	ServiceResult writeDomainAddress(byte[] domain);
+	void writeDomainAddress(byte[] domain);
 
 	/**
 	 * Invoked for an application layer device descriptor read service.

@@ -334,9 +334,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			}
 		}
 		final IndividualAddress ia = new IndividualAddress(addr);
-
-		// this service does not have a response
-		/*final ServiceResult sr =*/ mgmtSvc.writeAddressSerial(sn, ia);
+		mgmtSvc.writeAddressSerial(sn, ia);
 	}
 
 	private void onIndAddrSnRead(final Destination respondTo, final byte[] data)
@@ -370,8 +368,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		final byte[] addr = Arrays.copyOfRange(data, 0, 2);
 		final IndividualAddress ia = new IndividualAddress(addr);
 		// a device shall only set its address if in programming mode
-		// this service does not have a response
-		/*final ServiceResult sr =*/ mgmtSvc.writeAddress(ia);
+		mgmtSvc.writeAddress(ia);
 	}
 
 	private void onIndAddrRead(final Destination respondTo, final byte[] data)
@@ -445,7 +442,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		if (!verifyLength(data.length, lengthDoA, lengthDoA, "domain address write"))
 			return;
 		final byte[] domain = Arrays.copyOfRange(data, 0, lengthDoA);
-		/*final ServiceResult sr =*/ mgmtSvc.writeDomainAddress(domain);
+		mgmtSvc.writeDomainAddress(domain);
 	}
 
 	// p2p connection-oriented mode

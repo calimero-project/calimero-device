@@ -331,10 +331,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult writeAddress(final IndividualAddress newAddress)
+	public void writeAddress(final IndividualAddress newAddress)
 	{
 		if (!inProgrammingMode())
-			return null;
+			return;
 		final IndividualAddress old = device.getAddress();
 		final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
 		settings.setDeviceAddress(newAddress);
@@ -342,11 +342,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			((BaseKnxDevice) device).setAddress(newAddress);
 		}
 		logger.info("set new device address {} (old {})", newAddress, old);
-		return null;
 	}
 
 	@Override
-	public ServiceResult writeAddressSerial(final byte[] serialNo,
+	public void writeAddressSerial(final byte[] serialNo,
 		final IndividualAddress newAddress)
 	{
 		final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
@@ -354,7 +353,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
 			settings.setDeviceAddress(newAddress);
 		}
-		return null;
 	}
 
 	@Override
@@ -412,7 +410,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult writeDomainAddress(final byte[] domain)
+	public void writeDomainAddress(final byte[] domain)
 	{
 		if (inProgrammingMode()) {
 			domainAddress = domain;
@@ -425,7 +423,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				logger.error("setting DoA {} in interface object server", DataUnitBuilder.toHex(domain, " "), e);
 			}
 		}
-		return null;
 	}
 
 	@Override

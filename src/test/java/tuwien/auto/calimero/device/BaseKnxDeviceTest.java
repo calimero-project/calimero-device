@@ -181,16 +181,10 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult writeAddressSerial(final byte[] serialNo, final IndividualAddress newAddress)
-		{
-			return null;
-		}
+		public void writeAddressSerial(final byte[] serialNo, final IndividualAddress newAddress) {}
 
 		@Override
-		public ServiceResult writeAddress(final IndividualAddress newAddress)
-		{
-			return null;
-		}
+		public void writeAddress(final IndividualAddress newAddress) {}
 
 		@Override
 		public ServiceResult restart(final boolean masterReset, final int eraseCode, final int channel)
@@ -238,10 +232,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult writeDomainAddress(final byte[] domain)
-		{
-			return null;
-		}
+		public void writeDomainAddress(final byte[] domain) {}
 
 		@Override
 		public ServiceResult readDescriptor(final int type)
