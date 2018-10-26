@@ -178,20 +178,20 @@ public class InterfaceObjectServer implements PropertyAccess
 	}
 
 	/**
-	 * Loads property definitions from a resource for use by this IOS.
-	 * <p>
-	 * If previously set by
-	 * {@link InterfaceObjectServer#setResourceHandler(InterfaceObjectServer.IosResourceHandler)} ,
-	 * this method uses that resource handler. Otherwise, it uses the default property server
-	 * resource handler of this class.
+	 * Loads property definitions from a resource for use by this IOS. By default, this method uses
+	 * {@link XmlPropertyDefinitions} as resource handler.
 	 *
 	 * @param resource the identifier of a resource to load
 	 * @throws KNXException on errors in the property resource handler
 	 */
-	public synchronized void loadDefinitions(final String resource) throws KNXException
+	public void loadDefinitions(final String resource) throws KNXException
 	{
 		final ResourceHandler handler = new XmlPropertyDefinitions();
 		client.addDefinitions(handler.load(resource));
+	}
+
+	public Map<PropertyKey, Property> propertyDefinitions() {
+		return client.getDefinitions();
 	}
 
 	/**
@@ -632,8 +632,6 @@ public class InterfaceObjectServer implements PropertyAccess
 	private Property getDefinition(final int objectType, final int pid)
 	{
 		final Map<PropertyKey, Property> defs = client.getDefinitions();
-		if (defs == null)
-			return null;
 		Property p = defs.get(new PropertyKey(objectType, pid));
 		if (p == null && pid < 50)
 			p = defs.get(new PropertyKey(pid));

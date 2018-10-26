@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2015 B. Malinowsky
+    Copyright (c) 2010, 2018 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -76,47 +76,6 @@ public class PropertyEvent extends EventObject
 		elems = elements;
 		this.data = data.clone();
 	}
-
-	/**
-	 * Creates a new property event using the interface object type and object instance, and the
-	 * property data.
-	 * <p>
-	 *
-	 * @param source the interface object server instance containing the property
-	 * @param objectType interface object type in which the property is contained
-	 * @param objectInstance interface object instance containing the property
-	 * @param propertyId KNX property identifier
-	 * @param start the start index of the updated property values in the property value data array
-	 *        of the interface object
-	 * @param elements the number of updated property values, i.e. the number of elements contained
-	 *        in the <code>data</code> argument
-	 * @param data the updated property values as byte array, a copy is created during event
-	 *        construction
-	 */
-	/*public PropertyEvent(final InterfaceObjectServer source, int objectType, int
-	  	objectInstance, int propertyId, int start, int elements, byte[] data)
-	{
-		super(source);
-		type = objectType;
-		inst = objectInstance;
-		pid = propertyId;
-		this.start = start;
-		elems = elements;
-		this.data = (byte[]) data.clone();
-
-		idx = 0;
-	}*/
-
-	/**
-	 * Returns the interface object index of the interface object containing the KNX property.
-	 * <p>
-	 *
-	 * @return the object index as int
-	 */
-	/*public int getObjectIndex()
-	{
-		return io.getIndex();
-	}*/
 
 	/**
 	 * Returns the interface object containing the KNX property.

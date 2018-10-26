@@ -67,6 +67,8 @@ import tuwien.auto.calimero.link.medium.RFSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.mgmt.PropertyClient.Property;
+import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.process.ProcessEvent;
 
@@ -191,8 +193,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					return new ServiceResult(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (KNXException | RuntimeException ex) {
-				logger.warn("on group read request {}->{}: {}", e.getSourceAddr(), dst,
-						DataUnitBuilder.toHex(e.getASDU(), " "), ex);
+				logger.warn("on group read request {}->{}: {}", e.getSourceAddr(), dst, DataUnitBuilder.toHex(e.getASDU(), " "), ex);
 			}
 		}
 		return null;
@@ -211,8 +212,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
-			logger.warn("on group write {}->{}: {}", e.getSourceAddr(), dst, DataUnitBuilder.toHex(e.getASDU(), " "),
-					ex);
+			logger.warn("on group write {}->{}: {}", e.getSourceAddr(), dst, DataUnitBuilder.toHex(e.getASDU(), " "), ex);
 		}
 	}
 
@@ -246,21 +246,29 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int propertyId, final int startIndex, final int elements, final byte[] data)
 	{
 		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
+		Description d = null;
 		try {
-			final Description d = ios.getDescription(objectIndex, propertyId);
+			d = ios.getDescription(objectIndex, propertyId);
+		}
+		catch (final KnxPropertyException e) {
+			// try to create description from property definition
+			final int objType = ios.getInterfaceObjects()[objectIndex].getType();
+			final Property p = ios.propertyDefinitions().get(new PropertyKey(objType, propertyId));
+			if (p != null)
+				d = new Description(objectIndex, objType, propertyId, 0, p.getPDT(), !p.readOnly(), 0, 1, p.readLevel(), p.writeLevel());
+		}
+		if (d != null) {
 			if (!d.isWriteEnabled()) {
-				logger.warn("property {}|{} is {}", objectIndex, propertyId,
-						CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
+				logger.warn("property {}|{} is {}", objectIndex, propertyId, CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
 				return null;
 			}
 			final Integer level = accessLevel(remote);
 			if (level > d.getWriteLevel()) {
-				logger.warn("deny {} write access to property {}/{} (access level {}, requires {})",
-						remote.getAddress(), objectIndex, propertyId, level, d.getWriteLevel());
+				logger.warn("deny {} write access to property {}|{} (access level {}, requires {})", remote.getAddress(), objectIndex,
+						propertyId, level, d.getWriteLevel());
 				return null;
 			}
 		}
-		catch (final KnxPropertyException ignore) { logger.error("get description", ignore); }
 		// if we set a non-existing property, we won't have a description (it won't show up in a property editor)
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases
