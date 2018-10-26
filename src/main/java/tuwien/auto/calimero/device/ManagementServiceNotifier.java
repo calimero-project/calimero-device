@@ -36,6 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
+import static tuwien.auto.calimero.DataUnitBuilder.decodeAPCI;
+
 import java.util.Arrays;
 import java.util.EventObject;
 
@@ -296,7 +298,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		asdu[2] = res[1];
 		asdu[3] = res[2];
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(RESTART, asdu);
-		send(respondTo, apdu, sr.getPriority());
+		send(respondTo, apdu, sr.getPriority(), decodeAPCI(RESTART));
 	}
 
 	// p2p connection-oriented mode
@@ -313,9 +315,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		if (ignoreOrSchedule(sr))
 			return;
 
-		final byte[] asdu = sr.getResult();
-		final byte[] apdu = DataUnitBuilder.createAPDU(KEY_RESPONSE, asdu);
-		send(respondTo, apdu, sr.getPriority());
+		send(respondTo, KEY_RESPONSE, sr.getResult(), sr.getPriority());
 	}
 
 	private void onIndAddrSnWrite(final Destination respondTo, final byte[] data)
@@ -359,7 +359,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		}
 		final byte[] apdu = DataUnitBuilder.createAPDU(IND_ADDR_SN_RESPONSE, asdu);
 		// priority is always system
-		sendBroadcast(false, apdu, Priority.SYSTEM);
+		sendBroadcast(false, apdu, Priority.SYSTEM, decodeAPCI(IND_ADDR_SN_RESPONSE));
 	}
 
 	private void onIndAddrWrite(final Destination respondTo, final byte[] data)
@@ -386,7 +386,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] asdu = new byte[0];
 		final byte[] apdu = DataUnitBuilder.createAPDU(IND_ADDR_RESPONSE, asdu);
-		sendBroadcast(false, apdu, Priority.SYSTEM);
+		sendBroadcast(false, apdu, Priority.SYSTEM, decodeAPCI(IND_ADDR_RESPONSE));
 	}
 
 	private void onDoARead(final Destination respondTo, final byte[] data)
@@ -437,7 +437,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			asdu = new byte[] { 1, domain[0], domain[1], domain[2], domain[3], domain[4], domain[5] };
 		else
 			return;
-		send(respondTo, DataUnitBuilder.createAPDU(DOA_RESPONSE, asdu), sr.getPriority());
+		send(respondTo, DOA_RESPONSE, asdu, sr.getPriority());
 	}
 
 	private void onDoAWrite(final Destination respondTo, final byte[] data)
@@ -466,8 +466,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		if (ignoreOrSchedule(sr))
 			return;
 
-		final byte[] apdu = DataUnitBuilder.createAPDU(AUTHORIZE_RESPONSE, sr.getResult());
-		send(respondTo, apdu, sr.getPriority());
+		send(respondTo, AUTHORIZE_RESPONSE, sr.getResult(), sr.getPriority());
 	}
 
 	// p2p connection-oriented mode
@@ -485,7 +484,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] asdu = sr.getResult();
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(ADC_RESPONSE, asdu);
-		send(respondTo, apdu, sr.getPriority());
+		send(respondTo, apdu, sr.getPriority(), decodeAPCI(ADC_RESPONSE));
 	}
 
 	private void onDeviceDescRead(final Destination d, final byte[] data)
@@ -513,7 +512,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		final byte[] asdu = sr.getResult();
 		final byte[] apdu = DataUnitBuilder.createAPDU(DEVICE_DESC_RESPONSE, asdu);
 		apdu[1] |= type;
-		send(d, apdu, sr.getPriority());
+		send(d, apdu, sr.getPriority(), decodeAPCI(DEVICE_DESC_RESPONSE));
 	}
 
 	private void onPropertyRead(final Destination d, final byte[] data)
@@ -551,8 +550,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		for (int i = 0; i < res.length; ++i)
 			asdu[i + 4] = res[i];
 
-		final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_RESPONSE, asdu);
-		send(d, apdu, sr.getPriority());
+		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
 
 	private void onPropertyWrite(final Destination d, final byte[] data)
@@ -595,8 +593,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		for (int i = 0; i < written; ++i)
 			asdu[4 + i] = res[i];
 
-		final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_RESPONSE, asdu);
-		send(d, apdu, sr.getPriority());
+		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
 
 	private void onPropDescRead(final Destination d, final byte[] data)
@@ -621,8 +618,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			asdu[0] = (byte) objIndex;
 			asdu[1] = (byte) pid;
 			asdu[2] = (byte) propIndex;
-			final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_DESC_RESPONSE, asdu);
-			send(d, apdu, Priority.LOW);
+			send(d, PROPERTY_DESC_RESPONSE, asdu, Priority.LOW);
 			return;
 		}
 		if (ignoreOrSchedule(sr))
@@ -640,8 +636,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		final byte[] asdu = new byte[/*7*/] { (byte) objIndex, (byte) pid, (byte) index, (byte) type,
 			(byte) (max >>> 8), (byte) max, (byte) access };
 
-		final byte[] apdu = DataUnitBuilder.createAPDU(PROPERTY_DESC_RESPONSE, asdu);
-		send(d, apdu, sr.getPriority());
+		send(d, PROPERTY_DESC_RESPONSE, asdu, sr.getPriority());
 	}
 
 	private void onMemoryWrite(final Destination d, final byte[] data)
@@ -687,8 +682,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 				for (int i = 0; i < bytes; ++i)
 					asdu[3 + i] = written[i];
 
-				final byte[] apdu = DataUnitBuilder.createAPDU(MEMORY_RESPONSE, asdu);
-				send(d, apdu, sr.getPriority());
+				send(d, MEMORY_RESPONSE, asdu, sr.getPriority());
 			}
 		}
 	}
@@ -726,7 +720,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 				asdu[3 + i] = res[i];
 
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
-		send(d, apdu, sr.getPriority());
+		send(d, apdu, sr.getPriority(), decodeAPCI(MEMORY_RESPONSE));
 	}
 
 	private void onManagement(final int svcType, final byte[] data, final KNXAddress dst, final Destination respondTo)
@@ -755,20 +749,26 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		return true;
 	}
 
-	private void sendBroadcast(final boolean system, final byte[] apdu, final Priority p)
+	private void sendBroadcast(final boolean system, final byte[] apdu, final Priority p, final String service)
 	{
 		final String type = system ? "system" : "domain";
-		logger.trace(device.getAddress() + "->[" + type + " broadcast]" + " respond with "
-				+ DataUnitBuilder.toHex(apdu, " "));
+		logger.trace("{}->[{} broadcast] respond with {} {}", device.getAddress(), type, service, DataUnitBuilder.toHex(apdu, " "));
 		try {
 			tl.broadcast(system, p, apdu);
 		}
 		catch (KNXLinkClosedException | KNXTimeoutException e) {
-			logger.error("{}->[{}-broadcast]: {}", device.getAddress(), type, DataUnitBuilder.toHex(apdu, " "), e);
+			logger.error("{}->[{} broadcast] {} {}: {}", device.getAddress(), type, service, DataUnitBuilder.toHex(apdu, " "),
+					e.getMessage());
 		}
 	}
 
-	private void send(final Destination respondTo, final byte[] apdu, final Priority p)
+	private void send(final Destination respondTo, final int service, final byte[] asdu, final Priority p)
+	{
+		final byte[] apdu = DataUnitBuilder.createAPDU(service, asdu);
+		send(respondTo, apdu, p, decodeAPCI(service));
+	}
+
+	private void send(final Destination respondTo, final byte[] apdu, final Priority p, final String service)
 	{
 		// if we received a disconnect from the remote, the destination got destroyed to avoid keeping it around
 		if (respondTo.getState() == State.Destroyed) {
@@ -784,7 +784,8 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 				tl.sendData(dst, p, apdu);
 		}
 		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException e) {
-			logger.error("{}->{}: {}, {}", device.getAddress(), dst, DataUnitBuilder.toHex(apdu, " "), respondTo, e);
+			logger.error("{}->{} {} {}: {}, {}", device.getAddress(), dst, service, DataUnitBuilder.toHex(apdu, " "), e.getMessage(),
+					respondTo);
 		}
 	}
 

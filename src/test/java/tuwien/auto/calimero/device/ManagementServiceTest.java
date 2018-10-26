@@ -137,13 +137,14 @@ public class ManagementServiceTest
 	{
 		mgmt.authorize(dst, authKey);
 		final byte[] data = new byte[] { 1, 2, 3, 4 };
-		ServiceResult r = mgmt.writeProperty(dst, objectIndex, 110, 1, 1, data);
+		final int pidPL110Param = 73;
+		ServiceResult r = mgmt.writeProperty(dst, objectIndex, pidPL110Param, 1, 1, data);
 		assertNotNull(r);
 		assertNotNull(r.getResult());
 		assertArrayEquals(data, r.getResult());
 
 		mgmt.authorize(dst, highestAuthKey);
-		r = mgmt.readProperty(dst, objectIndex, 110, 1, 1);
+		r = mgmt.readProperty(dst, objectIndex, pidPL110Param, 1, 1);
 		assertNotNull(r);
 		assertNotNull(r.getResult());
 		assertArrayEquals(data, r.getResult());
