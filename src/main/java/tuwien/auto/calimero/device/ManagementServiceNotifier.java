@@ -752,7 +752,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	private void sendBroadcast(final boolean system, final byte[] apdu, final Priority p, final String service)
 	{
 		final String type = system ? "system" : "domain";
-		logger.trace("{}->[{} broadcast] respond with {} {}", device.getAddress(), type, service, DataUnitBuilder.toHex(apdu, " "));
+		logger.trace("{}->[{} broadcast] {} {}", device.getAddress(), type, service, DataUnitBuilder.toHex(apdu, " "));
 		try {
 			tl.broadcast(system, p, apdu);
 		}
@@ -772,11 +772,11 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	{
 		// if we received a disconnect from the remote, the destination got destroyed to avoid keeping it around
 		if (respondTo.getState() == State.Destroyed) {
-			logger.warn("cannot respond, {}", respondTo);
+			logger.warn("cannot respond with {}, {}", service, respondTo);
 			return;
 		}
 		final IndividualAddress dst = respondTo.getAddress();
-		logger.trace("{}->{} respond with {}", device.getAddress(), dst, DataUnitBuilder.toHex(apdu, " "));
+		logger.trace("{}->{} {} {}", device.getAddress(), dst, service, DataUnitBuilder.toHex(apdu, " "));
 		try {
 			if (respondTo.isConnectionOriented())
 				tl.sendData(respondTo, p, apdu);
@@ -799,8 +799,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		catch (final KnxPropertyException e) {
 			if (!missingApduLength) {
 				missingApduLength = true;
-				logger.error(
-						"device has no maximum APDU length set (PID.MAX_APDULENGTH), using " + defaultMaxApduLength);
+				logger.error("device has no maximum APDU length set (PID.MAX_APDULENGTH), using " + defaultMaxApduLength);
 			}
 			return defaultMaxApduLength;
 		}
