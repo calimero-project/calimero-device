@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2019 B. Malinowsky
+    Copyright (c) 2011, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -143,6 +143,8 @@ public class BaseKnxDevice implements KnxDevice
 
 	private final ProcessCommunicationService process;
 	private final ManagementService mgmt;
+
+	DeviceSecureApplicationLayer sal;
 
 	private ProcessServiceNotifier procNotifier;
 	ManagementServiceNotifier mgmtNotifier;
@@ -326,6 +328,10 @@ public class BaseKnxDevice implements KnxDevice
 		if (address.getDevice() != 0)
 			setAddress(address);
 
+		if (sal != null)
+			sal.close();
+		sal = new DeviceSecureApplicationLayer(this);
+
 		if (process instanceof KnxDeviceServiceLogic)
 			((KnxDeviceServiceLogic) process).setDevice(this);
 		else if (mgmt instanceof KnxDeviceServiceLogic)
@@ -471,7 +477,7 @@ public class BaseKnxDevice implements KnxDevice
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)
 		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, false, 0, 1, 3, 0), true);
 		// can be between 15 and 254 bytes (255 is Escape code for extended L_Data frames)
-		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(15));
+		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(254));
 
 		// default TP1 address
 		setDeviceProperty(PID.SUBNET_ADDRESS, (byte) 0x02);
