@@ -1,7 +1,7 @@
 Calimero KNX Device [![Build Status](https://travis-ci.org/calimero-project/calimero-device.svg?branch=master)](https://travis-ci.org/calimero-project/calimero-device)
 ===================
 
-The Calimero KNX network stack to run a KNX device on Java SE. This library allows you to implement your own KNX device on any platform that supports a JRE. The minimum required runtime environment is Java SE Embedded 8 with the profile [compact1](http://www.oracle.com/technetwork/java/embedded/resources/tech/compact-profiles-overview-2157132.html) (i.e., only a subset of the full SE API). 
+The Calimero KNX network stack to run a KNX device on Java SE. This library allows you to implement your own KNX device on any platform that supports a JRE. The minimum required runtime environment is [Java SE 11](https://jdk.java.net/11/) (_java.base_). 
 
 A code example for using this library is shown in [introduction](https://github.com/calimero-project/introduction):
 
