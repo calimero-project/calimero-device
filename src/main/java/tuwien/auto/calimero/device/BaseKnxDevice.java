@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2018 B. Malinowsky
+    Copyright (c) 2011, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -145,13 +145,14 @@ public class BaseKnxDevice implements KnxDevice
 	private final ManagementService mgmt;
 
 	private ProcessServiceNotifier procNotifier;
-	private ManagementServiceNotifier mgmtNotifier;
+	ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
 	// default TP1 address
 	private IndividualAddress self = new IndividualAddress(new byte[] { 0x02, (byte) 0xff });
 
-	private static final int deviceMemorySize = 50_000;
+//	private static final int deviceMemorySize = 50_000;
+	private static final int deviceMemorySize = 0x10010; // for testing memory services with > 65 K memory
 	private final byte[] memory = new byte[deviceMemorySize];
 
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,

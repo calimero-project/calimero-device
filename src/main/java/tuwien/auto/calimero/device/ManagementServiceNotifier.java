@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2018 B. Malinowsky
+    Copyright (c) 2012, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@
 package tuwien.auto.calimero.device;
 
 import static tuwien.auto.calimero.DataUnitBuilder.decodeAPCI;
+import static tuwien.auto.calimero.DataUnitBuilder.toHex;
 
 import java.util.Arrays;
 import java.util.EventObject;
@@ -52,6 +53,7 @@ import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
+import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
@@ -72,7 +74,7 @@ import tuwien.auto.calimero.mgmt.TransportListener;
  *
  * @author B. Malinowsky
  */
-final class ManagementServiceNotifier implements TransportListener, AutoCloseable
+class ManagementServiceNotifier implements TransportListener, AutoCloseable
 {
 	// service IDs copied over from management client
 	private static final int ADC_READ = 0x0180;
@@ -112,6 +114,12 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 	private static final int PROPERTY_WRITE = 0x03D7;
 
 	private static final int RESTART = 0x0380;
+
+	static final int MemoryExtendedWrite = 0b0111111011;
+	private static final int MemoryExtendedWriteResponse = 0b0111111100;
+	static final int MemoryExtendedRead = 0b0111111101;
+	private static final int MemoryExtendedReadResponse = 0b0111111110;
+
 
 	private static final int defaultMaxApduLength = 15;
 	private boolean missingApduLength;
@@ -267,6 +275,10 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			onKeyWrite(respondTo, data);
 		else if (svc == RESTART)
 			onRestart(respondTo, data);
+		else if (svc == MemoryExtendedWrite)
+			onMemoryExtendedWrite(respondTo, data);
+		else if (svc == MemoryExtendedRead)
+			onMemoryExtendedRead(respondTo, data);
 		else
 			onManagement(svc, data, dst, respondTo);
 	}
@@ -642,7 +654,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 			return;
 
 		// write between 1 and 63 bytes
-		int bytes = data[0];
+		int bytes = data[0] & 0xff;
 		final int address = ((data[1] & 0xff) << 8) | (data[2] & 0xff);
 
 		// the remote application layer shall ignore a memory-write.ind if
@@ -684,11 +696,73 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		}
 	}
 
+	private void onMemoryExtendedWrite(final Destination d, final byte[] data) {
+		if (!verifyLength(data.length, 5, 254, "memory-write"))
+			return;
+
+		// write between 1 and 250 bytes
+		final int bytes = data[0] & 0xff;
+		final int address = ((data[1] & 0xff) << 16) | ((data[2] & 0xff) << 8) | (data[3] & 0xff);
+
+		final ReturnCode rc;
+		Priority priority = Priority.LOW;
+		if (bytes > getMaxApduLength() - 4) {
+			logger.error("memory-write of length {} > max. {} bytes - ignore", bytes, getMaxApduLength() - 4);
+			rc = ReturnCode.ExceedsMaxApduLength;
+		}
+		else {
+			final byte[] memory = Arrays.copyOfRange(data, 4, data.length);
+			if (memory.length != bytes) {
+				logger.warn("ill-formed memory write: number field = {} but memory length = {}", bytes, memory);
+				rc = ReturnCode.Error; // ReturnCode.DataVoid would probably fit better, but is not specified
+			}
+			else {
+				logger.trace("write memory: start address 0x{}, {} bytes: {}", Integer.toHexString(address), bytes,
+						toHex(memory, " "));
+				final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
+				if (ignoreOrSchedule(sr))
+					return;
+
+				rc = ReturnCode.of(sr.getResult()[0] & 0xff);
+				priority = sr.getPriority();
+			}
+		}
+
+		final boolean withCrc = rc == ReturnCode.SuccessWithCrc;
+		final byte[] asdu = new byte[4 + (withCrc ? 2 : 0)];
+		asdu[0] = (byte) (rc.code());
+		asdu[1] = (byte) (address >>> 16);
+		asdu[2] = (byte) (address >>> 8);
+		asdu[3] = (byte) address;
+		if (withCrc) {
+			final int crc = crc16Ccitt(data);
+			asdu[4] = (byte) (crc >> 8);
+			asdu[5] = (byte) crc;
+		}
+
+		send(d, MemoryExtendedWriteResponse, asdu, priority);
+	}
+
+	private static int crc16Ccitt(final byte[] input) {
+		final int polynom = 0x1021;
+		final byte[] padded = Arrays.copyOf(input, input.length + 2);
+		int result = 0xffff;
+		for (int i = 0; i < 8 * padded.length; i++) {
+			result <<= 1;
+			final int nextBit = (padded[i / 8] >> (7 - (i % 8))) & 0x1;
+			result |= nextBit;
+			if ((result & 0x10000) != 0)
+				result ^= polynom;
+		}
+		return result & 0xffff;
+	}
+
+
 	private void onMemoryRead(final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 3, 3, "memory-read"))
 			return;
-		final int length = data[0];
+		final int length = data[0] & 0xff;
 		final int address = (data[1] & 0xff) << 8 | (data[2] & 0xff);
 
 		// requests with a length exceeding the maximum APDU size shall be ignored by the application
@@ -718,6 +792,49 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority(), decodeAPCI(MEMORY_RESPONSE));
+	}
+
+	private void onMemoryExtendedRead(final Destination d, final byte[] data) {
+		if (!verifyLength(data.length, 4, 4, "memory-read"))
+			return;
+		final int length = data[0] & 0xff;
+		final int address = ((data[1] & 0xff) << 16) | ((data[2] & 0xff) << 8) | (data[3] & 0xff);
+
+		final ReturnCode rc;
+		byte[] read = {};
+		Priority priority = Priority.LOW;
+		if (length > getMaxApduLength() - 4) {
+			logger.warn("memory-read request of length {} > max. {} bytes - ignored", length, getMaxApduLength() - 4);
+			rc = ReturnCode.ExceedsMaxApduLength;
+		}
+		else {
+			logger.trace("read memory: start address 0x{}, {} bytes", Integer.toHexString(address), length);
+			final ServiceResult sr = mgmtSvc.readMemory(address, length);
+			if (sr == null)
+				return;
+
+			final byte[] result = sr.getResult();
+			if (result == null)
+				rc = ReturnCode.AddressVoid;
+			else if (result.length == 0)
+				rc = ReturnCode.AccessDenied;
+			else if (result.length != length)
+				rc = ReturnCode.MemoryError;
+			else {
+				rc = ReturnCode.Success;
+				read = result;
+			}
+			priority = sr.getPriority();
+		}
+
+		final byte[] asdu = new byte[4 + read.length];
+		asdu[0] = (byte) rc.code();
+		asdu[1] = (byte) (address >> 16);
+		asdu[2] = (byte) (address >> 8);
+		asdu[3] = (byte) address;
+		for (int i = 0; i < read.length; ++i)
+			asdu[4 + i] = read[i];
+		send(d, MemoryExtendedReadResponse, asdu, priority);
 	}
 
 	private void onManagement(final int svcType, final byte[] data, final KNXAddress dst, final Destination respondTo)
@@ -765,7 +882,7 @@ final class ManagementServiceNotifier implements TransportListener, AutoCloseabl
 		send(respondTo, apdu, p, decodeAPCI(service));
 	}
 
-	private void send(final Destination respondTo, final byte[] apdu, final Priority p, final String service)
+	void send(final Destination respondTo, final byte[] apdu, final Priority p, final String service)
 	{
 		// if we received a disconnect from the remote, the destination got destroyed to avoid keeping it around
 		if (respondTo.getState() == State.Destroyed) {

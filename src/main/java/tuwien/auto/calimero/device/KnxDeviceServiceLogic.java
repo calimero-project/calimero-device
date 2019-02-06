@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2018 B. Malinowsky
+    Copyright (c) 2012, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -51,6 +51,7 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.datapoint.Datapoint;
@@ -294,6 +295,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readMemory(final int startAddress, final int bytes)
 	{
+		if (startAddress > 0xffff) {
+			final byte[] mem = getDeviceMemory();
+			if (startAddress >= mem.length)
+				return new ServiceResult();
+			if (startAddress + bytes >= mem.length)
+				return ServiceResult.Empty;
+		}
 		if (startAddress >= getDeviceMemory().length)
 			return ServiceResult.Empty;
 		final Collection<Datapoint> c = ((DatapointMap<Datapoint>) datapoints).getDatapoints();
@@ -310,9 +318,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
+	// TODO revise this method to always use return codes, and not written memory for standard writes
 	public ServiceResult writeMemory(final int startAddress, final byte[] data)
 	{
 		final byte[] mem = getDeviceMemory();
+		if (startAddress > 0xffff) {
+			if (startAddress >= mem.length)
+				return new ServiceResult((byte) ReturnCode.AddressVoid.code());
+			if (startAddress + data.length >= mem.length)
+				return new ServiceResult((byte) ReturnCode.MemoryError.code());
+		}
 		for (int i = 0; i < data.length; i++) {
 			final byte b = data[i];
 			mem[startAddress + i] = b;
