@@ -35,7 +35,9 @@ compileTestJava.options*.compilerArgs = [
 ]
 
 test {
-	useJUnitPlatform()
+	useJUnitPlatform() {
+		excludeTags 'knxnetip'
+	}
 }
 
 dependencies {
