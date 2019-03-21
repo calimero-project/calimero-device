@@ -39,6 +39,7 @@ package tuwien.auto.calimero.device;
 import static tuwien.auto.calimero.DataUnitBuilder.decodeAPCI;
 import static tuwien.auto.calimero.DataUnitBuilder.toHex;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.EventObject;
 
@@ -120,6 +121,13 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	static final int MemoryExtendedRead = 0b0111111101;
 	private static final int MemoryExtendedReadResponse = 0b0111111110;
 
+	private static final int SystemNetworkParamRead = 0b0111001000;
+	private static final int SystemNetworkParamResponse = 0b0111001001;
+	private static final int SystemNetworkParamWrite = 0b0111001010;
+
+	private static final int NetworkParamRead = 0b1111011010;
+	private static final int NetworkParamResponse = 0b1111011011;
+	private static final int NetworkParamWrite = 0b1111100100;
 
 	private static final int defaultMaxApduLength = 15;
 	private boolean missingApduLength;
@@ -233,6 +241,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		tl.detach();
 	}
 
+	TransportLayer transportLayer() { return tl; }
+
 	private void dispatchAndRespond(final FrameEvent e)
 	{
 		device.dispatch(e, () -> dispatch(e), this::respond);
@@ -279,8 +289,73 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			onMemoryExtendedWrite(respondTo, data);
 		else if (svc == MemoryExtendedRead)
 			onMemoryExtendedRead(respondTo, data);
+		else if (svc == NetworkParamRead)
+			onNetworkParamRead(respondTo, data, false, dst.getRawAddress() == 0);
+		else if (svc == NetworkParamWrite)
+			onNetworkParamWrite(respondTo, data, false);
+		else if (svc == SystemNetworkParamRead)
+			onNetworkParamRead(respondTo, data, true, dst.getRawAddress() == 0);
+		else if (svc == SystemNetworkParamWrite)
+			onNetworkParamWrite(respondTo, data, true);
 		else
 			onManagement(svc, data, dst, respondTo);
+	}
+
+	// test-info length of network param services is impl-specific, we allow operand (1 byte) + mfr-code (2 bytes)
+	private static final int testInfoLength = 3;
+
+	private void onNetworkParamRead(final Destination respondTo, final byte[] data, final boolean system,
+		final boolean broadcast) {
+		final var paramTypeSize = system ? 4 : 3;
+		if (!verifyLength(data.length, paramTypeSize + 1, paramTypeSize + testInfoLength, "network-param-read"))
+			return;
+		final ByteBuffer buffer = ByteBuffer.wrap(data);
+		var objectType = buffer.getShort() & 0xff;
+		var pid = system ? (buffer.getShort() & 0xffff) >> 4 : buffer.get() & 0xff;
+		var info = new byte[buffer.remaining()];
+		buffer.get(info);
+		final ServiceResult sr = mgmtSvc.readParameter(objectType, pid, info);
+		if (ignoreOrSchedule(sr))
+			return;
+
+		final byte[] res = sr.getResult();
+		if (res.length == 0) {
+			// no negative response for normal network-param read service in broadcast communication mode
+			if (broadcast && !system)
+				return;
+			objectType = 0xffff;
+			pid = 0xff;
+			info = new byte[0];
+		}
+
+		final ByteBuffer asdu = ByteBuffer.allocate(paramTypeSize + info.length + res.length);
+		asdu.putShort((short) objectType);
+		if (system)
+			asdu.putShort((short) (pid << 4));
+		else
+			asdu.put((byte) pid);
+		asdu.put(info).put(res);
+
+		final var service = system ? SystemNetworkParamResponse : NetworkParamResponse;
+		if (broadcast) {
+			// NYI wait random time
+			final var apdu = DataUnitBuilder.createAPDU(service, asdu.array());
+			sendBroadcast(false, apdu, Priority.SYSTEM, decodeAPCI(service));
+		}
+		else
+			send(respondTo, service, asdu.array(), Priority.SYSTEM);
+	}
+
+	private void onNetworkParamWrite(final Destination respondTo, final byte[] data, final boolean system) {
+		final var minExpected = system ? 5 : 4;
+		if (!verifyLength(data.length, minExpected, 12, "network-param-write"))
+			return;
+		final ByteBuffer buffer = ByteBuffer.wrap(data);
+		final var objectType = buffer.getShort() & 0xff;
+		final var pid = system ? (buffer.getShort() & 0xffff) >> 4 : buffer.get() & 0xff;
+		final var info = new byte[buffer.remaining()];
+		buffer.get(info);
+		mgmtSvc.writeParameter(objectType, pid, info);
 	}
 
 	private void onRestart(final Destination respondTo, final byte[] data)

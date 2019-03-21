@@ -37,6 +37,8 @@
 package tuwien.auto.calimero.device;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Random;
@@ -95,6 +97,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	final byte[][] authKeys = new byte[16][4];
 	final WeakHashMap<Destination, Integer> accessLevels = new WeakHashMap<>();
 	int minAccessLevel = 3; // or 15
+
+	private final Instant startTime = Instant.now();
+	private boolean ignoreReadSNByPowerReset;
 
 	public void setDevice(final KnxDevice device)
 	{
@@ -445,6 +450,48 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			catch (final KnxPropertyException e) {
 				logger.error("setting DoA {} in interface object server", DataUnitBuilder.toHex(domain, " "), e);
 			}
+		}
+	}
+
+	@Override
+	public ServiceResult readParameter(final int objectType, final int pid, final byte[] info) {
+		if (objectType == 0 && pid == PID.SERIAL_NUMBER) {
+			final var operand = info[0] & 0xff;
+			int maxWaitSeconds = 0;
+			if (operand == 1 && inProgrammingMode())
+				maxWaitSeconds = 1;
+			else if (operand == 2 && device.getAddress().getDevice() == 0xff
+					&& (Arrays.equals(new byte[] { 0, (byte) 0xff }, domainAddress)
+							|| Arrays.equals(new byte[6], domainAddress)))
+				maxWaitSeconds = info[1] & 0xff;
+			else if (operand == 3) {
+				if (ignoreReadSNByPowerReset || startTime.plus(Duration.ofMinutes(4)).isBefore(Instant.now()))
+					return null;
+				maxWaitSeconds = info[1] & 0xff;
+				ignoreReadSNByPowerReset = maxWaitSeconds < 255;
+			}
+
+			if (maxWaitSeconds == 255) // mgmt procedure cancel indicator
+				return null;
+
+			if (maxWaitSeconds > 0) {
+				// TODO don't block, schedule it
+				randomWait(maxWaitSeconds * 1000);
+				final var sn = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+				return new ServiceResult(sn);
+			}
+		}
+		return ServiceResult.Empty;
+	}
+
+	private void randomWait(final int maxWaitMillis) {
+		final int wait = (int) (Math.random() * maxWaitMillis);
+		logger.debug("add random wait time of " + wait + " ms before response");
+		try {
+			Thread.sleep(wait);
+		}
+		catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
 		}
 	}
 

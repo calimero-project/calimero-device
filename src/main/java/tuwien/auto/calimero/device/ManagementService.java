@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2018 B. Malinowsky
+    Copyright (c) 2011, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -188,6 +188,12 @@ public interface ManagementService
 	 * @param domain domain address, address length is either 2 bytes for KNX-PL110 or 6 bytes for KNX-RF
 	 */
 	void writeDomainAddress(byte[] domain);
+
+	default ServiceResult readParameter(final int objectType, final int pid, final byte[] testInfo) {
+		return ServiceResult.Empty;
+	}
+
+	default void writeParameter(final int objectType, final int pid, final byte[] value) {}
 
 	/**
 	 * Invoked for an application layer device descriptor read service.
