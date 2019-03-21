@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2015, 2018 B. Malinowsky
+    Copyright (c) 2015, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ import static tuwien.auto.calimero.device.LinkProcedure.Action.SetDeleteLink;
 import static tuwien.auto.calimero.device.LinkProcedure.Action.StartLink;
 import static tuwien.auto.calimero.device.LinkProcedure.Action.StopLink;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -227,8 +228,22 @@ public final class LinkProcedure implements Runnable
 	{
 		final int iot = (asdu[0] & 0xff << 8) | (asdu[1] & 0xff);
 		final int pid = asdu[2] & 0xff;
-		if (iot == deviceObjectType && pid == pidConfigLink) {
-			final int command = (asdu[3] & 0xff) >> 4;
+		return isEnterConfigMode(iot, pid, Arrays.copyOfRange(asdu, 3, asdu.length));
+	}
+
+	/**
+	 * Determines whether an actuator (which sent a network parameter write service containing the supplied arguments)
+	 * entered configuration mode. This method is useful for a sensor device to decide if its link procedure should be
+	 * started.
+	 *
+	 * @param objectType interface object type, {@code 0 ≤ objectType}
+	 * @param pid property identifier, {@code 0 < pid}
+	 * @param testInfo test info of a network parameter write service, {@code testInfo.length > 0}
+	 * @return <code>true</code> if the sender entered configuration mode, <code>false</code> otherwise
+	 */
+	public static boolean isEnterConfigMode(final int objectType, final int pid, final byte[] testInfo) {
+		if (objectType == deviceObjectType && pid == pidConfigLink) {
+			final int command = (testInfo[0] & 0xff) >> 4;
 			final Action action = Action.values()[command];
 			return action == EnterConfigMode;
 		}
