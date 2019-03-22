@@ -320,8 +320,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final byte[] res = sr.getResult();
 		if (res.length == 0) {
-			// no negative response for normal network-param read service in broadcast communication mode
-			if (broadcast && !system)
+			// no negative response for network-param read service in (system) broadcast communication mode
+			if (broadcast)
 				return;
 			objectType = 0xffff;
 			pid = 0xff;
