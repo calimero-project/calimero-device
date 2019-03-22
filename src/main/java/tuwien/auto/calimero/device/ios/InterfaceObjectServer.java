@@ -154,7 +154,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 		catch (KNXException | KNXMLException e) {
 			// using the default resource ID, we cannot expect to always find the resource
-			logger.info("could not load the Interface Object Server KNX property definitions");
+			logger.info("could not load the Interface Object Server KNX property definitions ({})", e.getMessage());
 		}
 
 		// AN033 3.2.6: minimum required interface objects for a cEMI server
