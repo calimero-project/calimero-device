@@ -82,6 +82,7 @@ import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.mgmt.TransportLayer;
 
 /**
  * Implementation of a KNX device for common device tasks. This type can either be used directly, with the device logic
@@ -152,7 +153,7 @@ public class BaseKnxDevice implements KnxDevice
 	private IndividualAddress self = new IndividualAddress(new byte[] { 0x02, (byte) 0xff });
 
 //	private static final int deviceMemorySize = 50_000;
-	private static final int deviceMemorySize = 0x10010; // for testing memory services with > 65 K memory
+	private static final int deviceMemorySize = 0x10010; // for testing memory services with > 64 K memory
 	private final byte[] memory = new byte[deviceMemorySize];
 
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
@@ -351,6 +352,8 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		return executor;
 	}
+
+	public final TransportLayer transportLayer() { return mgmtNotifier.transportLayer(); }
 
 	@Override
 	public String toString()
