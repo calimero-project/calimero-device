@@ -708,7 +708,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			final InterfaceObject io = getIfObject(objIndex);
 			Description d = null;
 			if (pid != 0)
-				d = findByPid(io.descriptions, pid);
+				d = findByPid(io, pid);
 			else if (propIndex < io.descriptions.size())
 				d = io.descriptions.get(propIndex);
 
@@ -789,7 +789,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					dptId = p.getDPT();
 				}
 			}
-			if (pdt != 0)
+			if (pdt != 0) {
 				try {
 					typeSize = PropertyTypes.createTranslator(pdt).getTypeSize();
 					// round bit values up to 1 byte
@@ -797,6 +797,7 @@ public class InterfaceObjectServer implements PropertyAccess
 						typeSize = 1;
 				}
 				catch (final KNXException e) {}
+			}
 			if (typeSize == 0 && dptId != null)
 				try {
 					typeSize = TranslatorTypes.createTranslator(0, dptId).getTypeSize();
@@ -867,7 +868,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 				// no current number of elements field yet since values array is null:
 				// check if description exists, if yes return 0 elements, otherwise throw
-				if (findByPid(io.descriptions, pid) != null)
+				if (findByPid(io, pid) != null)
 					return new byte[] { 0, 0 };
 			}
 
@@ -894,7 +895,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		{
 			Description d = null;
 			if (pid != 0)
-				d = findByPid(io.descriptions, pid);
+				d = findByPid(io, pid);
 			else if (propIndex < io.descriptions.size())
 				d = io.descriptions.get(propIndex);
 
@@ -935,19 +936,12 @@ public class InterfaceObjectServer implements PropertyAccess
 			final Description d = new Description(objIndex, io.getType(), pid, pIndex, pdt, writable, elems, maxElems,
 					readLevel, writeLevel);
 			io.descriptions.add(d);
+			io.pidToDescription.put(pid, d);
 			return d;
 		}
 
-		private Description findByPid(final List<Description> descriptions, final int pid)
-		{
-			// descriptions are stored at their property index in the list,
-			// so the list can contain null entries
-			for (final Iterator<Description> i = descriptions.iterator(); i.hasNext();) {
-				final Description d = i.next();
-				if (d != null && d.getPID() == pid)
-					return d;
-			}
-			return null;
+		private Description findByPid(final InterfaceObject io, final int pid) {
+			return io.pidToDescription.get(pid);
 		}
 	}
 

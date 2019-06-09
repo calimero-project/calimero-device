@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2018 B. Malinowsky
+    Copyright (c) 2010, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -137,7 +137,7 @@ public class InterfaceObject
 
 	// list holding Description objects or null entries
 	List<Description> descriptions = new ArrayList<>();
-	// map key is PropertyKey, map value is byte[]
+	Map<Integer, Description> pidToDescription = new HashMap<>();
 	Map<PropertyKey, byte[]> values = new HashMap<>();
 
 	private final int type;
@@ -260,6 +260,7 @@ public class InterfaceObject
 		descriptions.set(index, d);
 		// truncate property elements based on max. allowed elements
 		truncateValueArray(d.getPID(), d.getMaxElements());
+		pidToDescription.put(d.getPID(), d);
 	}
 
 	void setIndex(final int index)
