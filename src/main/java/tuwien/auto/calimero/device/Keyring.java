@@ -40,18 +40,23 @@ import static java.util.function.Predicate.isEqual;
 import static java.util.function.Predicate.not;
 
 import java.io.ByteArrayOutputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.security.DigestException;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import javax.crypto.Cipher;
@@ -67,18 +72,121 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXFormatException;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
+import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.knxnetip.KnxSecureException;
+import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.xml.KNXMLException;
 import tuwien.auto.calimero.xml.XmlInputFactory;
 import tuwien.auto.calimero.xml.XmlReader;
 
 /**
- * Loads an ETS project keyring file. Not thread-safe.
+ * Loads an ETS project keyring file. Not thread-safe. Methods parsing the keyring resource can throw
+ * {@link KNXMLException}; methods decrypting keys or passwords can throw {@link KnxSecureException}.
  */
 public final class Keyring {
 
+	public static final class Interface {
+		private final String type;
+		private final IndividualAddress addr;
+		private final int user;
+		private final byte[] pwd;
+		private final byte[] auth;
+		private volatile Map<GroupAddress, Set<IndividualAddress>> groups = Map.of();
+
+		Interface(final String type, final IndividualAddress addr, final int user, final byte[] pwd,
+			final byte[] auth) {
+			this.type = type;
+			this.addr = addr;
+			this.user = user;
+			this.pwd = pwd;
+			this.auth = auth;
+		}
+
+		public IndividualAddress address() { return addr; }
+
+		/**
+		 * Returns the user ID of this interface, or {@code 0} if no user was assigned.
+		 *
+		 * @return user as unsigned int, {@code 0 ≤ user < 128}
+		 */
+		public int user() { return user; }
+
+		/**
+		 * Returns the encrypted user password required to use this interface, or array of {@code length = 0} if no password was set.
+		 *
+		 * @return encrypted password as byte array
+		 */
+		public byte[] password() { return pwd.clone(); }
+
+		/**
+		 * Returns the encrypted device authentication code of this interface, or array of {@code length = 0} if no code was set.
+		 *
+		 * @return encrypted authentication code as byte array
+		 */
+		public byte[] authentication() { return auth.clone(); }
+
+		/**
+		 * Returns the groups specified for this interface, each with its set of senders.
+		 *
+		 * @return group addresses, mapped to their (empty) set of senders
+		 */
+		public Map<GroupAddress, Set<IndividualAddress>> groups() { return groups; }
+
+		@Override
+		public String toString() {
+			return type + " interface " + addr + ", user " + user + ", groups " + groups.keySet();
+		}
+	};
+
+	public static final class Device {
+		private final IndividualAddress addr;
+		private final byte[] toolkey;
+		private final byte[] pwd;
+		private final byte[] auth;
+		private final long sequence;
+
+		Device(final IndividualAddress addr, final byte[] toolkey, final byte[] pwd, final byte[] auth,
+			final long sequence) {
+			this.addr = addr;
+			this.toolkey = toolkey;
+			this.pwd = pwd;
+			this.auth = auth;
+			this.sequence = sequence;
+		}
+
+		/**
+		 * Returns the encrypted tool key of this device,
+		 *
+		 * @return tool key byte array of length 32
+		 */
+		public byte[] toolKey() { return toolkey.clone(); }
+
+		/**
+		 * Returns the encrypted management password of this device, or array of {@code length = 0} if no password was set.
+		 *
+		 * @return byte array containing (empty) encrypted password
+		 */
+		public byte[] password() { return pwd.clone(); }
+
+		/**
+		 * Returns the encrypted authentication code of this device, or array of {@code length = 0} if no code was set.
+		 *
+		 * @return byte array containing (empty) encrypted authentication code
+		 */
+		public byte[] authentication() { return auth.clone(); }
+
+		@Override
+		public String toString() {
+			return "device " + addr + " (seq " + sequence + ")";
+		}
+	};
+
+
 	private static final String keyringNamespace = "http://knx.org/xml/keyring/1";
 	private static final byte[] keyringSalt = utf8Bytes("1.keyring.ets.knx.org");
+
+	private static final byte[] zeroKey = new byte[16];
+	private static final byte[] emptyPwd = new byte[0];
 
 	private static final Logger logger = LoggerFactory.getLogger("calimero.device");
 
@@ -88,9 +196,38 @@ public final class Keyring {
 	private byte[] passwordHash = {};
 	private byte[] createdHash = {};
 
+	private byte[] signature;
+
+	// mappings:
+	// InetAddress mcast group -> group key
+	// "latencyTolerance" -> Duration
+	// IndividualAddress host -> map : IndividualAddress interface addr -> Interface
 	private final Map<Object, Object> config = new HashMap<>();
 
-	public Keyring(final String keyringUri, final char[] keyringPassword) {
+	// TODO clarify the use of optional fields host & IA for interface types Backbone/USB
+	// this mapping works for tunneling interfaces: host -> interface IA -> Interface
+	private final Map<IndividualAddress, Map<IndividualAddress, Interface>> hostToInterfaces = new HashMap<>();
+	private volatile Map<GroupAddress, byte[]> groups = Map.of();
+	private volatile Map<IndividualAddress, Device> devices = Map.of();
+
+
+	/**
+	 * Loads an ETS keyring file given by its URI. Loading a keyring does not decrypt any encrypted data.
+	 *
+	 * @param keyringUri keyring location identifier, the XML resource name has to end with ".knxkeys"
+	 * @return new Keyring instance containing the keyring information
+	 * @throws KNXMLException on XML parsing errors, or keyring elements deviating from the expected or requested
+	 *         format
+	 * @throws KnxSecureException for cryptographic setup/algorithm problems
+	 * @see #verifySignature(char[])
+	 */
+	public static Keyring load(final String keyringUri) {
+		final var keyring = new Keyring(keyringUri, new char[0]);
+		keyring.load();
+		return keyring;
+	}
+
+	Keyring(final String keyringUri, final char[] keyringPassword) {
 		if (!keyringUri.endsWith(".knxkeys"))
 			throw new KNXIllegalArgumentException("'" + keyringUri + "' is not a keyring file");
 
@@ -98,8 +235,9 @@ public final class Keyring {
 		this.keyringPassword = keyringPassword;
 	}
 
-	public void load() {
-		try (var reader = XmlInputFactory.newInstance().createXMLReader(keyringUri)) {
+	void load() {
+		int line = 0;
+		try (final var reader = XmlInputFactory.newInstance().createXMLReader(keyringUri)) {
 			// call nextTag() to dive straight into first element, so we can check the keyring namespace
 			reader.nextTag();
 
@@ -115,51 +253,82 @@ public final class Keyring {
 			final var created = reader.getAttributeValue(null, "Created");
 			logger.debug("read keyring for project '{}', created by {} on {}", project, createdBy, created);
 
-			passwordHash = pbkdf2WithHmacSha256(keyringPassword, keyringSalt);
+			passwordHash = hashKeyringPwd(keyringPassword);
 			createdHash = sha256(utf8Bytes(created));
 
-			final boolean strictVerification = true;
-			verifySignature(reader.getAttributeValue(null, "Signature"), strictVerification);
+			signature = decode(reader.getAttributeValue(null, "Signature"));
 
-			boolean inInterface = false;
+			if (keyringPassword.length > 0) {
+				if (!verifySignature(passwordHash)) {
+					final String msg = "signature verification failed for keyring '" + keyringUri + "'";
+					final boolean strictVerification = true;
+					if (strictVerification)
+						throw new KnxSecureException(msg);
+					logger.warn(msg);
+				}
+			}
+
+			Interface iface = null;
 			boolean inDevices = false;
 			boolean inGroupAddresses = false;
+
+			final Map<GroupAddress, byte[]> groups = new HashMap<>();
+			final Map<IndividualAddress, Device> devices = new HashMap<>();
+
 			for (reader.next(); reader.getEventType() != XmlReader.END_DOCUMENT; reader.next()) {
-				if (reader.getEventType() != XmlReader.START_ELEMENT)
+				final var event = reader.getEventType();
+
+				if (reader.getEventType() != XmlReader.START_ELEMENT) {
+					if (event == XmlReader.END_ELEMENT && "Interface".equals(reader.getLocalName()) && iface != null) {
+						iface.groups = Map.copyOf(iface.groups);
+						logger.trace("add {}", iface);
+						iface = null;
+					}
 					continue;
+				}
 
 				final var name = reader.getLocalName();
+				line = reader.getLocation().getLineNumber();
 				if ("Backbone".equals(name)) {
-					final var mcastGroup = reader.getAttributeValue(null, "MulticastAddress");
-					final var groupKey = decrypt(reader.getAttributeValue(null, "Key"));
+					final var mcastGroup = InetAddress.getByName(reader.getAttributeValue(null, "MulticastAddress"));
+					if (!KNXnetIPRouting.isValidRoutingMulticast(mcastGroup))
+						throw new KNXMLException("loading keyring '" + keyringUri + "': " + mcastGroup.getHostAddress()
+								+ " is not a valid KNX multicast address");
+					final var groupKey = decode(reader.getAttributeValue(null, "Key"));
 					final var latency = Duration.ofMillis(Integer.parseInt(reader.getAttributeValue(null, "Latency")));
 
 					config.put(mcastGroup, groupKey);
 					config.put("latencyTolerance", latency);
 				}
 				else if ("Interface".equals(name)) { // [0, *]
-					inInterface = true;
 					inGroupAddresses = false;
 
 					final var type = reader.getAttributeValue(null, "Type"); // { Backbone, Tunneling, USB }
 					// rest is optional
-					final var host = reader.getAttributeValue(null, "Host");
-					final var addr = reader.getAttributeValue(null, "IndividualAddress");
-					final var userId = reader.getAttributeValue(null, "UserID");
-					final var pwd = reader.getAttributeValue(null, "Password");
-					final var auth = reader.getAttributeValue(null, "Authentication");
+					String attr = reader.getAttributeValue(null, "Host");
+					final var host = attr != null ? new IndividualAddress(attr) : KNXMediumSettings.BackboneRouter;
+					attr = reader.getAttributeValue(null, "IndividualAddress");
+					final var addr = attr != null ? new IndividualAddress(attr) : KNXMediumSettings.BackboneRouter;
+					final var user = readAttribute(reader, "UserID", Integer::parseInt, 0);
+					final var pwd = readAttribute(reader, "Password", Keyring::decode, emptyPwd);
+					final var auth = readAttribute(reader, "Authentication", Keyring::decode, emptyPwd);
 
-					logger.trace("{} interface: {} {}, user {}, pwd {}, auth {}", type, host, addr, userId, pwd, auth);
+					iface = new Interface(type, addr, user, pwd, auth);
+					final var interfaces = hostToInterfaces.computeIfAbsent(host, key -> new HashMap<>());
+					interfaces.put(addr, iface);
 				}
-				else if (inInterface && "Group".equals(name)) { // [0, *]
+				else if (iface != null && "Group".equals(name)) { // [0, *]
 					final var addr = new GroupAddress(reader.getAttributeValue(null, "Address"));
-					final var senderList = reader.getAttributeValue(null, "Senders"); // list of addresses
+					final var senders = reader.getAttributeValue(null, "Senders"); // (empty) list of addresses
 
-					final var senders = new HashSet<IndividualAddress>();
-					for (final String sender : senderList.split("\\s+", 0))
-						senders.add(new IndividualAddress(sender));
+					final var list = new ArrayList<IndividualAddress>();
+					final Matcher matcher = Pattern.compile("[^\\s]+").matcher(senders);
+					while (matcher.find())
+						list.add(new IndividualAddress(matcher.group()));
 
-					logger.trace("group {} senders = {}", addr, senders);
+					if (iface.groups.isEmpty())
+						iface.groups = new HashMap<>();
+					iface.groups.put(addr, Set.of(list.toArray(new IndividualAddress[0])));
 				}
 				else if ("Devices".equals(name)) {
 					inDevices = true;
@@ -167,29 +336,36 @@ public final class Keyring {
 				else if (inDevices && "Device".equals(name)) { // [0, *]
 					final var addr = new IndividualAddress(reader.getAttributeValue(null, "IndividualAddress"));
 					// rest is optional
-					final var toolkey = decrypt(reader.getAttributeValue(null, "ToolKey"));
-					final var seq = reader.getAttributeValue(null, "SequenceNumber");
-					final var pwd = reader.getAttributeValue(null, "ManagementPassword");
-					final var auth = reader.getAttributeValue(null, "Authentication");
+					final var toolkey = readAttribute(reader, "ToolKey", Keyring::decode, zeroKey);
+					final var seq = readAttribute(reader, "SequenceNumber", Long::parseLong, (long) 0);
+					final var pwd = readAttribute(reader, "ManagementPassword", Keyring::decode, emptyPwd);
+					final var auth = readAttribute(reader, "Authentication", Keyring::decode, emptyPwd);
 
-					logger.trace("device {} seq {}, toolkey {}, mgmt pwd {}, auth {}", addr, seq, safeKeyPrefix(toolkey), pwd, auth);
+					final var device = new Device(addr, toolkey, pwd, auth, seq);
+					devices.put(addr, device);
+					logger.trace("add {}", device);
 				}
 				else if ("GroupAddresses".equals(name)) {
 					inGroupAddresses = true;
-					inInterface = false;
 				}
 				else if (inGroupAddresses && "Group".equals(name)) { // [0, *]
 					final var addr = new GroupAddress(reader.getAttributeValue(null, "Address"));
-					final var key = decrypt(reader.getAttributeValue(null, "Key"));
-
-					config.put(addr, key);
+					final var key = decode(reader.getAttributeValue(null, "Key"));
+					groups.put(addr, key);
 				}
 				else
 					logger.warn("keyring '" + keyringUri + "': skip unknown element '{}'", name);
 			}
+
+			this.groups = Map.copyOf(groups);
+			config.putAll(this.groups);
+			this.devices = Map.copyOf(devices);
+			config.putAll(hostToInterfaces);
 		}
-		catch (final KNXFormatException e) {
-			throw new KNXMLException("loading keyring '" + keyringUri + "' address element with " + e.getMessage());
+		catch (KNXFormatException | UnknownHostException e) {
+			final String location = line != 0 ? " [line " + line + "]" : "";
+			throw new KNXMLException(
+					"loading keyring '" + keyringUri + "'" + location + " address element with " + e.getMessage());
 		}
 		catch (final GeneralSecurityException e) {
 			// NoSuchAlgorithmException, InvalidKeySpecException etc. imply a setup/programming error
@@ -197,20 +373,37 @@ public final class Keyring {
 		}
 		finally {
 			Arrays.fill(passwordHash, (byte) 0);
-			Arrays.fill(createdHash, (byte) 0);
 		}
 	}
 
-	public Map<?, ?> configuration() {
-		return Collections.unmodifiableMap(config);
+	/**
+	 * Verifies the keyring signature using the supplied keyring password.
+	 *
+	 * @param keyringPassword keyring password used for keyring encryption
+	 * @return <code>true</code> if signature is valid, <code>false</code> otherwise
+	 * @throws KNXMLException on XML parsing errors during signature verification
+	 */
+	public boolean verifySignature(final char[] keyringPassword) {
+		try {
+			return verifySignature(hashKeyringPwd(keyringPassword));
+		}
+		catch (final GeneralSecurityException e) {
+			return false;
+		}
 	}
 
-	private byte[] decrypt(final String key) throws GeneralSecurityException {
-		final byte[] decodedGroupKey = Base64.getDecoder().decode(key);
-		return aes128Cbc(decodedGroupKey, passwordHash, createdHash);
+	// interim accessor
+	public Map<?, ?> configuration() { return Collections.unmodifiableMap(config); }
+
+	Map<IndividualAddress, Map<IndividualAddress, Interface>> tunnelingInterfaces() {
+		return Collections.unmodifiableMap(hostToInterfaces);
 	}
 
-	private void verifySignature(final String signature, final boolean throwOnFailure) throws GeneralSecurityException {
+	public Map<GroupAddress, byte[]> groups() { return groups; }
+
+	public Map<IndividualAddress, Device> devices() { return devices; }
+
+	private boolean verifySignature(final byte[] passwordHash) throws GeneralSecurityException {
 		final var output = new ByteArrayOutputStream();
 		try (var reader = XmlInputFactory.newInstance().createXMLReader(keyringUri)) {
 			while (reader.next() != XmlReader.END_DOCUMENT) {
@@ -224,13 +417,61 @@ public final class Keyring {
 		appendString(Base64.getEncoder().encode(passwordHash), output);
 
 		final byte[] outputHash = sha256(output.toByteArray());
-		final byte[] decoded = Base64.getDecoder().decode(signature);
-		if (!Arrays.equals(outputHash, decoded)) {
-			final String msg = "signature verification failed for keyring '" + keyringUri + "'";
-			if (throwOnFailure)
-				throw new KnxSecureException(msg);
-			logger.warn(msg);
+		return Arrays.equals(outputHash, signature);
+	}
+
+	/**
+	 * Decrypts a backbone key, tool key, or group address key using the keyring password.
+	 *
+	 * @param input encrypted key
+	 * @param keyringPassword the password of this keyring
+	 * @return decrypted key as byte array
+	 */
+	byte[] decryptKey(final byte[] input, final char[] keyringPassword) {
+		final var pwdHash = hashKeyringPwd(keyringPassword);
+		try {
+			return aes128Cbc(input, pwdHash, createdHash);
 		}
+		catch (final GeneralSecurityException e) {
+			throw new KnxSecureException("decrypting key data", e);
+		}
+		finally {
+			Arrays.fill(pwdHash, (byte) 0);
+		}
+	}
+
+	/**
+	 * Decrypts a user password, device authentication code, or management (commissioning) password using the keyring
+	 * password.
+	 *
+	 * @param input encrypted password
+	 * @param keyringPassword the password of this keyring
+	 * @return decrypted password as char array
+	 */
+	char[] decryptPassword(final byte[] input, final char[] keyringPassword) {
+		final var keyringPwdHash = hashKeyringPwd(keyringPassword);
+		try {
+			final byte[] pwdData = extractPassword(aes128Cbc(input, keyringPwdHash, createdHash));
+			final var chars = new char[pwdData.length];
+			for (int i = 0; i < pwdData.length; i++)
+				chars[i] = (char)(pwdData[i] & 0xff);
+			Arrays.fill(pwdData, (byte) 0);
+			return chars;
+		}
+		catch (final GeneralSecurityException e) {
+			throw new KnxSecureException("decrypting password data", e);
+		}
+		finally {
+			Arrays.fill(keyringPwdHash, (byte) 0);
+		}
+	}
+
+	private static <R> R readAttribute(final XmlReader reader, final String attribute, final Function<String, R> parser,
+			final R defaultValue) {
+		final var attr = reader.getAttributeValue(null, attribute);
+		if (attr == null)
+			return defaultValue;
+		return parser.apply(attr);
 	}
 
 	private static void appendElement(final XmlReader reader, final ByteArrayOutputStream output) {
@@ -252,11 +493,25 @@ public final class Keyring {
 		output.write(str, 0, str.length);
 	}
 
-	// TODO PKCS #7, device auth code, tunneling pwd
+	private static byte[] decode(final String base64) {
+		return Base64.getDecoder().decode(base64);
+	}
+
 	private static byte[] extractPassword(final byte[] data) {
-		final int b = data[31] & 0xff;
-		final byte[] range = Arrays.copyOfRange(data, 8, 24 - b);
+		if (data.length == 0)
+			return emptyPwd;
+		final int b = data[data.length - 1] & 0xff;
+		final byte[] range = Arrays.copyOfRange(data, 8, data.length - b);
 		return range;
+	}
+
+	private static byte[] hashKeyringPwd(final char[] keyringPwd) {
+		try {
+			return pbkdf2WithHmacSha256(keyringPwd, keyringSalt);
+		}
+		catch (final GeneralSecurityException e) {
+			throw new KnxSecureException("hashing keyring password", e);
+		}
 	}
 
 	private static byte[] aes128Cbc(final byte[] input, final byte[] key, final byte[] iv)
@@ -270,7 +525,7 @@ public final class Keyring {
 		return cipher.doFinal(input);
 	}
 
-	private static byte[] sha256(final byte[] input) throws NoSuchAlgorithmException, DigestException {
+	private static byte[] sha256(final byte[] input) throws NoSuchAlgorithmException {
 		final var digest = MessageDigest.getInstance("SHA-256");
 		digest.update(input);
 		return Arrays.copyOf(digest.digest(), 16);
@@ -290,10 +545,6 @@ public final class Keyring {
 		finally {
 			keySpec.clearPassword();
 		}
-	}
-
-	private static String safeKeyPrefix(final byte[] key) {
-		return String.format("%x%x%x***", key[0], key[1], key[2]);
 	}
 
 	private static byte[] utf8Bytes(final String s) {
