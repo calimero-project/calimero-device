@@ -44,7 +44,6 @@ import java.lang.reflect.Field;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
-import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -68,12 +67,12 @@ import org.slf4j.Logger;
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.device.ios.PropertyEvent;
-import tuwien.auto.calimero.knxnetip.ConnectionBase;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
@@ -519,17 +518,15 @@ public class BaseKnxDevice implements KnxDevice
 		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, propertyId, 1, 1, data);
 	}
 
-	// [KNXnetIPRouting, InetAddress, MulticastSocket]
-	private Object[] ipInfo() throws ReflectiveOperationException {
+	private KNXnetIPRouting connectionOfLink() throws ReflectiveOperationException {
 		final KNXnetIPRouting conn = accessField(AbstractLink.class, "conn", link);
 		if (conn == null)
-			throw new RuntimeException("no KNX IP routing connection found in link " + link.getName());
-		final MulticastSocket socket = accessField(ConnectionBase.class, "socket", conn);
-		return new Object[] { conn, socket, conn.getRemoteAddress().getAddress() };
+			throw new KnxRuntimeException("no KNX IP routing connection found in link " + link.getName(), null);
+		return conn;
 	}
 
 	@SuppressWarnings("unchecked")
-	private <T, U> T accessField(final Class<? extends U> clazz, final String field, final U obj)
+	private static <T, U> T accessField(final Class<? extends U> clazz, final String field, final U obj)
 		throws ReflectiveOperationException, SecurityException {
 		Class<? extends U> cl = (Class<? extends U>) obj.getClass();
 		while (cl != null && !clazz.equals(cl))
@@ -562,12 +559,10 @@ public class BaseKnxDevice implements KnxDevice
 		try {
 			ip = InetAddress.getLocalHost().getAddress();
 
-			final Object[] objects = ipInfo();
-//			final KNXnetIPRouting conn = (KNXnetIPRouting) objects[0];
-			final MulticastSocket socket = (MulticastSocket) objects[1];
-			mcast = ((InetAddress) objects[2]).getAddress();
+			final KNXnetIPRouting conn = connectionOfLink();
+			mcast = conn.getRemoteAddress().getAddress().getAddress();
 
-			final NetworkInterface netif = socket.getNetworkInterface();
+			final NetworkInterface netif = conn.networkInterface();
 			// workaround to verify that interface is actually configured
 			if (NetworkInterface.getByName(netif.getName()) != null) {
 				final List<InterfaceAddress> addresses = netif.getInterfaceAddresses();
@@ -633,7 +628,7 @@ public class BaseKnxDevice implements KnxDevice
 			if (pe.getInterfaceObject().getType() == InterfaceObject.KNXNETIP_PARAMETER_OBJECT) {
 				final int pid = pe.getPropertyId();
 				if (pid == PID.TTL) {
-					final KNXnetIPRouting conn = (KNXnetIPRouting) ipInfo()[0];
+					final KNXnetIPRouting conn = connectionOfLink();
 					conn.setHopCount(pe.getNewData()[0]);
 				}
 				else if (pid == PID.KNX_INDIVIDUAL_ADDRESS)
