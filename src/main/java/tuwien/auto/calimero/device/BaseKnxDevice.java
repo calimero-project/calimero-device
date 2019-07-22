@@ -148,9 +148,6 @@ public class BaseKnxDevice implements KnxDevice
 	ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
-	// default TP1 address
-	private IndividualAddress self = new IndividualAddress(new byte[] { 0x02, (byte) 0xff });
-
 //	private static final int deviceMemorySize = 50_000;
 	private static final int deviceMemorySize = 0x10010; // for testing memory services with > 64 K memory
 	private final byte[] memory = new byte[deviceMemorySize];
@@ -283,14 +280,13 @@ public class BaseKnxDevice implements KnxDevice
 	{
 		if (address == null)
 			throw new NullPointerException("device address cannot be null");
-		if (address.getRawAddress() == 0 || self.equals(address))
+		if (address.getRawAddress() == 0 || getAddress().equals(address))
 			return;
-		self = address;
 
 		final KNXMediumSettings settings = getDeviceLink().getKNXMedium();
 		settings.setDeviceAddress(address);
 
-		final byte[] addr = self.toByteArray();
+		final byte[] addr = address.toByteArray();
 		setDeviceProperty(PID.SUBNET_ADDRESS, addr[0]);
 		setDeviceProperty(PID.DEVICE_ADDRESS, addr[1]);
 
@@ -303,9 +299,10 @@ public class BaseKnxDevice implements KnxDevice
 	}
 
 	@Override
-	public final synchronized IndividualAddress getAddress()
-	{
-		return self;
+	public final synchronized IndividualAddress getAddress() {
+		final var subnet = ios.getProperty(DEVICE_OBJECT, objectInstance, PID.SUBNET_ADDRESS, 1, 1);
+		final var device = ios.getProperty(DEVICE_OBJECT, objectInstance, PID.DEVICE_ADDRESS, 1, 1);
+		return new IndividualAddress(new byte[] { subnet[0], device[0] });
 	}
 
 	@Override
@@ -357,7 +354,7 @@ public class BaseKnxDevice implements KnxDevice
 	@Override
 	public String toString()
 	{
-		return name + " " + self;
+		return name + " " + getAddress();
 	}
 
 	void dispatch(final EventObject e, final Supplier<ServiceResult> dispatch,
@@ -459,6 +456,10 @@ public class BaseKnxDevice implements KnxDevice
 		// can be between 15 and 254 bytes (255 is Escape code for extended L_Data frames)
 		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(15));
 
+		// default TP1 address
+		setDeviceProperty(PID.SUBNET_ADDRESS, (byte) 0x02);
+		setDeviceProperty(PID.DEVICE_ADDRESS, (byte) 0xff);
+
 		// Order Info
 		final byte[] orderInfo = new byte[10]; // PDT Generic 10 bytes
 		setDeviceProperty(PID.ORDER_INFO, orderInfo);
@@ -546,7 +547,7 @@ public class BaseKnxDevice implements KnxDevice
 			ios.addInterfaceObject(KNXNETIP_PARAMETER_OBJECT);
 
 		setIpProperty(PID.PROJECT_INSTALLATION_ID, fromWord(0));
-		setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, self.toByteArray());
+		setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, getAddress().toByteArray());
 		setIpProperty(PID.CURRENT_IP_ASSIGNMENT_METHOD, (byte) 1);
 		setIpProperty(PID.IP_ASSIGNMENT_METHOD, (byte) 1);
 		setIpProperty(PID.IP_CAPABILITIES, (byte) 0);
