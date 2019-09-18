@@ -247,18 +247,45 @@ public interface ManagementService
 	ServiceResult authorize(Destination remote, byte[] key);
 
 	/**
+	 * Erase codes used with a master reset restart service.
+	 */
+	enum EraseCode {
+		None,
+		/** Confirmed alternative to the unconfirmed basic restart. */
+		ConfirmedRestart,
+		/** Reset the device to its ex-factory state. */
+		FactoryReset,
+		/** Reset the device address to the medium-specific default address. */
+		ResetIndividualAddress,
+		/** Reset the application program memory to the default application. */
+		ResetApplicationProgram,
+		/** Reset the application parameter memory to its default value. */
+		ResetApplicationParameters,
+		/**
+		 * Reset link information for group objects (Group Address Table, Group Object Association Table) to its
+		 * default state.
+		 */
+		ResetLinks,
+		/** Reset the device to its ex-factory state, the device address(es) shall not be reset. */
+		FactoryResetWithoutIndividualAddress
+	}
+
+	/**
 	 * Restarts this device.
 	 *
 	 * @param masterReset perform a master reset of the controller
-	 * @param eraseCode for a master reset, specifies the resources that shall be reset prior to resetting the device
+	 * @param eraseCode for a master reset, specifies the resources that shall be reset prior to restarting the device
 	 * @param channel for a master reset, specifies the number of the application channel that shall be reset and the
 	 *        application parameters set to default values; 0 is to clear all link information in the group address
-	 *        table and group object association table and reset all application parameters
-	 * @return <code>null</code> for basic reset, a master reset returns service result with error code and process time
+	 *        table and group object association table and reset all application parameters. With erase codes
+	 *        {@link EraseCode#ConfirmedRestart}, {@link EraseCode#ResetIndividualAddress}, and
+	 *        {@link EraseCode#ResetApplicationProgram}, the channel number is fixed to {@code 0}.
+	 * @return <code>null</code> for basic restart, a master reset returns service result with error code and process
+	 *         time
 	 * @see ManagementClient#restart(Destination)
 	 * @see ManagementClient#restart(Destination, int, int)
 	 */
-	ServiceResult restart(boolean masterReset, int eraseCode, int channel);
+	ServiceResult restart(boolean masterReset, EraseCode eraseCode, int channel);
 
 	/**
 	 * A catch-all method for not specifically dispatched management services.

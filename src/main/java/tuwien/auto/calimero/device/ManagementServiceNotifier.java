@@ -56,6 +56,7 @@ import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.cemi.CEMILData;
+import tuwien.auto.calimero.device.ManagementService.EraseCode;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
@@ -360,23 +361,37 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private void onRestart(final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 1, 3, "restart"))
+		final String name = decodeAPCI(RESTART);
+		if (!verifyLength(data.length, 1, 3, name))
 			return;
 
 		// bits 1 to 4 in frame byte 7 (first byte ASDU) shall be 0; if not,
 		// we have to ignore the service without any response
 		final int reserved = data[0] & 0x1e;
-		if (reserved != 0)
+		if (reserved != 0) {
+			logger.warn("{} uses reserved bits -- ignore", name);
 			return;
+		}
 
 		final boolean masterReset = (data[0] & 0x01) == 1;
 		final int eraseCode = masterReset ? data[1] & 0xff : 0;
 		final int channel = masterReset ? data[2] & 0xff : 0;
-		// a basic restart does not have any response,
-		// a master reset returns an error code and process time
-		final ServiceResult sr = mgmtSvc.restart(masterReset, eraseCode, channel);
-		if (ignoreOrSchedule(sr))
-			return;
+
+		ServiceResult sr;
+		if (eraseCode < EraseCode.values().length) {
+			final EraseCode code = EraseCode.values()[eraseCode];
+			logger.trace("{}->{} {} erase code {}, channel {}", respondTo, device.getAddress(), name, code, channel);
+
+			// a basic restart does not have any response,
+			// a master reset returns an error code and process time
+			sr = mgmtSvc.restart(masterReset, code, channel);
+			if (ignoreOrSchedule(sr))
+				return;
+		}
+		else {
+			final int unsupportedEraseCode = 2;
+			sr = new ServiceResult((byte) unsupportedEraseCode, (byte) 0, (byte) 0);
+		}
 
 		final byte[] res = sr.getResult();
 		final byte[] asdu = new byte[4];

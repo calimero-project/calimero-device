@@ -555,10 +555,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult restart(final boolean masterReset, final int eraseCode, final int channel)
+	public ServiceResult restart(final boolean masterReset, final EraseCode eraseCode, final int channel)
 	{
-		logger.info("received request to restart");
+		final String type = masterReset ? "master reset (" + eraseCode + ")" : "basic restart";
+		logger.info("received request for {}", type);
 		setProgrammingMode(false);
+		if (masterReset) {
+			final byte errorCode = 0;
+			final byte processTimeSeconds = 3;
+			return new ServiceResult(errorCode, (byte) 0, processTimeSeconds);
+		}
 		return null;
 	}
 
