@@ -584,8 +584,6 @@ public class InterfaceObjectServer implements PropertyAccess
 		for (final Iterator<InterfaceObject> i = objects.iterator(); i.hasNext();)
 			types[k++] = i.next().getType();
 
-		// now sort'em asc
-		Arrays.sort(types);
 		// write them into byte array format
 		final byte[] value = new byte[(items + 1) * 2];
 		value[0] = (byte) (items >> 8);
