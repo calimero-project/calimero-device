@@ -171,6 +171,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 */
 	public final void setProgrammingMode(final boolean inProgrammingMode)
 	{
+		try {
+			final byte state = (byte) (inProgrammingMode ? 1 : 0);
+			device.getInterfaceObjectServer().setProperty(0, PID.PROGMODE, 1, 1, state);
+		}
+		catch (final KnxPropertyException ignore) {}
+
 		final byte[] mem = getDeviceMemory();
 		int b = mem[0x60];
 		b = inProgrammingMode ? b | 0x01 : b & (~0x01);
@@ -182,9 +188,14 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 */
 	public final boolean inProgrammingMode()
 	{
-		final byte[] mem = getDeviceMemory();
-		// check bit 0 at location 0x60 for programming mode
-		return (mem[0x60] & 0x01) == 0x01;
+		byte value;
+		try {
+			value = device.getInterfaceObjectServer().getProperty(0, PID.PROGMODE, 1, 1)[0];
+		}
+		catch (final KnxPropertyException e) {
+			value = getDeviceMemory()[0x60];
+		}
+		return (value & 0x01) == 0x01;
 	}
 
 	@Override
