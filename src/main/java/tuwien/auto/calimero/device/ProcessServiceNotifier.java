@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2017 B. Malinowsky
+    Copyright (c) 2011, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -110,8 +110,8 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 
 	public void respond(final EventObject event, final ServiceResult sr)
 	{
-		final GroupAddress to = ((ProcessEvent) event).getDestination();
 		if (sr.getResult() != null) {
+			final GroupAddress to = ((ProcessEvent) event).getDestination();
 			try {
 				res.setPriority(sr.getPriority());
 				res.write(to, sr.getResult(), sr.compact);

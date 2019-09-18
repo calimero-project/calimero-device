@@ -146,7 +146,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	{
 		this.device = device;
 		tl = new TransportLayerImpl(device.getDeviceLink(), true);
-		tl.addTransportListener(this);
 		mgmtSvc = mgmt;
 		logger = device.logger();
 
@@ -157,6 +156,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			lengthDoA = 6;
 		else
 			lengthDoA = 0;
+
+		tl.addTransportListener(this);
 	}
 
 	@Override
@@ -208,12 +209,13 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	{
 		// since our service code is not split up in request/response, just do everything here
 		final FrameEvent fe = (FrameEvent) e;
-		final byte[] tpdu = fe.getFrame().getPayload();
-		final int svc = DataUnitBuilder.getAPDUService(tpdu);
-		final byte[] asdu = DataUnitBuilder.extractASDU(tpdu);
 		final CEMILData cemi = (CEMILData) fe.getFrame();
 		final IndividualAddress sender = cemi.getSource();
 		final KNXAddress dst = cemi.getDestination();
+
+		final byte[] tpdu = cemi.getPayload();
+		final int svc = DataUnitBuilder.getAPDUService(tpdu);
+		final byte[] asdu = DataUnitBuilder.extractASDU(tpdu);
 
 		if (tpdu.length - 1 > getMaxApduLength()) {
 			logger.error("discard {}->{} {}: exceeds max. allowed APDU length of {}", sender, dst,
@@ -251,7 +253,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo)
 	{
-		logger.trace(DataUnitBuilder.decodeAPCI(svc));
+		logger.trace(decodeAPCI(svc));
 		if (svc == MEMORY_READ)
 			onMemoryRead(respondTo, data);
 		else if (svc == MEMORY_WRITE)

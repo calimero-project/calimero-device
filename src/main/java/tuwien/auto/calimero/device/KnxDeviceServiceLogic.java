@@ -229,13 +229,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
-			logger.warn("on group write {}->{}: {}", e.getSourceAddr(), dst, DataUnitBuilder.toHex(e.getASDU(), " "), ex);
+			logger.warn("on group write {}->{}: {}, {}", e.getSourceAddr(), dst,
+					DataUnitBuilder.toHex(e.getASDU(), " "), ex.getMessage());
 		}
 	}
 
 	@Override
-	public void groupResponse(final ProcessEvent e)
-	{}
+	public void groupResponse(final ProcessEvent e) {}
 
 	@Override
 	public ServiceResult readProperty(final Destination remote, final int objectIndex,
@@ -291,6 +291,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		// handle some special cases
 		if (propertyId == PID.PROGMODE)
 			setProgrammingMode((data[0] & 0x01) == 0x01);
+
 		return new ServiceResult(data);
 	}
 
