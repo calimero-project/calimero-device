@@ -255,8 +255,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			// getProperty will fail and provide a more accurate error
 		}
 		final byte[] res = ios.getProperty(objectIndex, propertyId, startIndex, elements);
+		if (propertyId == PID.LOAD_STATE_CONTROL) {
+			if (res.length > 1)
+				return new ServiceResult(res[0]);
+		}
+
 		return new ServiceResult(res);
 	}
+
+	enum LoadEvent { NoOperation, StartLoading, LoadCompleted, AdditionalLoadControls, Unload }
+	enum LoadState { Unloaded, Loaded, Loading, Error, Unloading, LoadCompleting }
 
 	@Override
 	public ServiceResult writeProperty(final Destination remote, final int objectIndex,
@@ -286,6 +294,27 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return null;
 			}
 		}
+
+		if (propertyId == PID.LOAD_STATE_CONTROL) {
+			final var event = LoadEvent.values()[data[0] & 0xff];
+			logger.debug("load state control event for OI {}: {}", objectIndex, event);
+			switch (event) {
+			case NoOperation:
+				return readProperty(remote, objectIndex, propertyId, startIndex, elements);
+			case StartLoading:
+				ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loading.ordinal());
+				return new ServiceResult((byte) LoadState.Loading.ordinal());
+			case LoadCompleted:
+				ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loaded.ordinal());
+				return new ServiceResult((byte) LoadState.LoadCompleting.ordinal());
+			case AdditionalLoadControls:
+				return new ServiceResult((byte) 0xff);
+			case Unload:
+				ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Unloaded.ordinal());
+				return new ServiceResult((byte) LoadState.Unloading.ordinal());
+			}
+		}
+
 		// if we set a non-existing property, we won't have a description (it won't show up in a property editor)
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases

@@ -682,7 +682,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final byte[] res = sr.getResult();
 		int written = res.length;
-		if (res.length != propertyData.length) {
+		if (res.length != propertyData.length && pid != PID.LOAD_STATE_CONTROL) {
 			elements = 0;
 			written = 0;
 		}
