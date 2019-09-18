@@ -59,6 +59,7 @@ import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
@@ -334,6 +335,48 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		else
 			d = ios.getDescriptionByIndex(objectIndex, propertyIndex);
 		return new ServiceResult(d.toByteArray());
+	}
+
+	private static final int PID_ROUTETABLE_CONTROL = 56;
+
+	@Override
+	public ServiceResult functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
+		final byte[] command) {
+		final int serviceId = command[1] & 0xff;
+		final int objectType = device.getInterfaceObjectServer().getInterfaceObjects()[objectIndex].getType();
+
+		if (objectType == InterfaceObject.ROUTER_OBJECT) {
+			if (propertyId == PID_ROUTETABLE_CONTROL) {
+				final int clearRoutingTable = 1;
+				final int setRoutingTable = 2;
+				final int clearGroupAddresses = 3;
+				final int setGroupAddresses = 4;
+
+				if (serviceId == clearRoutingTable)
+					return new ServiceResult((byte) 0, (byte) clearRoutingTable);
+				if (serviceId == setRoutingTable)
+					return new ServiceResult((byte) 0, (byte) setRoutingTable);
+				if (serviceId == clearGroupAddresses) {
+					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
+					return new ServiceResult((byte) 0, (byte) clearGroupAddresses, command[2], command[3], command[4],
+							command[5]);
+				}
+				if (serviceId == setGroupAddresses) {
+					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
+					return new ServiceResult((byte) 0, (byte) setGroupAddresses, command[2], command[3], command[4],
+							command[5]);
+				}
+			}
+		}
+		return new ServiceResult((byte) 0xff);
+	}
+
+	@Override
+	public ServiceResult readFunctionPropertyState(final Destination remote, final int objectIndex,
+		final int propertyId, final byte[] functionInput) {
+		return ServiceResult.Empty;
 	}
 
 	private static final int addrGroupAddrTable = 0x0116; // max. length 233

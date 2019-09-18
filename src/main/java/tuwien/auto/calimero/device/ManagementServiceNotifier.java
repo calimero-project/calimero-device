@@ -58,7 +58,9 @@ import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.device.ManagementService.EraseCode;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
+import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
+import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
@@ -66,6 +68,7 @@ import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.Destination.State;
 import tuwien.auto.calimero.mgmt.KNXDisconnectException;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.mgmt.TransportListener;
@@ -117,6 +120,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private static final int RESTART = 0x0380;
 
+	private static final int FunctionPropertyCommand = 0b1011000111;
+	private static final int FunctionPropertyStateRead = 0b1011001000;
+	private static final int FunctionPropertyStateResponse = 0b1011001001;
+
 	static final int MemoryExtendedWrite = 0b0111111011;
 	private static final int MemoryExtendedWriteResponse = 0b0111111100;
 	static final int MemoryExtendedRead = 0b0111111101;
@@ -129,6 +136,11 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private static final int NetworkParamRead = 0b1111011010;
 	private static final int NetworkParamResponse = 0b1111011011;
 	private static final int NetworkParamWrite = 0b1111100100;
+
+	private static final int FunctionPropertyExtCommand =       0b0111010100;
+	private static final int FunctionPropertyExtStateRead =     0b0111010101;
+	private static final int FunctionPropertyExtStateResponse = 0b0111010110;
+
 
 	private static final int defaultMaxApduLength = 15;
 	private boolean missingApduLength;
@@ -288,6 +300,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			onKeyWrite(respondTo, data);
 		else if (svc == RESTART)
 			onRestart(respondTo, data);
+		else if (svc == FunctionPropertyCommand)
+			onFunctionPropertyCommandOrState(dst, respondTo, true, data);
+		else if (svc == FunctionPropertyStateRead)
+			onFunctionPropertyCommandOrState(dst, respondTo, false, data);
 		else if (svc == MemoryExtendedWrite)
 			onMemoryExtendedWrite(respondTo, data);
 		else if (svc == MemoryExtendedRead)
@@ -300,6 +316,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			onNetworkParamRead(respondTo, data, true, dst.getRawAddress() == 0);
 		else if (svc == SystemNetworkParamWrite)
 			onNetworkParamWrite(respondTo, data, true);
+		else if (svc == FunctionPropertyExtCommand)
+			onFunctionPropertyExtCommandOrState(dst, respondTo, true, data, true);
+		else if (svc == FunctionPropertyExtStateRead)
+			onFunctionPropertyExtCommandOrState(dst, respondTo, true, data, true);
 		else
 			onManagement(svc, data, dst, respondTo);
 	}
@@ -740,6 +760,63 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, PROPERTY_DESC_RESPONSE, asdu, sr.getPriority());
 	}
 
+	private void onFunctionPropertyCommandOrState(final KNXAddress dst, final Destination respondTo, final boolean isCommand,
+		final byte[] data) {
+		final String name = decodeAPCI(isCommand ? FunctionPropertyCommand : FunctionPropertyStateRead);
+		if (!verifyLength(data.length, 3, 15, name))
+			return;
+		final int objIndex = data[0] & 0xff;
+		final int pid = data[1] & 0xff;
+		final byte[] functionInput = Arrays.copyOfRange(data, 2, data.length);
+
+		logger.trace("{}->{} {} {}|{}{} {}", respondTo.getAddress(), dst, name, objIndex,
+				pid, propertyName(objIndex, pid), toHex(functionInput, " "));
+
+		ServiceResult sr = ServiceResult.Empty;
+		try {
+			final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
+			if (description.getPDT() == PropertyTypes.PDT_FUNCTION)
+				sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput) :
+								 mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
+			else
+				logger.warn("property {}|{} is not a function property", objIndex, pid);
+
+			if (ignoreOrSchedule(sr))
+				return;
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("{}", e.getMessage());
+			sr = ServiceResult.Empty;
+		}
+
+		// if the property is not a function (PDT_FUNCTION), the response shall not contain a return code and no data
+		// in that case, using the Empty result here is fine
+		final byte[] res = sr.getResult();
+		final byte[] asdu = new byte[2 + res.length];
+		asdu[0] = (byte) objIndex;
+		asdu[1] = (byte) pid;
+		for (int i = 0; i < res.length; ++i)
+			asdu[i + 2] = res[i];
+
+		send(respondTo, FunctionPropertyStateResponse, asdu, sr.getPriority());
+	}
+
+	private String propertyName(final int objectIndex, final int pid) {
+		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
+		final PropertyClient.PropertyKey key;
+		if (pid <= 50)
+			key = new PropertyClient.PropertyKey(pid);
+		else {
+			final var objects = ios.getInterfaceObjects();
+			final int objectType = objectIndex < objects.length ? objects[objectIndex].getType() : 0;
+			key = new PropertyClient.PropertyKey(objectType, pid);
+		}
+		final var property = ios.propertyDefinitions().get(key);
+		if (property != null)
+			return " (" + property.getName() + ")";
+		return "";
+	}
+
 	private void onMemoryWrite(final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 4, 66, "memory-write"))
@@ -929,6 +1006,69 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, MemoryExtendedReadResponse, asdu, priority);
 	}
 
+	private void onFunctionPropertyExtCommandOrState(final KNXAddress dst, final Destination respondTo,
+		final boolean isCommand, final byte[] data, final boolean system) {
+		final String name = decodeAPCI(isCommand ? FunctionPropertyExtCommand : FunctionPropertyExtStateRead);
+		if (!verifyLength(data.length, 6, getMaxApduLength() - 2, name))
+			return;
+		final int iot = ((data[0] & 0xff) << 8) | data[1] & 0xff;
+		final int oi = ((data[2] & 0xff) << 4) | ((data[3] & 0xff) >> 4);
+		final int pid = ((data[3] & 0xf) << 8) | (data[4] & 0xff);
+		final byte[] functionInput = Arrays.copyOfRange(data, 5, data.length);
+
+		ReturnCode rc;
+		logger.trace("{}->{} {} IOT {} OI {} PID {} {}", respondTo.getAddress(), dst, name, iot, oi, pid,
+				toHex(functionInput, " "));
+
+		ServiceResult sr = null;
+		try {
+			final int objIndex = objectIndex(iot, oi);
+			final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
+			if (description.getPDT() == PropertyTypes.PDT_FUNCTION)
+				sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
+								: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
+			else
+				rc = ReturnCode.DataTypeConflict;
+		}
+		catch (final KnxPropertyException e) {
+			rc = ReturnCode.AddressVoid;
+		}
+
+		if (sr == null)
+			return;
+
+		byte[] state = {};
+		final byte[] result = sr.getResult();
+		if (result == null)
+			rc = ReturnCode.AddressVoid;
+		else if (result.length == 0)
+			rc = ReturnCode.AccessDenied;
+		else if (result.length > getMaxApduLength() - 2 - 5)
+			rc = ReturnCode.ExceedsMaxApduLength;
+		else {
+			rc = ReturnCode.Success;
+			state = result;
+		}
+
+		final byte[] asdu = new byte[6 + state.length];
+		asdu[0] = (byte) (iot >> 8);
+		asdu[1] = (byte) iot;
+		asdu[2] = (byte) (oi >> 4);
+		asdu[3] = (byte) (((oi & 0xf) << 4) | (pid >> 8));
+		asdu[4] = (byte) pid;
+		asdu[5] = (byte) rc.code();
+		for (int i = 0; i < state.length; ++i)
+			asdu[6 + i] = state[i];
+
+		final var priority = system ? Priority.SYSTEM : Priority.LOW;
+		send(respondTo, FunctionPropertyExtStateResponse, asdu, priority);
+	}
+
+	private int objectIndex(final int iot, final int oi) {
+		final var data = device.getInterfaceObjectServer().getProperty(iot, oi, PID.OBJECT_INDEX, 1, 1);
+		return toUnsigned(data);
+	}
+
 	private void onManagement(final int svcType, final byte[] data, final KNXAddress dst, final Destination respondTo)
 	{
 		final ServiceResult sr = mgmtSvc.management(svcType, data, dst, respondTo, tl);
@@ -1014,6 +1154,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	// for a max of (2^31)-1
 	private static int toUnsigned(final byte[] data)
 	{
+		if (data.length == 1)
+			return data[0] & 0xff;
 		if (data.length == 2)
 			return (data[0] & 0xff) << 8 | (data[1] & 0xff);
 		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | (data[3] & 0xff);

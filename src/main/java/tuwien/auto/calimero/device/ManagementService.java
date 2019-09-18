@@ -102,6 +102,16 @@ public interface ManagementService
 	 */
 	ServiceResult readPropertyDescription(int objectIndex, int propertyId, int propertyIndex);
 
+	default ServiceResult functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
+		final byte[] command) {
+		return ServiceResult.Empty;
+	}
+
+	default ServiceResult readFunctionPropertyState(final Destination remote, final int objectIndex, final int propertyId,
+		final byte[] functionInput) {
+		return ServiceResult.Empty;
+	}
+
 	/**
 	 * Invoked for an application layer memory read service.
 	 * <p>
