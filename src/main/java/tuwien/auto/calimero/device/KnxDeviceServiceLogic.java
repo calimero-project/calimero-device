@@ -282,7 +282,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (p != null)
 				d = new Description(objectIndex, objType, propertyId, 0, p.getPDT(), !p.readOnly(), 0, 1, p.readLevel(), p.writeLevel());
 		}
-		if (d != null) {
+		if (d != null && !inProgrammingMode()) {
 			if (!d.isWriteEnabled()) {
 				logger.warn("property {}|{} is {}", objectIndex, propertyId, CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
 				return null;
