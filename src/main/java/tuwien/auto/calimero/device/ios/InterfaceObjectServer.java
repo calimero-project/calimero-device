@@ -613,9 +613,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		if (createDescription)
 			adapter.createNewDescription(index, PID.OBJECT_NAME, false);
 
-		// AN104: global property PID.OBJECT_INDEX holds index of the if-object
-		io.values.put(new PropertyKey(objectType, PID.OBJECT_INDEX),
-				new byte[] { 0, 1, (byte) (index >> 8), (byte) index });
+		io.values.put(new PropertyKey(objectType, PID.OBJECT_INDEX), new byte[] { 0, 1, (byte) index });
 		if (createDescription)
 			adapter.createNewDescription(index, PID.OBJECT_INDEX, false);
 	}
