@@ -328,6 +328,8 @@ public class BaseKnxDevice implements KnxDevice
 
 		if (process instanceof KnxDeviceServiceLogic)
 			((KnxDeviceServiceLogic) process).setDevice(this);
+		else if (mgmt instanceof KnxDeviceServiceLogic)
+			((KnxDeviceServiceLogic) mgmt).setDevice(this);
 		resetNotifiers();
 	}
 
