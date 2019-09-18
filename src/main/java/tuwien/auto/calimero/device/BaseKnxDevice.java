@@ -283,8 +283,11 @@ public class BaseKnxDevice implements KnxDevice
 		if (address.getRawAddress() == 0 || getAddress().equals(address))
 			return;
 
-		final KNXMediumSettings settings = getDeviceLink().getKNXMedium();
-		settings.setDeviceAddress(address);
+		final KNXNetworkLink link = getDeviceLink();
+		if (link != null) {
+			final KNXMediumSettings settings = link.getKNXMedium();
+			settings.setDeviceAddress(address);
+		}
 
 		final byte[] addr = address.toByteArray();
 		setDeviceProperty(PID.SUBNET_ADDRESS, addr[0]);
