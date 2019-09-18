@@ -93,6 +93,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private static final int DOA_RESPONSE = 0x3E2;
 	private static final int DOA_SELECTIVE_READ = 0x3E3;
 
+	private static final int DoASerialNumberRead = 0b1111101100;
+	private static final int DoASerialNumberResponse = 0b1111101101;
+	private static final int DoASerialNumberWrite = 0b1111101110;
+
 	private static final int IND_ADDR_READ = 0x0100;
 	private static final int IND_ADDR_RESPONSE = 0x0140;
 	private static final int IND_ADDR_WRITE = 0xC0;
@@ -296,6 +300,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			onDoASelectiveRead(respondTo, data);
 		else if (svc == DOA_WRITE)
 			onDoAWrite(respondTo, data);
+		else if (svc == DoASerialNumberRead)
+			onDoASerialNumberRead(respondTo, data);
+		else if (svc == DoASerialNumberWrite)
+			onDoASerialNumberWrite(respondTo, data);
 		else if (svc == KEY_WRITE)
 			onKeyWrite(respondTo, data);
 		else if (svc == RESTART)
@@ -567,6 +575,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			return;
 		final byte[] domain = Arrays.copyOfRange(data, 0, lengthDoA);
 		mgmtSvc.writeDomainAddress(domain);
+	}
+
+	private void onDoASerialNumberWrite(final Destination respondTo, final byte[] data) {
+		logger.info("DoA S/N write from {}", respondTo);
+		// NYI
+//		device.setAddress(null);
+	}
+
+	private void onDoASerialNumberRead(final Destination respondTo, final byte[] data) {
+		logger.info("DoA S/N read from {}", respondTo);
 	}
 
 	// p2p connection-oriented mode
