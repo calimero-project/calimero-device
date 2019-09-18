@@ -271,11 +271,11 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		else if (svc == MEMORY_WRITE)
 			onMemoryWrite(respondTo, data);
 		else if (svc == PROPERTY_DESC_READ)
-			onPropDescRead(respondTo, data);
+			onPropDescRead(dst, respondTo, data);
 		else if (svc == PROPERTY_READ)
-			onPropertyRead(respondTo, data);
+			onPropertyRead(dst, respondTo, data);
 		else if (svc == PROPERTY_WRITE)
-			onPropertyWrite(respondTo, data);
+			onPropertyWrite(dst, respondTo, data);
 		else if (svc == DEVICE_DESC_READ)
 			onDeviceDescRead(respondTo, data);
 		else if (svc == ADC_READ)
@@ -636,7 +636,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, apdu, sr.getPriority(), decodeAPCI(DEVICE_DESC_RESPONSE));
 	}
 
-	private void onPropertyRead(final Destination d, final byte[] data)
+	private void onPropertyRead(final KNXAddress dst, final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 4, 4, "property-read"))
 			return;
@@ -644,6 +644,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int pid = data[1] & 0xff;
 		int elements = (data[2] & 0xff) >> 4;
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
+
+		logger.trace("{}->{} {} {}|{}{} {}..{}", d.getAddress(), dst, decodeAPCI(PROPERTY_READ),
+				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1);
 
 		ServiceResult sr;
 		try {
@@ -674,7 +677,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
 
-	private void onPropertyWrite(final Destination d, final byte[] data)
+	private void onPropertyWrite(final KNXAddress dst, final Destination d, final byte[] data)
 	{
 		// the max ASDU upper length would be 253 (254 - 1 byte APCI)
 		if (!verifyLength(data.length, 5, getMaxApduLength() - 1, "property-write"))
@@ -684,6 +687,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		int elements = (data[2] & 0xff) >> 4;
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 		final byte[] propertyData = Arrays.copyOfRange(data, 4, data.length);
+
+		logger.trace("{}->{} {} {}|{}{} {}..{} {}", d.getAddress(), dst, decodeAPCI(PROPERTY_WRITE),
+				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, ""));
 
 		ServiceResult sr = null;
 		try {
@@ -717,13 +723,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
 
-	private void onPropDescRead(final Destination d, final byte[] data)
+	private void onPropDescRead(final KNXAddress dst, final Destination d, final byte[] data)
 	{
 		if (!verifyLength(data.length, 3, 3, "property description read"))
 			return;
 		final int objIndex = data[0] & 0xff;
 		int pid = data[1] & 0xff;
 		final int propIndex = data[2] & 0xff;
+
+		logger.trace("{}->{} {} {}|{} pidx {}{}", d.getAddress(), dst, decodeAPCI(PROPERTY_DESC_READ),
+				objIndex, pid, propIndex, propertyName(objIndex, pid));
 
 		ServiceResult sr = null;
 		try {
