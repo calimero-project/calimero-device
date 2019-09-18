@@ -914,17 +914,24 @@ public class InterfaceObjectServer implements PropertyAccess
 		private Description createNewDescription(final int objIndex, final int pid, final boolean writeEnabled)
 		{
 			final InterfaceObject io = getIfObject(objIndex);
-			int pdt = 0;
-			final Property p = getDefinition(io.getType(), pid);
-			if (p != null)
-				pdt = p.getPDT();
-			final int pIndex = io.descriptions.size();
 			int elems = 0;
 			try {
 				elems = toInt(getProperty(objIndex, pid, 0, 1));
 			}
 			catch (final KnxPropertyException e) {}
 			final int maxElems = Math.max(elems, 10);
+
+			int pdt = 0;
+			final Property p = getDefinition(io.getType(), pid);
+			if (p != null)
+				pdt = p.getPDT();
+			if (pdt == 0 && elems > 0) {
+				final var values = io.values.get(new PropertyKey(io.getType(), pid));
+				final int size = (values.length - 2) / elems;
+				pdt = PropertyTypes.PDT_GENERIC_01 + size - 1;
+			}
+
+			final int pIndex = io.descriptions.size();
 			final boolean writable = p != null ? !p.readOnly() : writeEnabled;
 			// level is between 0 (max. access rights required) and 3 or 15 (min. rights required)
 			final int readLevel = p != null ? p.readLevel() : 0;
