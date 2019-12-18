@@ -365,13 +365,17 @@ public class BaseKnxDevice implements KnxDevice
 	void dispatch(final EventObject e, final Supplier<ServiceResult> dispatch,
 		final BiConsumer<EventObject, ServiceResult> respond)
 	{
+		final long start = System.nanoTime();
 		if (threadingPolicy == INCOMING_EVENTS_THREADED) {
 			submitTask(() -> {
 				try {
 					Optional.ofNullable(dispatch.get()).ifPresent(sr -> respond.accept(e, sr));
 				}
+				catch (final RuntimeException rte) {
+					logger.error("error executing dispatch/respond task", rte);
+				}
 				finally {
-					taskDone();
+					taskDone(start);
 				}
 			});
 		}
@@ -380,8 +384,11 @@ public class BaseKnxDevice implements KnxDevice
 				try {
 					respond.accept(e, sr);
 				}
+				catch (final RuntimeException rte) {
+					logger.error("error executing respond task", rte);
+				}
 				finally {
-					taskDone();
+					taskDone(start);
 				}
 			}));
 		}
@@ -659,8 +666,12 @@ public class BaseKnxDevice implements KnxDevice
 		}
 	}
 
-	private void taskDone()
-	{
+	private void taskDone(final long start) {
+		final long total = System.nanoTime() - start;
+		final long ms = total / 1_000_000L;
+		if (ms > 3000)
+			logger.warn("task took suspiciously long ({} ms)", ms);
+
 		synchronized (tasks) {
 			if (tasks.isEmpty())
 				taskSubmitted = false;
