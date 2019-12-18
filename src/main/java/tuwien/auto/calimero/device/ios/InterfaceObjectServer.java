@@ -766,7 +766,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			// somewhere for subsequent use (also nice to have when saving the
 			// interface objects to a resource)
 			int typeSize = 0;
-			int pdt = 0;
+			int pdt = -1;
 			String dptId = null;
 			Description d = null;
 			boolean createDescription = false;
@@ -785,7 +785,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					dptId = p.getDPT();
 				}
 			}
-			if (pdt != 0) {
+			if (pdt != -1) {
 				try {
 					typeSize = PropertyTypes.createTranslator(pdt).getTypeSize();
 					// round bit values up to 1 byte
@@ -921,11 +921,11 @@ public class InterfaceObjectServer implements PropertyAccess
 			catch (final KnxPropertyException e) {}
 			final int maxElems = Math.max(elems, 10);
 
-			int pdt = 0;
+			int pdt = -1;
 			final Property p = getDefinition(io.getType(), pid);
 			if (p != null)
 				pdt = p.getPDT();
-			if (pdt == 0 && elems > 0) {
+			if (pdt == -1 && elems > 0) {
 				final var values = io.values.get(new PropertyKey(io.getType(), pid));
 				final int size = (values.length - 2) / elems;
 				pdt = PropertyTypes.PDT_GENERIC_01 + size - 1;
