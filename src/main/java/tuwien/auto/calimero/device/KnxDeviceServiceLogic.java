@@ -296,25 +296,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			}
 		}
 
-		if (propertyId == PID.LOAD_STATE_CONTROL) {
-			final var event = LoadEvent.values()[data[0] & 0xff];
-			logger.debug("load state control event for OI {}: {}", objectIndex, event);
-			switch (event) {
-			case NoOperation:
-				return readProperty(remote, objectIndex, propertyId, startIndex, elements);
-			case StartLoading:
-				ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loading.ordinal());
-				return new ServiceResult((byte) LoadState.Loading.ordinal());
-			case LoadCompleted:
-				ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loaded.ordinal());
-				return new ServiceResult((byte) LoadState.LoadCompleting.ordinal());
-			case AdditionalLoadControls:
-				return new ServiceResult((byte) 0xff);
-			case Unload:
-				ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Unloaded.ordinal());
-				return new ServiceResult((byte) LoadState.Unloading.ordinal());
-			}
-		}
+		if (propertyId == PID.LOAD_STATE_CONTROL)
+			return changeLoadState(remote, objectIndex, propertyId, startIndex, elements, data);
 
 		// if we set a non-existing property, we won't have a description (it won't show up in a property editor)
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
@@ -323,6 +306,32 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			setProgrammingMode((data[0] & 0x01) == 0x01);
 
 		return new ServiceResult(data);
+	}
+
+	private ServiceResult changeLoadState(final Destination remote, final int objectIndex, final int propertyId,
+			final int startIndex, final int elements, final byte[] data) {
+		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
+
+		final var event = LoadEvent.values()[data[0] & 0xff];
+		logger.debug("load state control event for OI {}: {}", objectIndex, event);
+		switch (event) {
+		case NoOperation:
+			return readProperty(remote, objectIndex, propertyId, startIndex, elements);
+		case StartLoading:
+			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loading.ordinal());
+			return new ServiceResult((byte) LoadState.Loading.ordinal());
+		case LoadCompleted:
+			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loaded.ordinal());
+			return new ServiceResult((byte) LoadState.Loaded.ordinal());
+		case AdditionalLoadControls:
+			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loading.ordinal());
+			return new ServiceResult((byte) LoadState.Loading.ordinal());
+		case Unload:
+			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loaded.ordinal());
+			return new ServiceResult((byte) LoadState.Unloaded.ordinal());
+		default:
+			throw new Error();
+		}
 	}
 
 	@Override
@@ -344,6 +353,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final byte[] command) {
 		final int serviceId = command[1] & 0xff;
 		final int objectType = device.getInterfaceObjectServer().getInterfaceObjects()[objectIndex].getType();
+
+		if (propertyId == PID.LOAD_STATE_CONTROL)
+			return changeLoadState(remote, objectIndex, propertyId, 1, 1, command);
 
 		if (objectType == InterfaceObject.ROUTER_OBJECT) {
 			if (propertyId == PID_ROUTETABLE_CONTROL) {
