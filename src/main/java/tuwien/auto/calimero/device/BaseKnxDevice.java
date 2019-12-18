@@ -417,6 +417,11 @@ public class BaseKnxDevice implements KnxDevice
 
 	private void initDeviceInfo() throws KnxPropertyException
 	{
+		ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
+
 		// Device Object settings
 
 		final byte[] desc = name.getBytes(Charset.forName("ISO-8859-1"));
@@ -497,7 +502,6 @@ public class BaseKnxDevice implements KnxDevice
 		// Application Program Object settings
 
 		final int appProgamObject = InterfaceObject.APPLICATIONPROGRAM_OBJECT;
-		ios.addInterfaceObject(appProgamObject);
 
 		// Required PEI Type
 		final int requiredPeiType = 0; // unsigned char
