@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2017 B. Malinowsky
+    Copyright (c) 2011, 2019 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ package tuwien.auto.calimero.device;
 
 import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.Priority;
+import tuwien.auto.calimero.ReturnCode;
 
 /**
  * Result container for application layer service handlers.
@@ -54,6 +55,7 @@ public class ServiceResult implements Runnable
 {
 	static final ServiceResult Empty = new ServiceResult(new byte[0]);
 
+	private final ReturnCode ret;
 	private final byte[] data;
 	final boolean compact;
 
@@ -62,6 +64,7 @@ public class ServiceResult implements Runnable
 	 */
 	public ServiceResult()
 	{
+		ret = ReturnCode.Success;
 		data = null;
 		compact = false;
 	}
@@ -78,10 +81,17 @@ public class ServiceResult implements Runnable
 		this(result, false);
 	}
 
+	ServiceResult(final ReturnCode returnCode, final byte... result) {
+		ret = returnCode;
+		data = result;
+		compact = false;
+	}
+
 	public ServiceResult(final byte[] result, final boolean compact)
 	{
 		if (result == null)
 			throw new KNXIllegalArgumentException("no service result");
+		ret = ReturnCode.Success;
 		data = result;
 		this.compact = compact;
 	}
@@ -108,4 +118,6 @@ public class ServiceResult implements Runnable
 	{
 		return Priority.LOW;
 	}
+
+	ReturnCode returnCode() { return ret; }
 }

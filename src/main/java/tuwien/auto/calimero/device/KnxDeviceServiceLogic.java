@@ -396,15 +396,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readMemory(final int startAddress, final int bytes)
 	{
-		if (startAddress > 0xffff) {
-			final byte[] mem = getDeviceMemory();
-			if (startAddress >= mem.length)
-				return new ServiceResult();
-			if (startAddress + bytes >= mem.length)
-				return ServiceResult.Empty;
-		}
-		if (startAddress >= getDeviceMemory().length)
-			return ServiceResult.Empty;
+		final byte[] mem = getDeviceMemory();
+		if (startAddress >= mem.length)
+			return new ServiceResult(ReturnCode.AddressVoid);
+		if (startAddress + bytes >= mem.length)
+			return new ServiceResult(ReturnCode.AccessDenied);
+
 		final Collection<Datapoint> c = ((DatapointMap<Datapoint>) datapoints).getDatapoints();
 		final int groupAddrTableSize = 3 + c.size() * 2;
 		if (startAddress >= addrGroupAddrTable && startAddress < addrGroupAddrTable + groupAddrTableSize) {
@@ -423,12 +420,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult writeMemory(final int startAddress, final byte[] data)
 	{
 		final byte[] mem = getDeviceMemory();
-		if (startAddress > 0xffff) {
-			if (startAddress >= mem.length)
-				return new ServiceResult((byte) ReturnCode.AddressVoid.code());
-			if (startAddress + data.length >= mem.length)
-				return new ServiceResult((byte) ReturnCode.MemoryError.code());
-		}
+		if (startAddress >= mem.length)
+			return new ServiceResult(ReturnCode.AddressVoid);
+		if (startAddress + data.length >= mem.length)
+			return new ServiceResult(ReturnCode.MemoryError);
 		for (int i = 0; i < data.length; i++) {
 			final byte b = data[i];
 			mem[startAddress + i] = b;

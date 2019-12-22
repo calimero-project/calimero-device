@@ -141,6 +141,14 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private static final int NetworkParamResponse = 0b1111011011;
 	private static final int NetworkParamWrite = 0b1111100100;
 
+	private static final int PropertyExtRead = 0b0111001100;
+	private static final int PropertyExtResponse = 0b0111001101;
+	private static final int PropertyExtWriteCon = 0b0111001110;
+	private static final int PropertyExtWriteConResponse = 0b0111001111;
+	private static final int PropertyExtWriteUnCon = 0b0111010000;
+	private static final int PropertyExtDescriptionRead = 0b0111010010;
+	private static final int PropertyExtDescriptionResponse = 0b0111010011;
+
 	private static final int FunctionPropertyExtCommand =       0b0111010100;
 	private static final int FunctionPropertyExtStateRead =     0b0111010101;
 	private static final int FunctionPropertyExtStateResponse = 0b0111010110;
@@ -221,6 +229,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		return new ServiceResult();
 	}
 
+	private Priority priority = Priority.LOW;
+
 	public void respond(final EventObject e, final ServiceResult sr)
 	{
 		// since our service code is not split up in request/response, just do everything here
@@ -269,7 +279,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo)
 	{
-		logger.trace(decodeAPCI(svc));
+		final String name = decodeAPCI(svc);
+		logger.trace(name);
 		if (svc == MEMORY_READ)
 			onMemoryRead(respondTo, data);
 		else if (svc == MEMORY_WRITE)
@@ -324,10 +335,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			onNetworkParamRead(respondTo, data, true, dst.getRawAddress() == 0);
 		else if (svc == SystemNetworkParamWrite)
 			onNetworkParamWrite(respondTo, data, true);
+		else if (svc == PropertyExtRead)
+			onPropertyExtRead(name, dst, respondTo, data);
+		else if (svc == PropertyExtWriteCon || svc == PropertyExtWriteUnCon)
+			onPropertyExtWrite(name, dst, respondTo, data, svc == PropertyExtWriteCon);
+		else if (svc == PropertyExtDescriptionRead)
+			onPropertyExtDescriptionRead(name, dst, respondTo, data);
 		else if (svc == FunctionPropertyExtCommand)
-			onFunctionPropertyExtCommandOrState(dst, respondTo, true, data, true);
+			onFunctionPropertyExtCommandOrState(name, dst, respondTo, true, data, true);
 		else if (svc == FunctionPropertyExtStateRead)
-			onFunctionPropertyExtCommandOrState(dst, respondTo, true, data, true);
+			onFunctionPropertyExtCommandOrState(name, dst, respondTo, false, data, true);
 		else
 			onManagement(svc, data, dst, respondTo);
 	}
@@ -869,17 +886,13 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 			if (ignoreOrSchedule(sr))
 				return;
-			final byte[] written = sr.getResult();
-			// check for unreachable/illegal/protected memory access
-			if (written.length == 0)
+			if (sr.returnCode() != ReturnCode.Success)
 				bytes = 0;
-			else if (written.length != bytes) {
-				logger.warn("wrong implementation of memory-write?");
-				bytes = 0;
-			}
+
 			// only respond if verify mode is active
 			final boolean verifyByServer = mgmtSvc.isVerifyModeEnabled();
 			if (verifyByServer) {
+				final byte[] written = sr.getResult();
 				final byte[] asdu = new byte[3 + bytes];
 				asdu[0] = (byte) bytes;
 				asdu[1] = (byte) (address >>> 8);
@@ -919,14 +932,14 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				if (ignoreOrSchedule(sr))
 					return;
 
-				rc = ReturnCode.of(sr.getResult()[0] & 0xff);
+				rc = sr.returnCode();
 				priority = sr.getPriority();
 			}
 		}
 
 		final boolean withCrc = rc == ReturnCode.SuccessWithCrc;
 		final byte[] asdu = new byte[4 + (withCrc ? 2 : 0)];
-		asdu[0] = (byte) (rc.code());
+		asdu[0] = (byte) rc.code();
 		asdu[1] = (byte) (address >>> 16);
 		asdu[2] = (byte) (address >>> 8);
 		asdu[3] = (byte) address;
@@ -996,7 +1009,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int length = data[0] & 0xff;
 		final int address = ((data[1] & 0xff) << 16) | ((data[2] & 0xff) << 8) | (data[3] & 0xff);
 
-		final ReturnCode rc;
+		ReturnCode rc;
 		byte[] read = {};
 		Priority priority = Priority.LOW;
 		if (length > getMaxApduLength() - 4) {
@@ -1006,19 +1019,14 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		else {
 			logger.trace("read memory: start address 0x{}, {} bytes", Integer.toHexString(address), length);
 			final ServiceResult sr = mgmtSvc.readMemory(address, length);
-			if (sr == null)
-				return;
 
+			rc = sr.returnCode();
 			final byte[] result = sr.getResult();
-			if (result == null)
-				rc = ReturnCode.AddressVoid;
-			else if (result.length == 0)
-				rc = ReturnCode.AccessDenied;
-			else if (result.length != length)
-				rc = ReturnCode.MemoryError;
-			else {
-				rc = ReturnCode.Success;
-				read = result;
+			if (rc == ReturnCode.Success) {
+				if (result.length == length)
+					read = result;
+				else
+					rc = ReturnCode.MemoryError;
 			}
 			priority = sr.getPriority();
 		}
@@ -1033,9 +1041,131 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, MemoryExtendedReadResponse, asdu, priority);
 	}
 
-	private void onFunctionPropertyExtCommandOrState(final KNXAddress dst, final Destination respondTo,
-		final boolean isCommand, final byte[] data, final boolean system) {
-		final String name = decodeAPCI(isCommand ? FunctionPropertyExtCommand : FunctionPropertyExtStateRead);
+	private void onPropertyExtDescriptionRead(final String name, final KNXAddress dst, final Destination respondTo, final byte[] data) {
+		if (!verifyLength(data.length, 7, 7, name))
+			return;
+		final int iot = (data[0] & 0xff) << 8 | data[1] & 0xff;
+		final int instance = (data[2] & 0xff) << 4 | (data[3] & 0xff) >> 4;
+		final int pid = (data[3] & 0xf) << 8 | data[4] & 0xff;
+		final int pdt = (data[5] & 0xff) >> 4; // reserved, always zero
+		final int propIndex = (data[5] & 0xf) << 8 | data[6] & 0xff;
+
+		final int objIndex = objectIndex(iot, instance);
+		logger.trace("{}->{} {} {}()|{} pidx {}{}", respondTo.getAddress(), dst, name, iot,
+				instance, pid, propIndex, propertyName(objIndex, pid));
+
+		ServiceResult sr = null;
+		try {
+			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("read property description: {}", e.getMessage());
+		}
+
+		// TODO adapt reset of method
+
+		// answer with non-existent property description on no result
+		if (sr == null) {
+			final byte[] asdu = new byte[7];
+			asdu[0] = (byte) instance;
+			asdu[1] = (byte) pid;
+			asdu[2] = (byte) propIndex;
+			send(respondTo, PropertyExtDescriptionResponse, asdu, Priority.LOW);
+			return;
+		}
+		if (ignoreOrSchedule(sr))
+			return;
+
+		final int typeDontCare = 0;
+		final Description desc = new Description(typeDontCare, sr.getResult());
+		// read back pid, because it is 0 when the propIndex was used
+		final int pidResponse = desc.getPID();
+		final int index = desc.getPropIndex();
+		int type = desc.isWriteEnabled() ? 0x80 : 0;
+		type |= desc.getPDT();
+		final int max = desc.getMaxElements();
+		final int access = desc.getReadLevel() << 4 | desc.getWriteLevel();
+		final byte[] asdu = new byte[/*7*/] { (byte) instance, (byte) pidResponse, (byte) index, (byte) type,
+			(byte) (max >>> 8), (byte) max, (byte) access };
+
+		send(respondTo, PropertyExtDescriptionResponse, asdu, sr.getPriority());
+	}
+
+	private void onPropertyExtRead(final String name, final KNXAddress dst, final Destination respondTo, final byte[] data) {
+		if (!verifyLength(data.length, 8, 8, name))
+			return;
+		final int iot = (data[0] & 0xff) << 8 | data[1] & 0xff;
+		final int instance = (data[2] & 0xff) << 4 | (data[3] & 0xff) >> 4;
+		final int pid = (data[3] & 0x0f) << 8 | data[4] & 0xff;
+		final int elements = data[5] & 0xff;
+		final int start = (data[6] & 0xff) << 8 | data[7] & 0xff;
+
+		final int objIndex = objectIndex(iot, instance);
+		logger.trace("{}->{} {} {}({})|{}{} {}..{}", respondTo.getAddress(), dst, name, iot,
+				instance, pid, propertyName(objIndex, pid), start, start + elements - 1);
+
+		ServiceResult sr = null;
+		try {
+			sr = mgmtSvc.readProperty(respondTo, objIndex, pid, start, elements);
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("reading property data: {}", e.getMessage());
+		}
+
+		final int length = sr == null ? 1 : sr.getResult().length;
+		final byte[] asdu = Arrays.copyOfRange(data, 0, 8 + length);
+		if (sr == null) {
+			asdu[5] = 0;
+			asdu[8] = (byte) ReturnCode.AddressVoid.code();
+		}
+		else
+			System.arraycopy(sr.getResult(), 0, asdu, 8, length);
+
+		final var prio = sr == null ? priority : sr.getPriority();
+		send(respondTo, PropertyExtResponse, asdu, prio);
+	}
+
+	private void onPropertyExtWrite(final String name, final KNXAddress dst, final Destination respondTo, final byte[] data,
+			final boolean confirm) {
+
+		if (!verifyLength(data.length, 9, getMaxApduLength() - 2, name))
+			return;
+		final int iot = (data[0] & 0xff) << 8 | data[1] & 0xff;
+		final int instance = (data[2] & 0xff) << 4 | (data[3] & 0xff) >> 4;
+		final int pid = (data[3] & 0xf) << 8 | data[4] & 0xff;
+		final int elements = data[5] & 0xff;
+		final int start = (data[6] & 0xff) << 8 | data[7] & 0xff;
+		final byte[] propertyData = Arrays.copyOfRange(data, 8, data.length);
+
+		final int objIndex = objectIndex(iot, instance);
+		logger.trace("{}->{} {} {}({})|{}{} {}..{}: {}", respondTo.getAddress(), dst, name, iot,
+				instance, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, " "));
+
+		ServiceResult sr = null;
+		try {
+			sr = mgmtSvc.writeProperty(respondTo, objIndex, pid, start, elements, propertyData);
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("writing property data: {}", e.getMessage());
+		}
+
+		if (!confirm)
+			return;
+
+		final byte[] asdu = Arrays.copyOfRange(data, 0, 9);
+		if (sr == null) {
+			asdu[5] = 0;
+			asdu[8] = (byte) ReturnCode.AddressVoid.code();
+		}
+		else
+			asdu[8] = (byte) ReturnCode.Success.code();
+
+		final var priority = sr == null ? Priority.LOW : sr.getPriority();
+		send(respondTo, PropertyExtWriteConResponse, asdu, priority);
+	}
+
+	private void onFunctionPropertyExtCommandOrState(final String name, final KNXAddress dst,
+			final Destination respondTo, final boolean isCommand, final byte[] data, final boolean system) {
 		if (!verifyLength(data.length, 6, getMaxApduLength() - 2, name))
 			return;
 		final int iot = ((data[0] & 0xff) << 8) | data[1] & 0xff;
@@ -1043,39 +1173,36 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int pid = ((data[3] & 0xf) << 8) | (data[4] & 0xff);
 		final byte[] functionInput = Arrays.copyOfRange(data, 5, data.length);
 
-		ReturnCode rc;
 		logger.trace("{}->{} {} IOT {} OI {} PID {} {}", respondTo.getAddress(), dst, name, iot, oi, pid,
 				toHex(functionInput, " "));
 
-		ServiceResult sr = null;
+		ServiceResult sr;
 		try {
 			final int objIndex = objectIndex(iot, oi);
 			final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
-			if (description.getPDT() == PropertyTypes.PDT_FUNCTION)
+			// TODO enforce access policy
+			if (description.getPDT() == PropertyTypes.PDT_FUNCTION || description.getPDT() == PropertyTypes.PDT_CONTROL)
 				sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
 								: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
 			else
-				rc = ReturnCode.DataTypeConflict;
+				sr = new ServiceResult(ReturnCode.DataTypeConflict);
 		}
 		catch (final KnxPropertyException e) {
-			rc = ReturnCode.AddressVoid;
+			sr = new ServiceResult(ReturnCode.AddressVoid);
 		}
-
-		if (sr == null)
-			return;
 
 		byte[] state = {};
 		final byte[] result = sr.getResult();
+		ReturnCode rc = sr.returnCode();
+		if (rc == ReturnCode.Success)
+			state = result;
+
 		if (result == null)
 			rc = ReturnCode.AddressVoid;
 		else if (result.length == 0)
 			rc = ReturnCode.AccessDenied;
 		else if (result.length > getMaxApduLength() - 2 - 5)
 			rc = ReturnCode.ExceedsMaxApduLength;
-		else {
-			rc = ReturnCode.Success;
-			state = result;
-		}
 
 		final byte[] asdu = new byte[6 + state.length];
 		asdu[0] = (byte) (iot >> 8);
