@@ -55,7 +55,9 @@ import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
+import tuwien.auto.calimero.cemi.CEMI;
 import tuwien.auto.calimero.cemi.CEMILData;
+import tuwien.auto.calimero.cemi.CemiTData;
 import tuwien.auto.calimero.device.ManagementService.EraseCode;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
@@ -235,11 +237,36 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	{
 		// since our service code is not split up in request/response, just do everything here
 		final FrameEvent fe = (FrameEvent) e;
-		final CEMILData cemi = (CEMILData) fe.getFrame();
-		final IndividualAddress sender = cemi.getSource();
-		final KNXAddress dst = cemi.getDestination();
-
+		final CEMI cemi = fe.getFrame();
 		final byte[] tpdu = cemi.getPayload();
+
+		final IndividualAddress sender;
+		final KNXAddress dst;
+		Destination d;
+		if (cemi instanceof CemiTData) {
+			sender = new IndividualAddress(0);
+			dst = new IndividualAddress(0);
+			final TransportLayerImpl impl = (TransportLayerImpl) tl;
+			d = impl.createDestination(sender, false);
+			d.close();
+		}
+		else {
+			if (tpdu == null)
+				return;
+
+			final CEMILData ldata = (CEMILData) cemi;
+			sender = ldata.getSource();
+
+			final TransportLayerImpl impl = (TransportLayerImpl) tl;
+			d = impl.getDestination(sender);
+			// TODO actually this check is for CL mode and should be made in transport layer
+			if (d == null)
+				d = impl.createDestination(sender, false);
+
+			dst = ldata.getDestination();
+			priority = ldata.getPriority();
+		}
+
 		final int svc = DataUnitBuilder.getAPDUService(tpdu);
 		final byte[] asdu = DataUnitBuilder.extractASDU(tpdu);
 
@@ -248,12 +275,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 					DataUnitBuilder.decode(tpdu, dst), getMaxApduLength());
 			return;
 		}
-
-		final TransportLayerImpl impl = (TransportLayerImpl) tl;
-		Destination d = impl.getDestination(sender);
-		// TODO actually this check is for CL mode and should be made in transport layer
-		if (d == null)
-			d = impl.createDestination(sender, false);
 
 		try {
 			dispatchToService(svc, asdu, dst, d);
