@@ -744,7 +744,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 		final byte[] propertyData = Arrays.copyOfRange(data, 4, data.length);
 
-		logger.trace("{}->{} {} {}|{}{} {}..{} {}", d.getAddress(), dst, decodeAPCI(PROPERTY_WRITE),
+		logger.trace("{}->{} {} {}|{}{} {}..{}: {}", d.getAddress(), dst, decodeAPCI(PROPERTY_WRITE),
 				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, ""));
 
 		ServiceResult sr = null;

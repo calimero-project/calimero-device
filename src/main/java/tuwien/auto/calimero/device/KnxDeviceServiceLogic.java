@@ -653,7 +653,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final Destination respondTo, final TransportLayer tl)
 	{
 		logger.info("{}->{} {} {}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
-				DataUnitBuilder.toHex(asdu, ""));
+				DataUnitBuilder.toHex(asdu, " "));
 		return null;
 	}
 
