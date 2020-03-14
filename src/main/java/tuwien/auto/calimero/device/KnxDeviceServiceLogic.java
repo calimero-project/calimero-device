@@ -36,6 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
+import static tuwien.auto.calimero.DataUnitBuilder.createLengthOptimizedAPDU;
+
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
@@ -53,6 +55,8 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.KNXTimeoutException;
+import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
@@ -64,6 +68,7 @@ import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
+import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.link.medium.PLSettings;
@@ -382,13 +387,144 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				}
 			}
 		}
-		return new ServiceResult((byte) 0xff);
+		else if (objectType == InterfaceObject.GROUP_OBJECT_TABLE_OBJECT) {
+			final int pidGODiagnostics = 66;
+			if (propertyId == pidGODiagnostics)
+				return writeGroupObjectDiagnostics(command, serviceId);
+		}
+		return new ServiceResult(ReturnCode.Error);
+	}
+
+	private ServiceResult writeGroupObjectDiagnostics(final byte[] command, final int serviceId) {
+		logger.debug("GO diagnostics write service 0x{}", Integer.toHexString(serviceId));
+
+		// write service IDs
+		final int setLocalGOValue = 0;
+		final int sendGroupValueWrite = 1;
+		final int sendLocalGOValueOnBus = 2;
+		final int sendGroupValueRead = 3;
+		final int limitGroupServiceSenders = 4;
+
+		if (serviceId == limitGroupServiceSenders) // only available in diagnostic operation mode
+			return new ServiceResult(ReturnCode.ImpossibleCommand);
+
+		final var dataVoidResult = new ServiceResult(ReturnCode.DataVoid, (byte) serviceId);
+		final var invalidCommandResult = new ServiceResult(ReturnCode.InvalidCommand, (byte) serviceId);
+
+		if (serviceId == setLocalGOValue) {
+			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+			final var data = Arrays.copyOfRange(command, 4, command.length);
+			// NYI set value, return E_GD_GO_STATUS_VALUE
+			return invalidCommandResult;
+		}
+		else if (serviceId == sendGroupValueWrite) {
+			final int flags = command[2] & 0xff;
+			if ((flags & 0x7f) > 3)
+				return dataVoidResult;
+
+			final var data = Arrays.copyOfRange(command, 5, command.length);
+			if (data.length == 0)
+				return dataVoidResult;
+
+			final boolean compactApdu = data.length == 1 && (data[0] & 0xff) < 64 && (flags & 0x80) == 0;
+			final boolean auth = (flags & 0x01) != 0;
+			final boolean conf = (flags & 0x02) != 0;
+
+			final var ga = new GroupAddress(Arrays.copyOfRange(command, 3, 5));
+			final var datapoint = datapoints.get(ga);
+			if (datapoint == null)
+				return dataVoidResult;
+
+			logger.debug("send group value write {}, conf {} auth {}", ga, conf, auth);
+			try {
+				final var translator = TranslatorTypes.createTranslator(datapoint.getDPT(), data);
+				updateDatapointValue(datapoint, translator);
+				sendGroupValue(ga, ProcessServiceNotifier.GROUP_WRITE, compactApdu, data);
+			}
+			catch (final KNXException e) {
+				logger.warn("GO diagnostics sending group value write to {}", ga, e);
+			}
+
+			return new ServiceResult((byte) serviceId);
+		}
+		else if (serviceId == sendLocalGOValueOnBus) {
+			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+			// NYI send local group value, return E_GD_GO_STATUS_VALUE
+			return invalidCommandResult;
+		}
+		else if (serviceId == sendGroupValueRead) {
+			final int flags = command[2] & 0xff;
+			if (flags > 3)
+				return dataVoidResult;
+
+			final boolean auth = (flags & 0x01) != 0;
+			final boolean conf = (flags & 0x02) != 0;
+			final var ga = new GroupAddress(Arrays.copyOfRange(command, 3, 5));
+
+			final var datapoint = datapoints.get(ga);
+			if (datapoint == null)
+				return dataVoidResult;
+
+			logger.info("send group value read {}, conf {} auth {}", ga, conf, auth);
+			final byte[] apdu = createLengthOptimizedAPDU(ProcessServiceNotifier.GROUP_READ);
+			final var link = device.getDeviceLink();
+			try {
+				link.sendRequestWait(ga, Priority.LOW, apdu);
+				final var translator = requestDatapointValue(datapoint);
+				if (translator != null) {
+					final boolean compactApdu = translator.getTypeSize() == 0;
+					sendGroupValue(ga, ProcessServiceNotifier.GROUP_RESPONSE, compactApdu, translator.getData());
+				}
+			}
+			catch (final KNXException e) {
+				logger.warn("GO diagnostics sending group value read to {}", ga, e);
+			}
+			return new ServiceResult((byte) serviceId);
+		}
+		return invalidCommandResult;
+	}
+
+	private void sendGroupValue(final GroupAddress dst, final int service, final boolean compactApdu, final byte[] data)
+			throws KNXTimeoutException, KNXLinkClosedException {
+		final var link = device.getDeviceLink();
+		final var apdu = compactApdu ? createLengthOptimizedAPDU(service, data) : DataUnitBuilder.createAPDU(service, data);
+		link.sendRequestWait(dst, Priority.LOW, apdu);
 	}
 
 	@Override
 	public ServiceResult readFunctionPropertyState(final Destination remote, final int objectIndex,
 		final int propertyId, final byte[] functionInput) {
+
+		final int serviceId = functionInput[1] & 0xff;
+		final int objectType = device.getInterfaceObjectServer().getInterfaceObjects()[objectIndex].getType();
+		if (objectType == InterfaceObject.GROUP_OBJECT_TABLE_OBJECT) {
+			final int pidGODiagnostics = 66;
+			if (propertyId == pidGODiagnostics)
+				return readGroupObjectDiagnostics(functionInput, serviceId);
+		}
+
 		return ServiceResult.Empty;
+	}
+
+	private ServiceResult readGroupObjectDiagnostics(final byte[] functionInput, final int serviceId) {
+		logger.debug("GO diagnostics read service 0x{}", Integer.toHexString(serviceId));
+
+		// read service IDs
+		final int getGOConfig = 0;
+		final int getLocalGOValue = 1;
+
+		final var invalidCommandResult = new ServiceResult(ReturnCode.InvalidCommand, (byte) serviceId);
+		if (serviceId == getGOConfig) {
+			final int groupObjectNumber = (functionInput[2] & 0xff) << 8 | (functionInput[3] & 0xff);
+			// NYI return E_GD_CONFIG
+			return invalidCommandResult;
+		}
+		else if (serviceId == getLocalGOValue) {
+			final int groupObjectNumber = (functionInput[2] & 0xff) << 8 | (functionInput[3] & 0xff);
+			// NYI return E_GD_GO_STATUS_VALUE
+			return invalidCommandResult;
+		}
+		return invalidCommandResult;
 	}
 
 	private static final int addrGroupAddrTable = 0x0116; // max. length 233

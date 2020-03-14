@@ -51,9 +51,9 @@ import tuwien.auto.calimero.process.ProcessListener;
 
 final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 {
-	private static final int GROUP_READ = 0x00;
-	private static final int GROUP_RESPONSE = 0x40;
-	private static final int GROUP_WRITE = 0x80;
+	static final int GROUP_READ = 0x00;
+	static final int GROUP_RESPONSE = 0x40;
+	static final int GROUP_WRITE = 0x80;
 
 	private final BaseKnxDevice device;
 	private final ProcessCommunicationService svc;

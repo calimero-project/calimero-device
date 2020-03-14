@@ -38,8 +38,8 @@ package tuwien.auto.calimero.device;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
+import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +48,7 @@ import org.junit.jupiter.api.Test;
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.FrameEvent;
+import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
@@ -57,11 +58,16 @@ import tuwien.auto.calimero.cemi.CEMI;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.cemi.CEMILDataEx;
 import tuwien.auto.calimero.datapoint.Datapoint;
+import tuwien.auto.calimero.datapoint.StateDP;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
+import tuwien.auto.calimero.dptxlator.DPTXlatorBoolean;
+import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.medium.TPSettings;
+import tuwien.auto.calimero.mgmt.Description;
 
 class ManagementServiceNotifierTest {
 
@@ -79,12 +85,16 @@ class ManagementServiceNotifierTest {
 	// re-use default logic of management services
 	private final KnxDeviceServiceLogic mgmtServices = new KnxDeviceServiceLogic() {
 		@Override
-		public void updateDatapointValue(final Datapoint ofDp, final DPTXlator update) { fail("not under test"); }
+		public void updateDatapointValue(final Datapoint ofDp, final DPTXlator update) {
+//			fail("not under test");
+		}
 
 		@Override
 		public DPTXlator requestDatapointValue(final Datapoint ofDp) throws KNXException {
-			fail("not under test");
-			return null;
+//			fail("not under test");
+			final var t = new DPTXlatorBoolean(DPTXlatorBoolean.DPT_SWITCH);
+			t.setData(new byte[] { 1 } );
+			return t;
 		}
 	};
 
@@ -96,6 +106,9 @@ class ManagementServiceNotifierTest {
 		final BaseKnxDevice device = new BaseKnxDevice("test", DeviceDescriptor.DD0.TYPE_5705,
 				new IndividualAddress(0, 0x02, 0xff), linkStub, null, mgmtServices);
 		mgmtServices.setDevice(device);
+		final var ios = device.getInterfaceObjectServer();
+		ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
+		ios.setDescription(new Description(6, 0, 66, 0, PropertyTypes.PDT_FUNCTION, true, 1, 1, 3, 3), true);
 
 		notifier = new ManagementServiceNotifier(device, mgmtServices) {
 			void send(final tuwien.auto.calimero.mgmt.Destination respondTo, final byte[] apdu, final Priority p,
@@ -142,6 +155,43 @@ class ManagementServiceNotifierTest {
 		final byte[] asdu = { (byte) 1, 0x10, 0x00, 0x00 };
 		test = apdu -> assertEquals(ReturnCode.AddressVoid, ReturnCode.of(apdu[2] & 0xff));
 		assertResponse(ManagementServiceNotifier.MemoryExtendedRead, asdu);
+	}
+
+	@Test
+	void goDiagnosticsSendGroupValueWrite() {
+		final var group = new GroupAddress(1, 1, 5);
+		mgmtServices.getDatapointModel().add(new StateDP(group, "test datapoint", 0, "1.001"));
+
+		sendGroupObjectDiagnostics(group, 1, ReturnCode.Success);
+	}
+
+	@Test
+	void goDiagnosticsSendNonExistingGroupValueWrite() {
+		final var group = new GroupAddress(1, 1, 6);
+
+		sendGroupObjectDiagnostics(group, 1, ReturnCode.DataVoid);
+	}
+
+	@Test
+	void goDiagnosticsSendGroupValueRead() {
+		final var group = new GroupAddress(1, 1, 5);
+		mgmtServices.getDatapointModel().add(new StateDP(group, "test datapoint", 0, "1.001"));
+
+		sendGroupObjectDiagnostics(group, 3, ReturnCode.Success);
+	}
+
+	private void sendGroupObjectDiagnostics(final GroupAddress group, final int service, final ReturnCode returnCode) {
+		final byte objectIndex = (byte) 6;
+		final byte pidGODiagnostics = (byte) 66;
+		final var buffer = ByteBuffer.allocate(10).put(objectIndex).put(pidGODiagnostics).put((byte) 0)
+				.put((byte) service).put((byte) 0).put(group.toByteArray());
+		test = apdu -> {
+			assertEquals(objectIndex, apdu[2] & 0xff);
+			assertEquals(pidGODiagnostics, apdu[3] & 0xff);
+			assertEquals(returnCode, ReturnCode.of(apdu[4] & 0xff));
+			assertEquals(service, apdu[5] & 0xff);
+		};
+		assertResponse(ManagementServiceNotifier.FunctionPropertyCommand, buffer.array());
 	}
 
 	private void assertResponse(final int svc, final byte[] asdu) {

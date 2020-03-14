@@ -126,7 +126,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private static final int RESTART = 0x0380;
 
-	private static final int FunctionPropertyCommand = 0b1011000111;
+	static final int FunctionPropertyCommand = 0b1011000111;
 	private static final int FunctionPropertyStateRead = 0b1011001000;
 	private static final int FunctionPropertyStateResponse = 0b1011001001;
 
@@ -825,8 +825,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, PROPERTY_DESC_RESPONSE, asdu, sr.getPriority());
 	}
 
-	private void onFunctionPropertyCommandOrState(final KNXAddress dst, final Destination respondTo, final boolean isCommand,
-		final byte[] data) {
+	private void onFunctionPropertyCommandOrState(final KNXAddress dst, final Destination respondTo,
+			final boolean isCommand, final byte[] data) {
 		final String name = decodeAPCI(isCommand ? FunctionPropertyCommand : FunctionPropertyStateRead);
 		if (!verifyLength(data.length, 3, 15, name))
 			return;
@@ -857,11 +857,12 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// if the property is not a function (PDT_FUNCTION), the response shall not contain a return code and no data
 		// in that case, using the Empty result here is fine
 		final byte[] res = sr.getResult();
-		final byte[] asdu = new byte[2 + res.length];
+		final byte[] asdu = new byte[3 + res.length];
 		asdu[0] = (byte) objIndex;
 		asdu[1] = (byte) pid;
+		asdu[2] = (byte) sr.returnCode().code();
 		for (int i = 0; i < res.length; ++i)
-			asdu[i + 2] = res[i];
+			asdu[i + 3] = res[i];
 
 		send(respondTo, FunctionPropertyStateResponse, asdu, sr.getPriority());
 	}
