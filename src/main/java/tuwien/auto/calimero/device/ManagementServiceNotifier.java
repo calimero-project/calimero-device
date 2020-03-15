@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2019 B. Malinowsky
+    Copyright (c) 2012, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -1070,6 +1070,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int instance = (data[2] & 0xff) << 4 | (data[3] & 0xff) >> 4;
 		final int pid = (data[3] & 0xf) << 8 | data[4] & 0xff;
 		final int pdt = (data[5] & 0xff) >> 4; // reserved, always zero
+		if (pdt != 0) {
+			logger.warn("{} PDT is reserved, but set to {}, ignore service", name, pdt);
+			return;
+		}
 		final int propIndex = (data[5] & 0xf) << 8 | data[6] & 0xff;
 
 		final int objIndex = objectIndex(iot, instance);
