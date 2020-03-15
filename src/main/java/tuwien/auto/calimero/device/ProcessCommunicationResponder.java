@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2018 B. Malinowsky
+    Copyright (c) 2011, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ import tuwien.auto.calimero.internal.EventListeners;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
-import tuwien.auto.calimero.process.ProcessCommunicationBase;
+import tuwien.auto.calimero.process.ProcessCommunication;
 import tuwien.auto.calimero.process.ProcessListener;
 
 /**
@@ -72,7 +72,7 @@ import tuwien.auto.calimero.process.ProcessListener;
  *
  * @author B. Malinowsky
  */
-public class ProcessCommunicationResponder implements ProcessCommunicationBase
+public class ProcessCommunicationResponder implements ProcessCommunication
 {
 	private static final int GROUP_RESPONSE = 0x40;
 

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2018 B. Malinowsky
+    Copyright (c) 2011, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -56,7 +56,6 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.KNXNetworkLinkIP;
 import tuwien.auto.calimero.link.medium.KnxIPSettings;
 import tuwien.auto.calimero.link.medium.TPSettings;
-import tuwien.auto.calimero.process.ProcessCommunicationBase;
 import tuwien.auto.calimero.process.ProcessCommunicator;
 import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
@@ -91,8 +90,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 					@Override
 					public void run()
 					{
-						try (ProcessCommunicationBase responder = new ProcessCommunicationResponder(
-								device1.getDeviceLink())) {
+						try (var responder = new ProcessCommunicationResponder(device1.getDeviceLink())) {
 							responder.write(dp.getMainAddress(), dpState);
 						}
 						catch (final KNXTimeoutException e) {
