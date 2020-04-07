@@ -435,13 +435,8 @@ public class BaseKnxDevice implements KnxDevice
 		final byte[] desc = name.getBytes(Charset.forName("ISO-8859-1"));
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, desc.length, desc);
 
-		final String[] sver = Settings.getLibraryVersion().split("\\.| |-", -1);
-		int last = 0;
-		try {
-			last = sver.length > 2 ? Integer.parseInt(sver[2]) : 0;
-		}
-		catch (final NumberFormatException e) {}
-		final int ver = Integer.parseInt(sver[0]) << 12 | Integer.parseInt(sver[1]) << 6 | last;
+		final String[] sver = Settings.getLibraryVersion().split("\\.| |-", 0);
+		final int ver = Integer.parseInt(sver[0]) << 6 | Integer.parseInt(sver[1]);
 		setDeviceProperty(PID.VERSION, fromWord(ver));
 
 		// Firmware Revision
