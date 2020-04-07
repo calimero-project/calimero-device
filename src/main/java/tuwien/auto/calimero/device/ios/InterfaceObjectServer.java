@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2019 B. Malinowsky
+    Copyright (c) 2010, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -158,9 +158,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 
 		// AN033 3.2.6: minimum required interface objects for a cEMI server
-		// are a device object and a cEMI server object
+		// are a device object and a cEMI server object (cEMI server is added by device)
 		addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
-		addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
 	}
 
 	/**

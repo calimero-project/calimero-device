@@ -167,6 +167,12 @@ public class BaseKnxDevice implements KnxDevice
 		this.process = process;
 		this.mgmt = mgmt;
 
+		ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
+
 		initDeviceInfo();
 	}
 
@@ -423,11 +429,6 @@ public class BaseKnxDevice implements KnxDevice
 
 	private void initDeviceInfo() throws KnxPropertyException
 	{
-		ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
-		ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
-		ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
-		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
-
 		// Device Object settings
 
 		final byte[] desc = name.getBytes(Charset.forName("ISO-8859-1"));
