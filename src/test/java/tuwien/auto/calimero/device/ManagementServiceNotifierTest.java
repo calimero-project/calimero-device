@@ -101,6 +101,8 @@ class ManagementServiceNotifierTest {
 	private Consumer<byte[]> test;
 	private boolean testFinished;
 
+	private int groupObjectTableIndex;
+
 	@BeforeEach
 	void init() throws KNXLinkClosedException {
 		final BaseKnxDevice device = new BaseKnxDevice("test", DeviceDescriptor.DD0.TYPE_5705,
@@ -108,7 +110,9 @@ class ManagementServiceNotifierTest {
 		mgmtServices.setDevice(device);
 		final var ios = device.getInterfaceObjectServer();
 		ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
-		ios.setDescription(new Description(6, 0, 66, 0, PropertyTypes.PDT_FUNCTION, true, 1, 1, 3, 3), true);
+		groupObjectTableIndex = 7;
+		ios.setDescription(
+				new Description(groupObjectTableIndex, 0, 66, 0, PropertyTypes.PDT_FUNCTION, true, 1, 1, 3, 3), true);
 
 		notifier = new ManagementServiceNotifier(device, mgmtServices) {
 			void send(final tuwien.auto.calimero.mgmt.Destination respondTo, final byte[] apdu, final Priority p,
@@ -181,7 +185,7 @@ class ManagementServiceNotifierTest {
 	}
 
 	private void sendGroupObjectDiagnostics(final GroupAddress group, final int service, final ReturnCode returnCode) {
-		final byte objectIndex = (byte) 6;
+		final byte objectIndex = (byte) groupObjectTableIndex;
 		final byte pidGODiagnostics = (byte) 66;
 		final var buffer = ByteBuffer.allocate(10).put(objectIndex).put(pidGODiagnostics).put((byte) 0)
 				.put((byte) service).put((byte) 0).put(group.toByteArray());

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2018 B. Malinowsky
+    Copyright (c) 2010, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -54,10 +54,7 @@ import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
-/**
- * @author B. Malinowsky
- */
-public class InterfaceObjectServerTest
+class InterfaceObjectServerTest
 {
 	private static final String baseDir = "src/test/resources/";
 	private static final String propertiesFile = baseDir + "properties.xml";
@@ -70,11 +67,6 @@ public class InterfaceObjectServerTest
 		ios = new InterfaceObjectServer(false);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#InterfaceObjectServer(boolean)} .
-	 *
-	 * @throws KNXException
-	 */
 	@Test
 	void interfaceObjectServer() throws KNXException
 	{
@@ -82,9 +74,6 @@ public class InterfaceObjectServerTest
 		new InterfaceObjectServer(true);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#setResourceHandler(InterfaceObjectServer.IosResourceHandler)}.
-	 */
 	@Test
 	void setResourceHandler()
 	{
@@ -113,22 +102,12 @@ public class InterfaceObjectServerTest
 		});
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#loadDefinitions(java.lang.String)}.
-	 *
-	 * @throws KNXException
-	 */
 	@Test
 	void loadDefinitions() throws KNXException
 	{
 		ios.loadDefinitions(propertiesFile);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#loadInterfaceObjects(java.lang.String)} .
-	 *
-	 * @throws KNXException
-	 */
 	@Test
 	void loadInterfaceObjects() throws KNXException
 	{
@@ -149,11 +128,6 @@ public class InterfaceObjectServerTest
 		assertEquals(4, d.getPDT());
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#saveInterfaceObjects(java.lang.String)}.
-	 *
-	 * @throws KNXException
-	 */
 	@Test
 	void saveInterfaceObjects() throws KNXException
 	{
@@ -163,20 +137,14 @@ public class InterfaceObjectServerTest
 		ios.saveInterfaceObjects(baseDir + "testSaveInterfaceObjects.xml");
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#getInterfaceObjects()}.
-	 */
 	@Test
 	void getInterfaceObjects()
 	{
 		final InterfaceObject[] objects = ios.getInterfaceObjects();
 		assertNotNull(objects);
-		assertEquals(2, objects.length);
+		assertEquals(1, objects.length);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#addInterfaceObject(int)}.
-	 */
 	@Test
 	void addInterfaceObject()
 	{
@@ -185,18 +153,12 @@ public class InterfaceObjectServerTest
 		assertEquals(length + 1, ios.getInterfaceObjects().length);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#addServerListener(InterfaceObjectServerListener)}.
-	 */
 	@Test
 	void addServerListener()
 	{
 		ios.addServerListener(e -> {});
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#removeServerListener(InterfaceObjectServerListener)}.
-	 */
 	@Test
 	void removeServerListener()
 	{
@@ -212,67 +174,30 @@ public class InterfaceObjectServerTest
 	private final int objectInstance = 1;
 	private final int propertyId = PID.OBJECT_INDEX;
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int)} .
-	 *
-	 * @throws KnxPropertyException
-	 */
 	@Test
 	void getPropertyIntIntIntInt() throws KnxPropertyException
 	{
 		ios.getProperty(objectIndex, propertyId, 1, 1);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, byte[])} .
-	 *
-	 * @throws KnxPropertyException
-	 */
 	@Test
 	void setPropertyIntIntIntIntByteArray() throws KnxPropertyException
 	{
 		ios.setProperty(objectIndex, propertyId, 1, 1, new byte[] { 0 });
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, int, int, byte[])}.
-	 *
-	 * @throws KnxPropertyException
-	 */
 	@Test
 	void setPropertyIntIntIntIntIntByteArray() throws KnxPropertyException
 	{
 		ios.setProperty(objectType, objectInstance, propertyId, 1, 1, new byte[] { 0 });
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#getProperty(int, int, int, int, int)} .
-	 * @throws KnxPropertyException
-	 */
 	@Test
 	void getPropertyIntIntIntIntInt() throws KnxPropertyException
 	{
 		ios.getProperty(objectType, objectInstance, propertyId, 1, 1);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#setProperty(int, int, int, java.lang.String)}.
-	 */
-	@Test
-	void setPropertyIntIntIntString()
-	{
-	}
-
-	/**
-	 * Test method for {@link InterfaceObjectServer#getPropertyTranslated(int, int, int, int)}.
-	 */
-	@Test void getPropertyTranslated()
-	{
-	}
-
-	/**
-	 * Test method for {@link InterfaceObjectServer#setDescription(tuwien.auto.calimero.mgmt.Description, boolean)}.
-	 */
 	@Test
 	void setDescription()
 	{
@@ -280,10 +205,6 @@ public class InterfaceObjectServerTest
 		ios.setDescription(set, true);
 	}
 
-	/**
-	 * Test method for {@link InterfaceObjectServer#getDescription(int, int)}.
-	 * @throws KnxPropertyException
-	 */
 	@Test
 	void getDescription() throws KnxPropertyException
 	{
