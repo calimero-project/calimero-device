@@ -154,6 +154,7 @@ public class BaseKnxDevice implements KnxDevice
 	private static final int deviceMemorySize = 0x10010; // for testing memory services with > 64 K memory
 	private final byte[] memory = new byte[deviceMemorySize];
 
+
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KnxPropertyException
 	{
@@ -590,7 +591,8 @@ public class BaseKnxDevice implements KnxDevice
 			// workaround to verify that interface is actually configured
 			if (NetworkInterface.getByName(netif.getName()) != null) {
 				final List<InterfaceAddress> addresses = netif.getInterfaceAddresses();
-				final Optional<InterfaceAddress> addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
+				final Optional<InterfaceAddress> addr = addresses.stream()
+						.filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
 				if (addr.isPresent()) {
 					ip = addr.get().getAddress().getAddress();
 

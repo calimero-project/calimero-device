@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2019 B. Malinowsky
+    Copyright (c) 2019, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -93,7 +93,7 @@ class ManagementServiceNotifierTest {
 		public DPTXlator requestDatapointValue(final Datapoint ofDp) throws KNXException {
 //			fail("not under test");
 			final var t = new DPTXlatorBoolean(DPTXlatorBoolean.DPT_SWITCH);
-			t.setData(new byte[] { 1 } );
+			t.setData(new byte[] { 1 });
 			return t;
 		}
 	};

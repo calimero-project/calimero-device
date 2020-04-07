@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2019 B. Malinowsky
+    Copyright (c) 2011, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -93,9 +93,8 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 	@Override
 	public void detached(final DetachEvent e) {}
 
-	public ServiceResult dispatch(final EventObject e)
+	ServiceResult dispatch(final ProcessEvent pe)
 	{
-		final ProcessEvent pe =  (ProcessEvent) e;
 		final int svcCode = pe.getServiceCode();
 		if (svcCode == GROUP_READ)
 			return svc.groupReadRequest(pe);
@@ -108,7 +107,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 		return null;
 	}
 
-	public void respond(final EventObject event, final ServiceResult sr)
+	void respond(final EventObject event, final ServiceResult sr)
 	{
 		if (sr.getResult() != null) {
 			final GroupAddress to = ((ProcessEvent) event).getDestination();

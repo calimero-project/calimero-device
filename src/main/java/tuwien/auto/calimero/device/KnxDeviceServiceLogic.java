@@ -286,7 +286,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final int objType = ios.getInterfaceObjects()[objectIndex].getType();
 			final Property p = ios.propertyDefinitions().get(new PropertyKey(objType, propertyId));
 			if (p != null)
-				d = new Description(objectIndex, objType, propertyId, 0, p.getPDT(), !p.readOnly(), 0, 1, p.readLevel(), p.writeLevel());
+				d = new Description(objectIndex, objType, propertyId, 0, p.getPDT(), !p.readOnly(), 0, 1, p.readLevel(),
+						p.writeLevel());
 		}
 		if (d != null && !inProgrammingMode()) {
 			if (!d.isWriteEnabled()) {
