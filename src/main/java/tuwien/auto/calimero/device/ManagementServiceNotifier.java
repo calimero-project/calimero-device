@@ -42,6 +42,8 @@ import static tuwien.auto.calimero.DataUnitBuilder.toHex;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.EventObject;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -69,6 +71,7 @@ import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
+import tuwien.auto.calimero.mgmt.Destination.AggregatorProxy;
 import tuwien.auto.calimero.mgmt.Destination.State;
 import tuwien.auto.calimero.mgmt.KNXDisconnectException;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
@@ -481,6 +484,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[3] = res[2];
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(RESTART, asdu);
 		send(respondTo, apdu, sr.getPriority(), decodeAPCI(RESTART));
+
+		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination())
+				.collect(Collectors.toList());
+		destinations.forEach(Destination::destroy);
 	}
 
 	// p2p connection-oriented mode
@@ -1367,6 +1374,20 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			}
 			return defaultMaxApduLength;
 		}
+	}
+
+	private Map<IndividualAddress, AggregatorProxy> transportLayerProxies() {
+		try {
+			final var field = tl.getClass().getDeclaredField("proxies");
+			field.setAccessible(true);
+			@SuppressWarnings("unchecked")
+			final var map = (Map<IndividualAddress, AggregatorProxy>) field.get(tl);
+			return map;
+		}
+		catch (NoSuchFieldException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	// for a max of (2^31)-1
