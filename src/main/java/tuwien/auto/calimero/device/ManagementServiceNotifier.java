@@ -316,61 +316,60 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo)
 	{
 		final String name = decodeAPCI(svc);
-		logger.trace(name);
 		if (svc == MEMORY_READ)
-			onMemoryRead(respondTo, data);
+			onMemoryRead(name, respondTo, data);
 		else if (svc == MEMORY_WRITE)
-			onMemoryWrite(respondTo, data);
+			onMemoryWrite(name, respondTo, data);
 		else if (svc == PROPERTY_DESC_READ)
-			onPropDescRead(dst, respondTo, data);
+			onPropDescRead(name, dst, respondTo, data);
 		else if (svc == PROPERTY_READ)
-			onPropertyRead(dst, respondTo, data);
+			onPropertyRead(name, dst, respondTo, data);
 		else if (svc == PROPERTY_WRITE)
-			onPropertyWrite(dst, respondTo, data);
+			onPropertyWrite(name, dst, respondTo, data);
 		else if (svc == DEVICE_DESC_READ)
-			onDeviceDescRead(respondTo, data);
+			onDeviceDescRead(name, respondTo, data);
 		else if (svc == ADC_READ)
-			onAdcRead(respondTo, data);
+			onAdcRead(name, respondTo, data);
 		else if (svc == AUTHORIZE_READ)
-			onAuthorize(respondTo, data);
+			onAuthorize(name, respondTo, data);
 		else if (svc == IND_ADDR_READ)
-			onIndAddrRead(respondTo, data);
+			onIndAddrRead(name, respondTo, data);
 		else if (svc == IND_ADDR_WRITE)
-			onIndAddrWrite(respondTo, data);
+			onIndAddrWrite(name, respondTo, data);
 		else if (svc == IND_ADDR_SN_READ)
-			onIndAddrSnRead(respondTo, data);
+			onIndAddrSnRead(name, respondTo, data);
 		else if (svc == IND_ADDR_SN_WRITE)
-			onIndAddrSnWrite(respondTo, data);
+			onIndAddrSnWrite(name, respondTo, data);
 		else if (svc == DOA_READ)
-			onDoARead(respondTo, data);
+			onDoARead(name, respondTo, data);
 		else if (svc == DOA_SELECTIVE_READ)
-			onDoASelectiveRead(respondTo, data);
+			onDoASelectiveRead(name, respondTo, data);
 		else if (svc == DOA_WRITE)
-			onDoAWrite(respondTo, data);
+			onDoAWrite(name, respondTo, data);
 		else if (svc == DoASerialNumberRead)
-			onDoASerialNumberRead(respondTo, data);
+			onDoASerialNumberRead(name, respondTo, data);
 		else if (svc == DoASerialNumberWrite)
-			onDoASerialNumberWrite(respondTo, data);
+			onDoASerialNumberWrite(name, respondTo, data);
 		else if (svc == KEY_WRITE)
-			onKeyWrite(respondTo, data);
+			onKeyWrite(name, respondTo, data);
 		else if (svc == RESTART)
-			onRestart(respondTo, data);
+			onRestart(name, respondTo, data);
 		else if (svc == FunctionPropertyCommand)
-			onFunctionPropertyCommandOrState(dst, respondTo, true, data);
+			onFunctionPropertyCommandOrState(name, dst, respondTo, true, data);
 		else if (svc == FunctionPropertyStateRead)
-			onFunctionPropertyCommandOrState(dst, respondTo, false, data);
+			onFunctionPropertyCommandOrState(name, dst, respondTo, false, data);
 		else if (svc == MemoryExtendedWrite)
-			onMemoryExtendedWrite(respondTo, data);
+			onMemoryExtendedWrite(name, respondTo, data);
 		else if (svc == MemoryExtendedRead)
-			onMemoryExtendedRead(respondTo, data);
+			onMemoryExtendedRead(name, respondTo, data);
 		else if (svc == NetworkParamRead)
-			onNetworkParamRead(respondTo, data, false, dst.getRawAddress() == 0);
+			onNetworkParamRead(name, respondTo, data, false, dst.getRawAddress() == 0);
 		else if (svc == NetworkParamWrite)
-			onNetworkParamWrite(respondTo, data, false);
+			onNetworkParamWrite(name, respondTo, data, false);
 		else if (svc == SystemNetworkParamRead)
-			onNetworkParamRead(respondTo, data, true, dst.getRawAddress() == 0);
+			onNetworkParamRead(name, respondTo, data, true, dst.getRawAddress() == 0);
 		else if (svc == SystemNetworkParamWrite)
-			onNetworkParamWrite(respondTo, data, true);
+			onNetworkParamWrite(name, respondTo, data, true);
 		else if (svc == PropertyExtRead)
 			onPropertyExtRead(name, dst, respondTo, data);
 		else if (svc == PropertyExtWriteCon || svc == PropertyExtWriteUnCon)
@@ -388,16 +387,20 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	// test-info length of network param services is impl-specific, we allow operand (1 byte) + mfr-code (2 bytes)
 	private static final int testInfoLength = 3;
 
-	private void onNetworkParamRead(final Destination respondTo, final byte[] data, final boolean system,
-		final boolean broadcast) {
-		final var paramTypeSize = system ? 4 : 3;
-		if (!verifyLength(data.length, paramTypeSize + 1, paramTypeSize + testInfoLength, "network-param-read"))
+	private void onNetworkParamRead(final String name, final Destination respondTo, final byte[] data,
+			final boolean systemRead, final boolean broadcast) {
+		final var paramTypeSize = systemRead ? 4 : 3;
+		if (!verifyLength(data.length, paramTypeSize + 1, paramTypeSize + testInfoLength, name))
 			return;
 		final ByteBuffer buffer = ByteBuffer.wrap(data);
 		var objectType = buffer.getShort() & 0xff;
-		var pid = system ? (buffer.getShort() & 0xffff) >> 4 : buffer.get() & 0xff;
+		var pid = systemRead ? (buffer.getShort() & 0xffff) >> 4 : buffer.get() & 0xff;
 		var info = new byte[buffer.remaining()];
 		buffer.get(info);
+
+		logger.trace("{}->{} {} {}(1)|{}{} info {}", respondTo.getAddress(), new GroupAddress(0), name,
+				objectType, pid, propertyName(objectIndex(objectType, 1), pid), toHex(info, " "));
+
 		final ServiceResult sr = mgmtSvc.readParameter(objectType, pid, info);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -414,13 +417,13 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final ByteBuffer asdu = ByteBuffer.allocate(paramTypeSize + info.length + res.length);
 		asdu.putShort((short) objectType);
-		if (system)
+		if (systemRead)
 			asdu.putShort((short) (pid << 4));
 		else
 			asdu.put((byte) pid);
 		asdu.put(info).put(res);
 
-		final var service = system ? SystemNetworkParamResponse : NetworkParamResponse;
+		final var service = systemRead ? SystemNetworkParamResponse : NetworkParamResponse;
 		if (broadcast) {
 			// NYI wait random time
 			final var apdu = DataUnitBuilder.createAPDU(service, asdu.array());
@@ -430,21 +433,24 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			send(respondTo, service, asdu.array(), Priority.SYSTEM);
 	}
 
-	private void onNetworkParamWrite(final Destination respondTo, final byte[] data, final boolean system) {
-		final var minExpected = system ? 5 : 4;
-		if (!verifyLength(data.length, minExpected, 12, "network-param-write"))
+	private void onNetworkParamWrite(final String name, final Destination respondTo, final byte[] data,
+			final boolean systemWrite) {
+		final var minExpected = systemWrite ? 5 : 4;
+		if (!verifyLength(data.length, minExpected, 12, name))
 			return;
 		final ByteBuffer buffer = ByteBuffer.wrap(data);
 		final var objectType = buffer.getShort() & 0xff;
-		final var pid = system ? (buffer.getShort() & 0xffff) >> 4 : buffer.get() & 0xff;
+		final var pid = systemWrite ? (buffer.getShort() & 0xffff) >> 4 : buffer.get() & 0xff;
 		final var info = new byte[buffer.remaining()];
 		buffer.get(info);
+		logger.trace("{}->{} {} {}(1)|{}{} info {}", respondTo.getAddress(), "[]", name,
+				objectType, pid, propertyName(objectIndex(objectType, 1), pid), toHex(info, " "));
+
 		mgmtSvc.writeParameter(objectType, pid, info);
 	}
 
-	private void onRestart(final Destination respondTo, final byte[] data)
+	private void onRestart(final String name, final Destination respondTo, final byte[] data)
 	{
-		final String name = decodeAPCI(RESTART);
 		if (!verifyLength(data.length, 1, 3, name))
 			return;
 
@@ -460,15 +466,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int eraseCode = masterReset ? data[1] & 0xff : 0;
 		final int channel = masterReset ? data[2] & 0xff : 0;
 
-		ServiceResult sr;
+		final ServiceResult sr;
 		if (eraseCode < EraseCode.values().length) {
 			final EraseCode code = EraseCode.values()[eraseCode];
-			logger.trace("{}->{} {} erase code {}, channel {}", respondTo, device.getAddress(), name, code, channel);
+			logger.trace("{}->{} {}: {}, channel {}", respondTo.getAddress(), device.getAddress(), name,
+					eraseCode == 0 ? "Basic Restart" : code, channel);
 
 			// a basic restart does not have any response,
 			// a master reset returns an error code and process time
 			sr = mgmtSvc.restart(masterReset, code, channel);
-			if (ignoreOrSchedule(sr))
+			if (!masterReset || ignoreOrSchedule(sr))
 				return;
 		}
 		else {
@@ -483,7 +490,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[2] = res[1];
 		asdu[3] = res[2];
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(RESTART, asdu);
-		send(respondTo, apdu, sr.getPriority(), decodeAPCI(RESTART));
+		send(respondTo, apdu, sr.getPriority(), name);
 
 		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination())
 				.collect(Collectors.toList());
@@ -491,14 +498,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	}
 
 	// p2p connection-oriented mode
-	private void onKeyWrite(final Destination respondTo, final byte[] data)
+	private void onKeyWrite(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 5, 5, "key write (access level)"))
+		if (!verifyLength(data.length, 5, 5, name))
 			return;
 		if (!respondTo.isConnectionOriented())
 			return;
 		final int level = data[0] & 0xff;
 		final byte[] key = Arrays.copyOfRange(data, 1, 5);
+		logger.trace("{}->{} {} level {} key 0x{}", respondTo.getAddress(), device.getAddress(), name, level, toHex(key, ""));
+
 		// result is one byte containing the set level
 		final ServiceResult sr = mgmtSvc.writeAuthKey(respondTo, level, key);
 		if (ignoreOrSchedule(sr))
@@ -507,13 +516,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(respondTo, KEY_RESPONSE, sr.getResult(), sr.getPriority());
 	}
 
-	private void onIndAddrSnWrite(final Destination respondTo, final byte[] data)
+	private void onIndAddrSnWrite(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 12, 12, "individual address SN write"))
+		if (!verifyLength(data.length, 12, 12, name))
 			return;
 		final byte[] sn = Arrays.copyOfRange(data, 0, 6);
 		final byte[] addr = Arrays.copyOfRange(data, 6, 8);
 		final byte[] reserved = Arrays.copyOfRange(data, 8, 12);
+
+		final IndividualAddress ia = new IndividualAddress(addr);
+		logger.trace("{}->{} {} {} {}", respondTo.getAddress(), device.getAddress(), name, knxSerialNumber(sn), ia);
 		// safety check that reserved area is zeroed out
 		// we don't bail, since its not required by the spec
 		for (int i = 0; i < reserved.length; i++) {
@@ -522,16 +534,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				logger.warn("byte " + (16 + i) + " not 0 (reserved area)");
 			}
 		}
-		final IndividualAddress ia = new IndividualAddress(addr);
 		mgmtSvc.writeAddressSerial(sn, ia);
 	}
 
-	private void onIndAddrSnRead(final Destination respondTo, final byte[] data)
+	private void onIndAddrSnRead(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 6, 6, "individual address SN read"))
+		if (!verifyLength(data.length, 6, 6, name))
 			return;
 
 		final byte[] sn = Arrays.copyOfRange(data, 0, 6);
+		logger.trace("{}->{} {} {}", respondTo.getAddress(), device.getAddress(), name, knxSerialNumber(sn));
 		final ServiceResult sr = mgmtSvc.readAddressSerial(sn);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -549,22 +561,30 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		sendBroadcast(false, apdu, Priority.SYSTEM, decodeAPCI(IND_ADDR_SN_RESPONSE));
 	}
 
-	private void onIndAddrWrite(final Destination respondTo, final byte[] data)
+	private static String knxSerialNumber(final byte[] sn) {
+		final var hex = toHex(sn, "");
+		return hex.substring(0, 4) + ":" + hex.substring(4);
+	}
+
+	private void onIndAddrWrite(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 2, 2, "individual address write"))
+		if (!verifyLength(data.length, 2, 2, name))
 			return;
 
 		final byte[] addr = Arrays.copyOfRange(data, 0, 2);
 		final IndividualAddress ia = new IndividualAddress(addr);
+		logger.trace("{}->{} {} {}", respondTo.getAddress(), device.getAddress(), name, ia);
+
 		// a device shall only set its address if in programming mode
 		mgmtSvc.writeAddress(ia);
 	}
 
-	private void onIndAddrRead(final Destination respondTo, final byte[] data)
+	private void onIndAddrRead(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 1, 1, "individual address read"))
+		if (!verifyLength(data.length, 1, 1, name))
 			return;
 
+		logger.trace("{}->{} {}", respondTo.getAddress(), device.getAddress(), name);
 		// only a device in programming mode shall respond to this service
 		final ServiceResult sr = mgmtSvc.readAddress();
 		if (ignoreOrSchedule(sr))
@@ -575,25 +595,28 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		sendBroadcast(false, apdu, Priority.SYSTEM, decodeAPCI(IND_ADDR_RESPONSE));
 	}
 
-	private void onDoARead(final Destination respondTo, final byte[] data)
+	private void onDoARead(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 0, 0, "domain address read"))
+		if (!verifyLength(data.length, 0, 0, name))
 			return;
 
+		logger.trace("{}->{} {}", respondTo.getAddress(), device.getAddress(), name);
 		final ServiceResult sr = mgmtSvc.readDomainAddress();
 		sendDoAresponse(respondTo, sr);
 	}
 
-	private void onDoASelectiveRead(final Destination respondTo, final byte[] data)
+	private void onDoASelectiveRead(final String name, final Destination respondTo, final byte[] data)
 	{
 		// selective read service: 5 bytes with PL DoA (length 2 bytes), 14 bytes with RF DoA (length 6 bytes)
-		if (!verifyLength(data.length, 5, 14, "domain address selective read"))
+		if (!verifyLength(data.length, 5, 14, name))
 			return;
 		if (data[0] == 0 && data.length == 5) {
 			// Type 0 – two byte DoA
 			final byte[] domain = Arrays.copyOfRange(data, 0, 2);
 			final IndividualAddress ia = new IndividualAddress(Arrays.copyOfRange(data, 2, 4));
 			final int range = data[4] & 0xff;
+			logger.trace("{}->{} {} {} - {}", respondTo.getAddress(), device.getAddress(), name, ia,
+					new IndividualAddress(ia.getRawAddress() + range));
 			final ServiceResult sr = mgmtSvc.readDomainAddress(domain, ia, range);
 			sendDoAresponse(respondTo, sr);
 		}
@@ -601,6 +624,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			// Type 1 – six byte DoA
 			final byte[] start = Arrays.copyOfRange(data, 1, 1 + 6);
 			final byte[] end = Arrays.copyOfRange(data, 1 + 6, 1 + 6 + 6);
+			logger.trace("{}->{} {} {} - {}", respondTo.getAddress(), device.getAddress(), name, toHex(start, ""),
+					toHex(end, ""));
 			final ServiceResult sr = mgmtSvc.readDomainAddress(start, end);
 			sendDoAresponse(respondTo, sr);
 		}
@@ -626,38 +651,40 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(respondTo, DOA_RESPONSE, asdu, sr.getPriority());
 	}
 
-	private void onDoAWrite(final Destination respondTo, final byte[] data)
+	private void onDoAWrite(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, lengthDoA, lengthDoA, "domain address write"))
+		if (!verifyLength(data.length, lengthDoA, lengthDoA, name))
 			return;
 		final byte[] domain = Arrays.copyOfRange(data, 0, lengthDoA);
+		logger.trace("{}->{} {} 0x{}", respondTo.getAddress(), device.getAddress(), name, toHex(domain, ""));
 		mgmtSvc.writeDomainAddress(domain);
 	}
 
-	private void onDoASerialNumberWrite(final Destination respondTo, final byte[] data) {
-		logger.info("DoA S/N write from {}", respondTo);
+	private void onDoASerialNumberWrite(final String name, final Destination respondTo, final byte[] data) {
+		logger.info("{}->{} {} not implemented", respondTo.getAddress(), device.getAddress(), name);
 		// NYI
 //		device.setAddress(null);
 	}
 
-	private void onDoASerialNumberRead(final Destination respondTo, final byte[] data) {
-		logger.info("DoA S/N read from {}", respondTo);
+	private void onDoASerialNumberRead(final String name, final Destination respondTo, final byte[] data) {
+		logger.info("{}->{} {} not implemented", respondTo.getAddress(), device.getAddress(), name);
 	}
 
 	// p2p connection-oriented mode
-	private void onAuthorize(final Destination respondTo, final byte[] data)
+	private void onAuthorize(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 5, 5, "authorize request"))
+		if (!verifyLength(data.length, 5, 5, name))
 			return;
 		if (respondTo.getState() != Destination.State.OpenIdle)
 			return;
 
 		final int reserved = data[0] & 0xff;
 		if (reserved != 0) {
-			logger.warn("first byte in authorize request not zero");
+			logger.warn("first byte in authorize request not zero, ignore");
 			return;
 		}
 		final byte[] key = Arrays.copyOfRange(data, 1, 5);
+		logger.trace("{}->{} {} key 0x{}", respondTo.getAddress(), device.getAddress(), name, toHex(key, ""));
 		final ServiceResult sr = mgmtSvc.authorize(respondTo, key);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -666,13 +693,14 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	}
 
 	// p2p connection-oriented mode
-	private void onAdcRead(final Destination respondTo, final byte[] data)
+	private void onAdcRead(final String name, final Destination respondTo, final byte[] data)
 	{
-		if (!verifyLength(data.length, 2, 2, "AD converter read"))
+		if (!verifyLength(data.length, 2, 2, name))
 			return;
 		final int channel = data[0] & 0x3f;
 		// number of consecutive reads of AD converter
 		final int reads = data[1] & 0xff;
+		logger.trace("{}->{} {} channel {}, read count {}", respondTo.getAddress(), device.getAddress(), name, channel, reads);
 		// the returned structure is [channel, read count, value high, value low]
 		final ServiceResult sr = mgmtSvc.readADC(channel, reads);
 		if (ignoreOrSchedule(sr))
@@ -683,9 +711,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(respondTo, apdu, sr.getPriority(), decodeAPCI(ADC_RESPONSE));
 	}
 
-	private void onDeviceDescRead(final Destination d, final byte[] data)
+	private void onDeviceDescRead(final String name, final Destination d, final byte[] data)
 	{
-		if (!verifyLength(data.length, 1, 1, "device descriptor read"))
+		if (!verifyLength(data.length, 1, 1, name))
 			return;
 		final int type = data[0] & 0xff;
 		// Descriptor type 0:
@@ -697,8 +725,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// link mgmt service support (2 bit) | logical tag (LT) base value (6 bit) |
 		// CI 1 (16 bit) | CI 2 (16 bit) | CI 3 (16 bit) | CI 4 (16 bit) |
 
+		logger.trace("{}->{} {} type {}", d.getAddress(), device.getAddress(), name, type);
 		if (type != 0 && type != 2) {
-			logger.warn("device descriptor read: unsupported type " + type);
+			logger.warn("{}: unsupported type {}", name, type);
 			return;
 		}
 		final ServiceResult sr = mgmtSvc.readDescriptor(type);
@@ -711,16 +740,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, apdu, sr.getPriority(), decodeAPCI(DEVICE_DESC_RESPONSE));
 	}
 
-	private void onPropertyRead(final KNXAddress dst, final Destination d, final byte[] data)
+	private void onPropertyRead(final String name, final KNXAddress dst, final Destination d, final byte[] data)
 	{
-		if (!verifyLength(data.length, 4, 4, "property-read"))
+		if (!verifyLength(data.length, 4, 4, name))
 			return;
 		final int objIndex = data[0] & 0xff;
 		final int pid = data[1] & 0xff;
 		int elements = (data[2] & 0xff) >> 4;
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 
-		logger.trace("{}->{} {} {}|{}{} {}..{}", d.getAddress(), dst, decodeAPCI(PROPERTY_READ),
+		logger.trace("{}->{} {} {}|{}{} {}..{}", d.getAddress(), dst, name,
 				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1);
 
 		ServiceResult sr;
@@ -752,10 +781,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
 
-	private void onPropertyWrite(final KNXAddress dst, final Destination d, final byte[] data)
+	private void onPropertyWrite(final String name, final KNXAddress dst, final Destination d, final byte[] data)
 	{
 		// the max ASDU upper length would be 253 (254 - 1 byte APCI)
-		if (!verifyLength(data.length, 5, getMaxApduLength() - 1, "property-write"))
+		if (!verifyLength(data.length, 5, getMaxApduLength() - 1, name))
 			return;
 		final int objIndex = data[0] & 0xff;
 		final int pid = data[1] & 0xff;
@@ -763,7 +792,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int start = (data[2] & 0x0f) << 8 | (data[3] & 0xff);
 		final byte[] propertyData = Arrays.copyOfRange(data, 4, data.length);
 
-		logger.trace("{}->{} {} {}|{}{} {}..{}: {}", d.getAddress(), dst, decodeAPCI(PROPERTY_WRITE),
+		logger.trace("{}->{} {} {}|{}{} {}..{}: {}", d.getAddress(), dst, name,
 				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, ""));
 
 		ServiceResult sr = null;
@@ -798,15 +827,15 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
 
-	private void onPropDescRead(final KNXAddress dst, final Destination d, final byte[] data)
+	private void onPropDescRead(final String name, final KNXAddress dst, final Destination d, final byte[] data)
 	{
-		if (!verifyLength(data.length, 3, 3, "property description read"))
+		if (!verifyLength(data.length, 3, 3, name))
 			return;
 		final int objIndex = data[0] & 0xff;
 		int pid = data[1] & 0xff;
 		final int propIndex = data[2] & 0xff;
 
-		logger.trace("{}->{} {} {}|{} pidx {}{}", d.getAddress(), dst, decodeAPCI(PROPERTY_DESC_READ),
+		logger.trace("{}->{} {} {}|{} pidx {}{}", d.getAddress(), dst, name,
 				objIndex, pid, propIndex, propertyName(objIndex, pid));
 
 		ServiceResult sr = null;
@@ -814,7 +843,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("read property description: {}", e.getMessage());
+			logger.warn("{}: {}", name, e.getMessage());
 		}
 
 		// answer with non-existent property description on no result
@@ -844,9 +873,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, PROPERTY_DESC_RESPONSE, asdu, sr.getPriority());
 	}
 
-	private void onFunctionPropertyCommandOrState(final KNXAddress dst, final Destination respondTo,
+	private void onFunctionPropertyCommandOrState(final String name, final KNXAddress dst, final Destination respondTo,
 			final boolean isCommand, final byte[] data) {
-		final String name = decodeAPCI(isCommand ? FunctionPropertyCommand : FunctionPropertyStateRead);
 		if (!verifyLength(data.length, 3, 15, name))
 			return;
 		final int objIndex = data[0] & 0xff;
@@ -860,8 +888,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		try {
 			final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
 			if (description.getPDT() == PropertyTypes.PDT_FUNCTION)
-				sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput) :
-								 mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
+				sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
+						: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
 			else
 				logger.warn("property {}|{} is not a function property", objIndex, pid);
 
@@ -886,25 +914,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(respondTo, FunctionPropertyStateResponse, asdu, sr.getPriority());
 	}
 
-	private String propertyName(final int objectIndex, final int pid) {
-		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
-		final PropertyClient.PropertyKey key;
-		if (pid <= 50)
-			key = new PropertyClient.PropertyKey(pid);
-		else {
-			final var objects = ios.getInterfaceObjects();
-			final int objectType = objectIndex < objects.length ? objects[objectIndex].getType() : 0;
-			key = new PropertyClient.PropertyKey(objectType, pid);
-		}
-		final var property = ios.propertyDefinitions().get(key);
-		if (property != null)
-			return " (" + property.getName() + ")";
-		return "";
-	}
-
-	private void onMemoryWrite(final Destination d, final byte[] data)
+	private void onMemoryWrite(final String name, final Destination d, final byte[] data)
 	{
-		if (!verifyLength(data.length, 4, 66, "memory-write"))
+		if (!verifyLength(data.length, 4, 66, name))
 			return;
 
 		// write between 1 and 63 bytes
@@ -914,16 +926,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// the remote application layer shall ignore a memory-write.ind if
 		// the value of the parameter number is greater than maximum APDU length – 3
 		if (bytes > getMaxApduLength() - 3) {
-			logger.error("memory-write of length {} > max. {} bytes - ignore", bytes, getMaxApduLength() - 3);
+			logger.error("{} of length {} > max. {} bytes - ignore", name, bytes, getMaxApduLength() - 3);
 			return;
 		}
 
 		final byte[] memory = Arrays.copyOfRange(data, 3, data.length);
 		if (memory.length != bytes)
-			logger.warn("ill-formed memory write: number field = {} but memory length = {}", bytes, memory);
+			logger.warn("ill-formed {}: number field = {} but memory length = {}", name, bytes, memory);
 		else {
-			logger.trace("write memory: start address 0x{}, {} bytes: {}", Integer.toHexString(address), bytes,
-					DataUnitBuilder.toHex(memory, " "));
+			logger.trace("{}->{} {}: start address 0x{}, {} bytes: {}", d.getAddress(), device.getAddress(), name,
+					Integer.toHexString(address), bytes, DataUnitBuilder.toHex(memory, " "));
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 			if (ignoreOrSchedule(sr))
 				return;
@@ -946,8 +958,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 	}
 
-	private void onMemoryExtendedWrite(final Destination d, final byte[] data) {
-		if (!verifyLength(data.length, 5, 254, "memory-write"))
+	private void onMemoryExtendedWrite(final String name, final Destination d, final byte[] data) {
+		if (!verifyLength(data.length, 5, 254, name))
 			return;
 
 		// write between 1 and 250 bytes
@@ -967,8 +979,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				rc = ReturnCode.Error; // ReturnCode.DataVoid would probably fit better, but is not specified
 			}
 			else {
-				logger.trace("write memory: start address 0x{}, {} bytes: {}", Integer.toHexString(address), bytes,
-						toHex(memory, " "));
+				logger.trace("{}->{} {}: start address 0x{}, {} bytes: {}", d.getAddress(), device.getAddress(), name,
+						Integer.toHexString(address), bytes, toHex(memory, " "));
 				final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 				if (ignoreOrSchedule(sr))
 					return;
@@ -1008,19 +1020,20 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	}
 
 
-	private void onMemoryRead(final Destination d, final byte[] data)
+	private void onMemoryRead(final String name, final Destination d, final byte[] data)
 	{
-		if (!verifyLength(data.length, 3, 3, "memory-read"))
+		if (!verifyLength(data.length, 3, 3, name))
 			return;
 		final int length = data[0] & 0xff;
 		final int address = (data[1] & 0xff) << 8 | (data[2] & 0xff);
 
 		// requests with a length exceeding the maximum APDU size shall be ignored by the application
 		if (length > getMaxApduLength() - 3) {
-			logger.warn("memory-read request of length {} > max. {} bytes - ignored", length, getMaxApduLength() - 3);
+			logger.warn("{} of length {} > max. {} bytes - ignored", name, length, getMaxApduLength() - 3);
 			return;
 		}
-		logger.trace("read memory: start address 0x{}, {} bytes", Integer.toHexString(address), length);
+		logger.trace("{}->{} {}: start address 0x{}, {} bytes", d.getAddress(), device.getAddress(), name,
+				Integer.toHexString(address), length);
 		final ServiceResult sr = mgmtSvc.readMemory(address, length);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -1044,8 +1057,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(d, apdu, sr.getPriority(), decodeAPCI(MEMORY_RESPONSE));
 	}
 
-	private void onMemoryExtendedRead(final Destination d, final byte[] data) {
-		if (!verifyLength(data.length, 4, 4, "memory-read"))
+	private void onMemoryExtendedRead(final String name, final Destination d, final byte[] data) {
+		if (!verifyLength(data.length, 4, 4, name))
 			return;
 		final int length = data[0] & 0xff;
 		final int address = ((data[1] & 0xff) << 16) | ((data[2] & 0xff) << 8) | (data[3] & 0xff);
@@ -1058,7 +1071,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
-			logger.trace("read memory: start address 0x{}, {} bytes", Integer.toHexString(address), length);
+			logger.trace("{}->{} {}: start address 0x{}, {} bytes", d.getAddress(), device.getAddress(), name,
+					Integer.toHexString(address), length);
 			final ServiceResult sr = mgmtSvc.readMemory(address, length);
 
 			rc = sr.returnCode();
@@ -1107,7 +1121,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			logger.warn("read property description: {}", e.getMessage());
 		}
 
-		// TODO adapt reset of method
+		// TODO adapt rest of method
 
 		// answer with non-existent property description on no result
 		if (sr == null) {
@@ -1273,11 +1287,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(respondTo, FunctionPropertyExtStateResponse, asdu, priority);
 	}
 
-	private int objectIndex(final int iot, final int oi) {
-		final var data = device.getInterfaceObjectServer().getProperty(iot, oi, PID.OBJECT_INDEX, 1, 1);
-		return toUnsigned(data);
-	}
-
 	private void onManagement(final int svcType, final byte[] data, final KNXAddress dst, final Destination respondTo)
 	{
 		final ServiceResult sr = mgmtSvc.management(svcType, data, dst, respondTo, tl);
@@ -1360,6 +1369,27 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 	}
 
+	private int objectIndex(final int iot, final int oi) {
+		final var data = device.getInterfaceObjectServer().getProperty(iot, oi, PID.OBJECT_INDEX, 1, 1);
+		return toUnsigned(data);
+	}
+
+	private String propertyName(final int objectIndex, final int pid) {
+		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
+		final PropertyClient.PropertyKey key;
+		if (pid <= 50)
+			key = new PropertyClient.PropertyKey(pid);
+		else {
+			final var objects = ios.getInterfaceObjects();
+			final int objectType = objectIndex < objects.length ? objects[objectIndex].getType() : 0;
+			key = new PropertyClient.PropertyKey(objectType, pid);
+		}
+		final var property = ios.propertyDefinitions().get(key);
+		if (property != null)
+			return " (" + property.getName() + ")";
+		return "";
+	}
+
 	private int getMaxApduLength()
 	{
 		try {
@@ -1370,7 +1400,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		catch (final KnxPropertyException e) {
 			if (!missingApduLength) {
 				missingApduLength = true;
-				logger.error("device has no maximum APDU length set (PID.MAX_APDULENGTH), using " + defaultMaxApduLength);
+				logger.warn("device has no maximum APDU length set (PID.MAX_APDULENGTH), using " + defaultMaxApduLength);
 			}
 			return defaultMaxApduLength;
 		}
