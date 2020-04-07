@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2019 B. Malinowsky
+    Copyright (c) 2012, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -565,6 +565,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final byte b = data[i];
 			mem[startAddress + i] = b;
 		}
+		if (startAddress == 0x60 && data.length == 1)
+			setProgrammingMode(data[0] == 1);
 		return new ServiceResult(data);
 	}
 
