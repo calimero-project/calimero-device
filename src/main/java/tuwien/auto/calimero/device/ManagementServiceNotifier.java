@@ -229,11 +229,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.info("attached link was closed");
 	}
 
-	public ServiceResult dispatch(final EventObject e)
-	{
-		// everything is done in response
-		return new ServiceResult();
-	}
 	boolean securedService;
 
 	private Priority priority = Priority.LOW;
@@ -304,7 +299,15 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private void dispatchAndRespond(final FrameEvent e)
 	{
-		device.dispatch(e, () -> dispatch(e), this::respond);
+		final var cemi = e.getFrame();
+		if (cemi instanceof CEMILData) {
+			final CEMILData ldata = (CEMILData) cemi;
+			final var dst = ldata.getDestination();
+			if (dst instanceof IndividualAddress && !dst.equals(device.getAddress()))
+				return;
+		}
+		// we do everthing in respond
+		device.dispatch(e, () -> ServiceResult.Empty, this::respond);
 	}
 
 	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo)
