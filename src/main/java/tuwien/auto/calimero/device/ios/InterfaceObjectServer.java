@@ -858,7 +858,7 @@ public class InterfaceObjectServer implements PropertyAccess
 					throw new KnxPropertyException("current number of elements consists of only 1 element",
 							ErrorCodes.UNSPECIFIED_ERROR);
 
-				if (values != null)
+				if (values != null && values.length > 1)
 					return new byte[] { values[0], values[1] };
 
 				// no current number of elements field yet since values array is null:
@@ -1115,7 +1115,6 @@ public class InterfaceObjectServer implements PropertyAccess
 				// property element does not contain a data element. And since we are
 				// not validating the xml schema, this should be enough.
 				boolean valueExpected = false;
-				final byte[] emptyValue = new byte[0];
 
 				while (r.next() != XmlReader.END_DOCUMENT) {
 					if (r.getEventType() == XmlReader.START_ELEMENT) {
@@ -1131,7 +1130,7 @@ public class InterfaceObjectServer implements PropertyAccess
 									maxElems, rw[0], rw[1]);
 							descriptions.add(d);
 							if (valueExpected)
-								values.add(emptyValue);
+								values.add(new byte[2]);
 							valueExpected = true;
 							if (logger.isTraceEnabled())
 								logger.trace(d.toString());
@@ -1145,8 +1144,11 @@ public class InterfaceObjectServer implements PropertyAccess
 							if (odd == 1)
 								data[0] = Byte.parseByte(s.substring(0, 1), 16);
 							for (int i = 1; i < data.length; ++i)
-								data[i] = Byte.parseByte(s.substring(i * 2 - odd, i * 2 + 2 - odd), 16);
-							values.add(data);
+								data[i] = (byte) Short.parseShort(s.substring(i * 2 - odd, i * 2 + 2 - odd), 16);
+							if (data.length == 0)
+								values.add(new byte[2]);
+							else
+								values.add(data);
 							valueExpected = false;
 						}
 					}
@@ -1178,17 +1180,23 @@ public class InterfaceObjectServer implements PropertyAccess
 				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements()));
 				w.writeAttribute(ATTR_RW, Integer.toString(d.getReadLevel()) + "/" + d.getWriteLevel());
 				w.writeAttribute(ATTR_WRITE, d.isWriteEnabled() ? "1" : "0");
-				w.writeStartElement(TAG_DATA);
-				w.writeCharacters(DataUnitBuilder.toHex(data, ""));
-				w.writeEndElement();
+				writeData(data);
 				w.writeEndElement();
 			}
 			while (k.hasNext()) {
 				final byte[] data = k.next();
 				w.writeStartElement(TAG_PROPERTY);
+				writeData(data);
+				w.writeEndElement();
+			}
+		}
+
+		private void writeData(final byte[] data) {
+			if (data.length == 0)
+				w.writeEmptyElement(TAG_DATA);
+			else {
 				w.writeStartElement(TAG_DATA);
 				w.writeCharacters(DataUnitBuilder.toHex(data, ""));
-				w.writeEndElement();
 				w.writeEndElement();
 			}
 		}
