@@ -105,8 +105,8 @@ final class SecurityInterface {
 			}
 		}
 		if (index == 0) {
-			ios.addInterfaceObject(SECURITY_OBJECT);
-			index = interfaceObjects.length;
+			final var io = ios.addInterfaceObject(SECURITY_OBJECT);
+			index = io.getIndex();
 			populateWithDefaults();
 		}
 		objIndex = index;

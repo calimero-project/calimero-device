@@ -215,17 +215,9 @@ class InterfaceObjectServerTest
 	@Test
 	void resetElements() throws KNXException
 	{
-		ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
-		// get KNXnet/IP parameter object to set some additional addresses
-		final InterfaceObject[] objs = ios.getInterfaceObjects();
-		int objIdx = -1;
-		for (int i = 0; i < objs.length; i++) {
-			final InterfaceObject io = objs[i];
-			if (io.getType() == InterfaceObject.KNXNETIP_PARAMETER_OBJECT) {
-				objIdx = i;
-				break;
-			}
-		}
+		final var io = ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
+		final int objIdx = io.getIndex();
+
 		ios.setDescription(
 				new Description(objIdx, 0, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 0, true, 0, 20, 3, 3),
 				true);

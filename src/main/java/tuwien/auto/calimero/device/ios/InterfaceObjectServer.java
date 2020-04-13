@@ -279,8 +279,9 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * - PID.OBJECT_INDEX and property description, holding the index of the interface object<br>
 	 *
 	 * @param objectType Interface Object type, see {@link InterfaceObject} constants
+	 * @return the added interface object
 	 */
-	public void addInterfaceObject(final int objectType)
+	public InterfaceObject addInterfaceObject(final int objectType)
 	{
 		final InterfaceObject io;
 		final int index;
@@ -291,6 +292,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			updateIoList();
 		}
 		initIoProperties(io, true);
+		return io;
 	}
 
 	/**
