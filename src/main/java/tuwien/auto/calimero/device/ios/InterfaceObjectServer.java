@@ -292,6 +292,8 @@ public class InterfaceObjectServer implements PropertyAccess
 			updateIoList();
 		}
 		initIoProperties(io, true);
+		if (objectType == InterfaceObject.DEVICE_OBJECT)
+			adapter.createNewDescription(0, PID.IO_LIST, false);
 		return io;
 	}
 
@@ -577,25 +579,13 @@ public class InterfaceObjectServer implements PropertyAccess
 		final InterfaceObject io = objects.get(0);
 		if (io == null || io.getType() != InterfaceObject.DEVICE_OBJECT)
 			throw new IllegalStateException("IOS is missing mandatory device object");
-		// the IO_LIST property values have to be in ascending order
-		// first, read the object types out
-		final int items = objects.size();
-		final int[] types = new int[items];
-		int k = 0;
-		for (final Iterator<InterfaceObject> i = objects.iterator(); i.hasNext();)
-			types[k++] = i.next().getType();
 
-		// write them into byte array format
-		final byte[] value = new byte[(items + 1) * 2];
-		value[0] = (byte) (items >> 8);
-		value[1] = (byte) items;
-		for (int i = 0; i < types.length; ++i) {
-			final int type = types[i];
-			value[2 + 2 * i] = (byte) (type >> 8);
-			value[2 + 2 * i + 1] = (byte) type;
-		}
-		objects.get(0).values.put(new PropertyKey(InterfaceObject.DEVICE_OBJECT, PID.IO_LIST),
-				value);
+		final int items = objects.size();
+		final var buffer = ByteBuffer.allocate(2 + items * 2).putShort((short) items);
+		for (final var interfaceObject : objects)
+			buffer.putShort((short) interfaceObject.getType());
+
+		objects.get(0).values.put(new PropertyKey(InterfaceObject.DEVICE_OBJECT, PID.IO_LIST), buffer.array());
 	}
 
 	void initIoProperties(final InterfaceObject io, final boolean createDescription)
