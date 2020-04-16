@@ -806,8 +806,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			// correspondingly.
 			final int size = start + elements - 1;
 			if (values == null || size > (values.length - 2) / typeSize) {
-				// max elements of 100 randomly chosen in absence of a user setting
-				final int maxElements = d == null ? 100 : d.getMaxElements();
+				final int maxElements = d == null ? elements : d.getMaxElements();
 				if (size > maxElements)
 					throw new KnxPropertyException("property values index range [" + start + "..." + size + "] exceeds "
 							+ maxElements + " maximum elements", ErrorCodes.PROP_INDEX_RANGE_ERROR);
@@ -910,7 +909,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				elems = toInt(getProperty(objIndex, pid, 0, 1));
 			}
 			catch (final KnxPropertyException e) {}
-			final int maxElems = Math.max(elems, 10);
+			final int maxElems = Math.max(elems, 1);
 
 			int pdt = -1;
 			final Property p = getDefinition(io.getType(), pid);
