@@ -864,12 +864,14 @@ public class InterfaceObjectServer implements PropertyAccess
 						ErrorCodes.VOID_DP);
 
 			final int currElems = (values[0] & 0xff) << 8 | (values[1] & 0xff);
-			final int size = start + elements - 1;
+			// treat MAX_VALUE special, in that it returns all elements in range [start, currElems]
+			final int actualElements = elements == Integer.MAX_VALUE ? (currElems - start + 1) : elements;
+			final int size = start + actualElements - 1;
 			if (currElems < size)
 				throw new KnxPropertyException("requested elements exceed past last property value",
 						ErrorCodes.PROP_INDEX_RANGE_ERROR);
 			final int typeSize = (values.length - 2) / currElems;
-			final byte[] data = new byte[elements * typeSize];
+			final byte[] data = new byte[actualElements * typeSize];
 			int d = 0;
 			for (int i = 2 + (start - 1) * typeSize; i < 2 + size * typeSize; ++i)
 				data[d++] = values[i];
