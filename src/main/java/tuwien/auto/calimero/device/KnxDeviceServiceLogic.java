@@ -758,17 +758,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult authorize(final Destination remote, final byte[] key)
 	{
-		// possible access levels [max .. min]: [0 .. 3] or [0 .. 15]
-		// give minimum level of access to unauthorized clients, or clients with invalid auth
-		int currentLevel = minAccessLevel;
-		if (!Arrays.equals(key, defaultAuthKey)) {
-			for (int i = 0; i < authKeys.length; i++)
-				if (Arrays.equals(key, authKeys[i])) {
-					currentLevel = i;
-					break;
-				}
-		}
-
+		final int currentLevel = maximumAccessLevel(key);
 		setAccessLevel(remote, currentLevel);
 		return new ServiceResult((byte) currentLevel);
 	}
@@ -810,7 +800,17 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	protected int accessLevel(final Destination remote) {
-		return accessLevels.getOrDefault(remote, minAccessLevel);
+		final int freeLevel = maximumAccessLevel(defaultAuthKey);
+		return accessLevels.getOrDefault(remote, freeLevel);
+	}
+
+	// possible access levels [max .. min]: [0 .. 3] or [0 .. 15]
+	private int maximumAccessLevel(final byte[] key) {
+		for (int i = 0; i < authKeys.length; i++)
+			if (Arrays.equals(key, authKeys[i]))
+				return i;
+		// give minimum level of access to unauthorized clients, or clients with invalid auth
+		return minAccessLevel;
 	}
 
 	private void setAccessLevel(final Destination remote, final int accessLevel) {

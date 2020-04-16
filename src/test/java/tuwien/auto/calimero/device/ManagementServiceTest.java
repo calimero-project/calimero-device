@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2018 B. Malinowsky
+    Copyright (c) 2011, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
@@ -63,10 +64,7 @@ import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 
-/**
- * @author B. Malinowsky
- */
-public class ManagementServiceTest
+class ManagementServiceTest
 {
 	private static final int objectIndex = 0;
 	private static final int propertyId = PID.OBJECT_TYPE;
@@ -76,9 +74,9 @@ public class ManagementServiceTest
 	private TransportLayer tl;
 	private Destination dst;
 
-	private static final byte[] authKey = new byte[] { 0x10, 0x20, 0x30, 0x40 };
-	private static final byte[] highestAuthKey = new byte[] { 0x50, 0x60, 0x70, (byte) 0x80 };
-	private static final byte[] defaultAuthKey = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
+	private static final byte[] authKey = { 0x10, 0x20, 0x30, 0x40 };
+	private static final byte[] highestAuthKey = { 0x50, 0x60, 0x70, (byte) 0x80 };
+	private static final byte[] defaultAuthKey = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
 
 	@BeforeEach
 	void init() throws Exception
@@ -136,7 +134,7 @@ public class ManagementServiceTest
 	void writeProperty()
 	{
 		mgmt.authorize(dst, authKey);
-		final byte[] data = new byte[] { 1, 2, 3, 4 };
+		final byte[] data = { 1 };
 		final int pidPL110Param = 73;
 		ServiceResult r = mgmt.writeProperty(dst, objectIndex, pidPL110Param, 1, 1, data);
 		assertNotNull(r);
@@ -193,7 +191,7 @@ public class ManagementServiceTest
 	void writeMemory()
 	{
 		final int start = 0x22;
-		final byte[] data = new byte[] { 1, 2, 3, 4 };
+		final byte[] data = { 1, 2, 3, 4 };
 
 		ServiceResult r = mgmt.writeMemory(start, data);
 		assertNotNull(r);
@@ -226,7 +224,7 @@ public class ManagementServiceTest
 	@Test
 	void authorizeFreeAccess()
 	{
-		assertAuthResult(mgmt.authorize(dst, defaultAuthKey), 0xf);
+		assertAuthResult(mgmt.authorize(dst, defaultAuthKey), 0x1);
 	}
 
 	@Test
@@ -255,10 +253,22 @@ public class ManagementServiceTest
 	}
 
 	@Test
-	void writeAuthKeyWithoutAuthorization()
+	void writeAuthKeyWithFreeLevelAuthorization()
 	{
-		assertAuthResult(mgmt.writeAuthKey(dst, 5, new byte[] { 5, 5, 5, 5 }), 0xff);
-		assertAuthResult(mgmt.authorize(dst, new byte[] { 5, 5, 5, 5 }), 0xf);
+		assertAuthResult(mgmt.writeAuthKey(dst, 5, new byte[] { 5, 5, 5, 5 }), 0x5);
+		assertAuthResult(mgmt.authorize(dst, new byte[] { 5, 5, 5, 5 }), 0x5);
+	}
+
+	@Test
+	void writeAuthKeyWithoutAuthorization() throws KNXTimeoutException, KNXLinkClosedException {
+		assertAuthResult(mgmt.writeAuthKey(dst, 0, new byte[] { 5, 5, 5, 5 }), 0xff);
+		assertAuthResult(mgmt.writeAuthKey(dst, 1, new byte[] { 5, 5, 5, 5 }), 1);
+
+		dst.destroy();
+		final var noAuth = tl.createDestination(new IndividualAddress(1), true);
+		tl.connect(noAuth);
+		assertAuthResult(mgmt.writeAuthKey(dst, 1, new byte[] { 5, 5, 5, 5 }), 0xff);
+		assertAuthResult(mgmt.authorize(dst, new byte[] { 5, 5, 5, 5 }), 1);
 	}
 
 	private void assertAuthResult(final ServiceResult r, final int level)
