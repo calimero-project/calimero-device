@@ -1024,7 +1024,6 @@ public class InterfaceObjectServer implements PropertyAccess
 		private static final String ATTR_PDT = "pdt";
 		private static final String ATTR_RW = "rw";
 		private static final String ATTR_WRITE = "writeEnabled";
-		private static final String ATTR_ELEMS = "elements";
 		private static final String ATTR_MAXELEMS = "maxElements";
 
 		private static final String TAG_DATA = "data";
@@ -1112,13 +1111,12 @@ public class InterfaceObjectServer implements PropertyAccess
 					if (r.getEventType() == XmlReader.START_ELEMENT) {
 						if (r.getLocalName().equals(TAG_PROPERTY)) {
 							final int index = toInt(r.getAttributeValue(null, ATTR_INDEX));
-							final int elems = toInt(r.getAttributeValue(null, ATTR_ELEMS));
 							final int maxElems = toInt(r.getAttributeValue(null, ATTR_MAXELEMS));
 							final int[] rw = parseRW(r.getAttributeValue(null, ATTR_RW));
 							final Description d = new Description(oi, type,
 									toInt(r.getAttributeValue(null, ATTR_PID)), index,
 									toInt(r.getAttributeValue(null, ATTR_PDT)),
-									toInt(r.getAttributeValue(null, ATTR_WRITE)) == 1, elems,
+									toInt(r.getAttributeValue(null, ATTR_WRITE)) == 1, 0,
 									maxElems, rw[0], rw[1]);
 							descriptions.add(d);
 							if (valueExpected)
@@ -1168,7 +1166,6 @@ public class InterfaceObjectServer implements PropertyAccess
 				w.writeAttribute(ATTR_INDEX, Integer.toString(d.getPropIndex()));
 				w.writeAttribute(ATTR_PID, Integer.toString(d.getPID()));
 				w.writeAttribute(ATTR_PDT, d.getPDT() == -1 ? "<tbd>" : Integer.toString(d.getPDT()));
-				w.writeAttribute(ATTR_ELEMS, Integer.toString(d.getCurrentElements()));
 				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements()));
 				w.writeAttribute(ATTR_RW, Integer.toString(d.getReadLevel()) + "/" + d.getWriteLevel());
 				w.writeAttribute(ATTR_WRITE, d.isWriteEnabled() ? "1" : "0");
