@@ -591,15 +591,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public void writeAddress(final IndividualAddress newAddress)
 	{
-		if (!inProgrammingMode())
-			return;
-		final IndividualAddress old = device.getAddress();
-		final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
-		settings.setDeviceAddress(newAddress);
-		if (device instanceof BaseKnxDevice) {
-			((BaseKnxDevice) device).setAddress(newAddress);
-		}
-		logger.info("set new device address {} (old {})", newAddress, old);
+		if (inProgrammingMode())
+			setDeviceAddress(newAddress);
 	}
 
 	@Override
@@ -607,10 +600,18 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final IndividualAddress newAddress)
 	{
 		final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
-		if (Arrays.equals(myserial, serialNo)) {
-			final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
-			settings.setDeviceAddress(newAddress);
+		if (Arrays.equals(myserial, serialNo))
+			setDeviceAddress(newAddress);
+	}
+
+	private void setDeviceAddress(final IndividualAddress newAddress) {
+		final IndividualAddress old = device.getAddress();
+		final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
+		settings.setDeviceAddress(newAddress);
+		if (device instanceof BaseKnxDevice) {
+			((BaseKnxDevice) device).setAddress(newAddress);
 		}
+		logger.info("set new device address {} (old {})", newAddress, old);
 	}
 
 	@Override
