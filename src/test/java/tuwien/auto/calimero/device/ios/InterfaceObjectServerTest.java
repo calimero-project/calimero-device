@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.net.URL;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -57,7 +58,7 @@ import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 class InterfaceObjectServerTest
 {
 	private static final String baseDir = "src/test/resources/";
-	private static final String propertiesFile = baseDir + "properties.xml";
+	private static final String propertiesFile = "/properties.xml";
 
 	private InterfaceObjectServer ios;
 
@@ -105,7 +106,8 @@ class InterfaceObjectServerTest
 	@Test
 	void loadDefinitions() throws KNXException
 	{
-		ios.loadDefinitions(propertiesFile);
+		final URL resource = getClass().getResource(propertiesFile);
+		ios.loadDefinitions(resource.toString());
 	}
 
 	@Test
