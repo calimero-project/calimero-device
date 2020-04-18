@@ -436,14 +436,17 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (datapoint == null)
 				return dataVoidResult;
 
-			logger.debug("send group value write {}, conf {} auth {}", ga, conf, auth);
+			logger.debug("send group value write to {}, conf {} auth {}", ga, conf, auth);
 			try {
 				final var translator = TranslatorTypes.createTranslator(datapoint.getDPT(), data);
 				updateDatapointValue(datapoint, translator);
-				sendGroupValue(ga, ProcessServiceNotifier.GROUP_WRITE, compactApdu, data);
+				sendGroupValue(ga, ProcessServiceNotifier.GROUP_WRITE, compactApdu, data, datapoint.getPriority());
 			}
 			catch (final KNXException e) {
 				logger.warn("GO diagnostics sending group value write to {}", ga, e);
+			}
+			catch (final InterruptedException e) {
+				Thread.currentThread().interrupt();
 			}
 
 			return new ServiceResult((byte) serviceId);
@@ -466,30 +469,36 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (datapoint == null)
 				return dataVoidResult;
 
-			logger.info("send group value read {}, conf {} auth {}", ga, conf, auth);
-			final byte[] apdu = createLengthOptimizedAPDU(ProcessServiceNotifier.GROUP_READ);
-			final var link = device.getDeviceLink();
+			logger.info("send group value read to {}, conf {} auth {}", ga, conf, auth);
 			try {
-				link.sendRequestWait(ga, Priority.LOW, apdu);
+				sendGroupValue(ga, ProcessServiceNotifier.GROUP_READ, true, new byte[0], datapoint.getPriority());
 				final var translator = requestDatapointValue(datapoint);
 				if (translator != null) {
 					final boolean compactApdu = translator.getTypeSize() == 0;
-					sendGroupValue(ga, ProcessServiceNotifier.GROUP_RESPONSE, compactApdu, translator.getData());
+					sendGroupValue(ga, ProcessServiceNotifier.GROUP_RESPONSE, compactApdu, translator.getData(),
+							datapoint.getPriority());
 				}
 			}
 			catch (final KNXException e) {
 				logger.warn("GO diagnostics sending group value read to {}", ga, e);
+			}
+			catch (final InterruptedException e) {
+				Thread.currentThread().interrupt();
 			}
 			return new ServiceResult((byte) serviceId);
 		}
 		return invalidCommandResult;
 	}
 
-	private void sendGroupValue(final GroupAddress dst, final int service, final boolean compactApdu, final byte[] data)
-			throws KNXTimeoutException, KNXLinkClosedException {
+	private void sendGroupValue(final GroupAddress dst, final int service, final boolean compactApdu, final byte[] data,
+			final Priority priority) throws KNXTimeoutException, KNXLinkClosedException, InterruptedException {
+		final var plainApdu = compactApdu ? DataUnitBuilder.createLengthOptimizedAPDU(service, data)
+				: DataUnitBuilder.createAPDU(service, data);
+		final var sal = ((BaseKnxDevice) device).sal;
+		final var apdu = sal.secureGroupObject(device.getAddress(), dst, plainApdu).orElse(plainApdu);
+
 		final var link = device.getDeviceLink();
-		final var apdu = compactApdu ? createLengthOptimizedAPDU(service, data) : DataUnitBuilder.createAPDU(service, data);
-		link.sendRequestWait(dst, Priority.LOW, apdu);
+		link.sendRequestWait(dst, priority, apdu);
 	}
 
 	@Override
