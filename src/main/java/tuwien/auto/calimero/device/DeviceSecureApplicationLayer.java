@@ -88,14 +88,14 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 	private DeviceSecureApplicationLayer(final BaseKnxDevice device, final SecurityInterface securityInterface) {
 		super(device.getDeviceLink(),
 				device.getInterfaceObjectServer().getProperty(0, PropertyAccess.PID.SERIAL_NUMBER, 1, 1),
-				toLong(securityInterface.get(Pid.SequenceNumberSending)), Map.of());
+				unsigned(securityInterface.get(Pid.SequenceNumberSending)), Map.of());
 
 		this.device = device;
 		this.securityInterface = securityInterface;
 
 		long toolSeqNo = 0;
 		try {
-			toolSeqNo = toLong(securityInterface.get(Pid.ToolSequenceNumberSending));
+			toolSeqNo = unsigned(securityInterface.get(Pid.ToolSequenceNumberSending));
 		}
 		catch (final KnxPropertyException ignore) {}
 		if (toolSeqNo <= 1)
@@ -192,7 +192,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 			final int entrySize = 2 + SeqSize;
 			for (int offset = 0; offset < addresses.length; offset += entrySize) {
 				if (Arrays.equals(addr, 0, addr.length, addresses, offset, offset + 2))
-					return toLong(Arrays.copyOfRange(addresses, offset + 2, offset + 2 + SeqSize));
+					return unsigned(Arrays.copyOfRange(addresses, offset + 2, offset + 2 + SeqSize));
 			}
 		}
 		return 0;
@@ -384,7 +384,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		final int pidDownloadCounter = 30;
 		long counter = 0;
 		try {
-			counter = toLong(device.getInterfaceObjectServer().getProperty(0, pidDownloadCounter, 1, 1));
+			counter = unsigned(device.getInterfaceObjectServer().getProperty(0, pidDownloadCounter, 1, 1));
 		}
 		catch (final KnxPropertyException ignore) {}
 		// always reset seq to > 1, to avoid triggering sync.req during securing data
@@ -401,7 +401,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		final int entrySize = 2 + SeqSize;
 		for (int offset = 0; offset < addresses.length; offset += entrySize) {
 			final byte[] entry = Arrays.copyOfRange(addresses, offset, offset + 2);
-			final long ia = toLong(entry);
+			final long ia = unsigned(entry);
 			if (raw > ia)
 				insert++;
 			else
@@ -422,7 +422,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		final int entrySize = 2 + KeySize;
 		for (int offset = 0; offset < addresses.length; offset += entrySize) {
 			final byte[] entry = Arrays.copyOfRange(addresses, offset, offset + 2);
-			final long index = toLong(entry);
+			final long index = unsigned(entry);
 			if (gaIndex > index)
 				insert++;
 			else
@@ -450,9 +450,8 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 	// returns 1-based index of address in group address table
 	private int groupAddressIndex(final GroupAddress address) {
 		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
-		final int elems = (int) toLong(
-				ios.getProperty(InterfaceObject.ADDRESSTABLE_OBJECT, 1, PropertyAccess.PID.TABLE, 0, 1));
-		final byte[] addresses = ios.getProperty(InterfaceObject.ADDRESSTABLE_OBJECT, 1, PropertyAccess.PID.TABLE, 1, elems);
+		final byte[] addresses = ios.getProperty(InterfaceObject.ADDRESSTABLE_OBJECT, 1, PropertyAccess.PID.TABLE, 1,
+				Integer.MAX_VALUE);
 
 		final var addr = address.toByteArray();
 		final int entrySize = addr.length;
@@ -498,7 +497,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		return securityInterface.get(Pid.GOSecurityFlags, goIndex, 1)[0] & 0xff;
 	}
 
-	private static long toLong(final byte[] data) {
+	private static long unsigned(final byte[] data) {
 		long l = 0;
 		for (final byte b : data)
 			l = (l << 8) + (b & 0xff);

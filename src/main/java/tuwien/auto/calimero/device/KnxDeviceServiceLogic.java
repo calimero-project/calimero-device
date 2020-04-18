@@ -36,7 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
-import static tuwien.auto.calimero.DataUnitBuilder.createLengthOptimizedAPDU;
+import static tuwien.auto.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
+import static tuwien.auto.calimero.device.ios.InterfaceObject.GROUP_OBJECT_TABLE_OBJECT;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
@@ -99,7 +100,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private byte[] domainAddress;
 
 	// authentication
-	private static byte[] defaultAuthKey = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
+	private static byte[] defaultAuthKey = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
 	final byte[][] authKeys = new byte[16][4];
 	final WeakHashMap<Destination, Integer> accessLevels = new WeakHashMap<>();
 	int minAccessLevel = 3; // or 15
@@ -294,7 +295,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				logger.warn("property {}|{} is {}", objectIndex, propertyId, CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
 				return null;
 			}
-			final Integer level = accessLevel(remote);
+			final int level = accessLevel(remote);
 			if (level > d.getWriteLevel()) {
 				logger.warn("deny {} write access to property {}|{} (access level {}, requires {})", remote.getAddress(), objectIndex,
 						propertyId, level, d.getWriteLevel());
@@ -388,7 +389,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				}
 			}
 		}
-		else if (objectType == InterfaceObject.GROUP_OBJECT_TABLE_OBJECT) {
+		else if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
 			final int pidGODiagnostics = 66;
 			if (propertyId == pidGODiagnostics)
 				return writeGroupObjectDiagnostics(command, serviceId);
@@ -507,7 +508,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		final int serviceId = functionInput[1] & 0xff;
 		final int objectType = device.getInterfaceObjectServer().getInterfaceObjects()[objectIndex].getType();
-		if (objectType == InterfaceObject.GROUP_OBJECT_TABLE_OBJECT) {
+		if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
 			final int pidGODiagnostics = 66;
 			if (propertyId == pidGODiagnostics)
 				return readGroupObjectDiagnostics(functionInput, serviceId);

@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019 B. Malinowsky
+    Copyright (c) 2019, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -123,9 +123,9 @@ final class AccessPolicies {
 
 	private static final int allAllowed = accessPolicy("3ff/3ff");
 
-	private static int accessLevel(final int service, final boolean secure, final int role, final int security) {
+	private static int accessLevel(final int service, final boolean securityMode, final int role, final int security) {
 		final int policy = serviceLevelAccessPolicies.getOrDefault(service, allAllowed);
-		return readWrite(policy, secure, role, security);
+		return readWrite(policy, securityMode, role, security);
 	}
 
 	// data level access policies
@@ -143,9 +143,9 @@ final class AccessPolicies {
 		return (doASerialAccessLevel(service, domainSize, securityMode, role, security) & Write) == Write;
 	}
 
-	private static int doASerialAccessLevel(final int service, final int domainSize, final boolean secure,
+	private static int doASerialAccessLevel(final int service, final int domainSize, final boolean securityMode,
 		final int role, final int security) {
-		return readWrite(doASerialPolicy(service, domainSize), secure, role, security);
+		return readWrite(doASerialPolicy(service, domainSize), securityMode, role, security);
 	}
 
 	private static int doASerialPolicy(final int service, final int doASize) {
@@ -162,13 +162,18 @@ final class AccessPolicies {
 		}
 	}
 
-	static int restartAccess(final boolean secure, final int role, final int security, final int restartType,
-		final int eraseCode) {
-		if (restartType == 0 || (restartType == 1 && eraseCode == 1))
-			return 0x2AA0AA;
-		if (secure && (eraseCode == 3 || eraseCode == 4))
+	static boolean checkRestartAccess(final boolean securityMode, final int role, final int security,
+		final boolean masterReset, final int eraseCode) {
+		return (restartAccess(securityMode, role, security, masterReset, eraseCode) & Write) == Write;
+	}
+
+	private static int restartAccess(final boolean securityMode, final int role, final int security,
+		final boolean masterReset, final int eraseCode) {
+		if (!masterReset || (masterReset && eraseCode == 1))
+			return accessPolicy("2AA/0AA");
+		if (securityMode && (eraseCode == 3 || eraseCode == 4))
 			throw new KNXIllegalArgumentException("unsupported restart service erase code " + eraseCode);
-		return 0x2AA008;
+		return accessPolicy("2AA/008");
 	}
 
 	// resource allocation in bits for each role
@@ -181,10 +186,10 @@ final class AccessPolicies {
 	// relative bit offsets within (un)secured bitfield
 	private static final int[] roleOffset = { RoleXBits + ToolBits, ToolBits, 0 };
 	// relative bit offsets within a role
-	private static final int[] securityOffset = { 0, 2, 0 };
+	private static final int[] securityOffset = { 0, 0, 2 };
 
-	private static int readWrite(final int policy, final boolean secure, final int role, final int security) {
-		final int shift = (secure ? 0 : unsecuredModeOffset) + roleOffset[role] + securityOffset[security];
+	private static int readWrite(final int policy, final boolean securityMode, final int role, final int security) {
+		final int shift = (securityMode ? 0 : unsecuredModeOffset) + roleOffset[role] + securityOffset[security];
 		return (policy >> shift) & ReadWrite;
 	}
 }

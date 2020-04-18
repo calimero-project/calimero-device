@@ -806,7 +806,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				return;
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("{}", e.getMessage());
+			logger.warn("{}->{} {} {}|{}{} {}", d.getAddress(), dst, name,
+					objIndex, pid, propertyName(objIndex, pid), e.getMessage());
 			sr = ServiceResult.Empty;
 		}
 
@@ -1242,7 +1243,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			// TODO enforce access policy
 
 			final int reserved = functionInput[0] & 0xff;
-			if (reserved != 0)
+			if (description.getPDT() == PropertyTypes.PDT_FUNCTION && reserved != 0)
 				sr = new ServiceResult(ReturnCode.DataVoid);
 			else if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityInterface.Pid.SecurityMode)
 				sr = sal.securityMode(isCommand, functionInput);
@@ -1257,6 +1258,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				sr = new ServiceResult(ReturnCode.DataTypeConflict);
 		}
 		catch (final KnxPropertyException e) {
+			logger.warn("{}->{} {} {}({})|{}", respondTo.getAddress(), dst, name, iot, oi, pid, e);
 			sr = new ServiceResult(ReturnCode.AddressVoid);
 		}
 

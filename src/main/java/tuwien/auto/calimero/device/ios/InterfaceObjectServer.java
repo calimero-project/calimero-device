@@ -36,6 +36,7 @@
 
 package tuwien.auto.calimero.device.ios;
 
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -127,7 +128,6 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * </ul>
 	 * This constructor creates and initializes the following Interface Objects:<br>
 	 * - InterfaceObject.DEVICE_OBJECT<br>
-	 * - InterfaceObject.CEMI_SERVER_OBJECT<br>
 	 * See {@link #addInterfaceObject(int)} for details on creation.
 	 *
 	 * @param strictPropertyMode <code>true</code> if server shall enforce strict mode,
@@ -152,7 +152,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (resource != null)
 				loadDefinitions(resource.toString());
 		}
-		catch (KNXException | KNXMLException e) {
+		catch (KNXException | KNXMLException | UncheckedIOException e) {
 			// using the default resource ID, we cannot expect to always find the resource
 			logger.info("could not load the Interface Object Server KNX property definitions ({})", e.getMessage());
 		}
@@ -274,9 +274,10 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * <p>
 	 * In this version of the implementation (might change in the future) the following properties
 	 * and property descriptions are set:<br>
-	 * - {@link tuwien.auto.calimero.mgmt.PropertyAccess.PID#OBJECT_TYPE} and property description,
+	 * - {@link PID#OBJECT_TYPE} and property description,
 	 * representing the interface object type<br>
-	 * - PID.OBJECT_INDEX and property description, holding the index of the interface object<br>
+	 * - {@link PID#OBJECT_NAME} and property description, holding the interface object name<br>
+	 * - {@link PID#OBJECT_INDEX} and property description, holding the index of the interface object<br>
 	 *
 	 * @param objectType Interface Object type, see {@link InterfaceObject} constants
 	 * @return the added interface object
@@ -755,9 +756,6 @@ public class InterfaceObjectServer implements PropertyAccess
 			// 3) use dptId
 			// 4) trust input parameters and calculate type size
 
-			// NYI optimization: remember type size value once we read it out from
-			// somewhere for subsequent use (also nice to have when saving the
-			// interface objects to a resource)
 			int typeSize = 0;
 			int pdt = -1;
 			String dptId = null;

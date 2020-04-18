@@ -157,8 +157,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
-//	private static final int deviceMemorySize = 50_000;
-	private static final int deviceMemorySize = 0x10010; // for testing memory services with > 64 K memory
+	private static final int deviceMemorySize = 0x10010;
 	private final byte[] memory = new byte[deviceMemorySize];
 
 
