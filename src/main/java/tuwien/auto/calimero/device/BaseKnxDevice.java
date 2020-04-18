@@ -40,11 +40,13 @@ import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.KNXNETIP_PARAMETER_OBJECT;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -67,12 +69,15 @@ import org.slf4j.Logger;
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.Settings;
+import tuwien.auto.calimero.device.KnxDeviceServiceLogic.LoadState;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.device.ios.PropertyEvent;
+import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
@@ -96,7 +101,7 @@ import tuwien.auto.calimero.mgmt.TransportLayer;
  * @see ProcessCommunicationService
  * @see ManagementService
  */
-public class BaseKnxDevice implements KnxDevice
+public class BaseKnxDevice implements KnxDevice, AutoCloseable
 {
 	// The object instance determines which instance of an object type is
 	// queried for properties. Always defaults to 1.
@@ -141,6 +146,8 @@ public class BaseKnxDevice implements KnxDevice
 	private final InterfaceObjectServer ios;
 	private final Logger logger;
 
+	private final URI iosResource;
+
 	private final ProcessCommunicationService process;
 	private final ManagementService mgmt;
 
@@ -156,7 +163,7 @@ public class BaseKnxDevice implements KnxDevice
 
 
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
-		final ManagementService mgmt) throws KnxPropertyException
+		final ManagementService mgmt, final URI iosResource) throws KnxPropertyException
 	{
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
 		this.name = name;
@@ -165,16 +172,46 @@ public class BaseKnxDevice implements KnxDevice
 		ios.addServerListener(this::propertyChanged);
 		logger = LogService.getLogger("calimero.device." + name);
 
+		this.iosResource = iosResource;
+
 		this.process = process;
 		this.mgmt = mgmt;
 
-		ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
-		ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
-		ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
-		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
-		ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
+		if (iosResource != null) {
+			try {
+				ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
+				logger.debug("loading interface object server from {}", iosResource);
+				ios.loadInterfaceObjects(iosResource.toString());
+			}
+			catch (final UncheckedIOException e) {
+				logger.info("could not open {}, create resource on closing device ({})", iosResource, e.getCause().getMessage());
+			}
+			catch (final KNXException e) {
+				throw new KnxRuntimeException("loading interface object server", e);
+			}
+		}
+		else {
+			final var addressTable = ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
+			initTableProperties(addressTable, 0x0116);
 
-		initDeviceInfo();
+			final var assocTable = ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
+			initTableProperties(assocTable, 0x1000);
+
+			final var groupObjectTable = ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
+			initTableProperties(groupObjectTable, 0x3000);
+			final int pidGODiagnostics = 66;
+			ios.setDescription(new Description(groupObjectTable.getIndex(), 0, pidGODiagnostics,
+					PropertyTypes.PDT_FUNCTION, 0, true, 0, 1, 3, 3), true);
+
+			final var appObject = ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
+			ios.setProperty(appObject.getIndex(), PID.LOAD_STATE_CONTROL, 1, 1, (byte) 1);
+			ios.setProperty(appObject.getIndex(), PID.TABLE_REFERENCE, 1, 1, ByteBuffer.allocate(4).putInt(0x4000).array());
+
+			ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
+			ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
+
+			initDeviceInfo();
+		}
 	}
 
 	/**
@@ -203,7 +240,7 @@ public class BaseKnxDevice implements KnxDevice
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
 		final KNXNetworkLink link) throws KNXLinkClosedException, KnxPropertyException
 	{
-		this(name, dd, (ProcessCommunicationService) null, null);
+		this(name, dd, (ProcessCommunicationService) null, null, null);
 		setDeviceLink(link);
 		setAddress(device);
 	}
@@ -238,7 +275,7 @@ public class BaseKnxDevice implements KnxDevice
 		final KNXNetworkLink link, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
 	{
-		this(name, dd, process, mgmt);
+		this(name, dd, process, mgmt, null);
 		setDeviceLink(link);
 		setAddress(device);
 	}
@@ -251,9 +288,22 @@ public class BaseKnxDevice implements KnxDevice
 	 * @param logic KNX device service logic
 	 * @throws KnxPropertyException on error initializing the device KNX properties
 	 */
-	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic) throws KnxPropertyException
-	{
-		this(name, DeviceDescriptor.DD0.TYPE_5705, logic, logic);
+	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic) throws KnxPropertyException {
+		this(name, logic, (URI) null);
+	}
+
+	/**
+	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument, the device's communication link (and
+	 * address) has to be subsequently assigned.
+	 *
+	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param logic KNX device service logic
+	 * @param iosResource interface object server resource to load
+	 * @throws KnxPropertyException on error initializing the device KNX properties
+	 */
+	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic, final URI iosResource)
+			throws KnxPropertyException {
+		this(name, DeviceDescriptor.DD0.TYPE_5705, logic, logic, iosResource);
 		logic.setDevice(this);
 	}
 
@@ -370,6 +420,22 @@ public class BaseKnxDevice implements KnxDevice
 	public final TransportLayer transportLayer() { return mgmtNotifier.transportLayer(); }
 
 	@Override
+	public void close() {
+		if (sal != null)
+			sal.close();
+
+		if (iosResource != null) {
+			try {
+				logger.debug("saving interface object server to {}", iosResource);
+				ios.saveInterfaceObjects(iosResource.toString());
+			}
+			catch (final KNXException e) {
+				logger.error("saving interface object server", e);
+			}
+		}
+	}
+
+	@Override
 	public String toString()
 	{
 		return name + " " + getAddress();
@@ -415,6 +481,18 @@ public class BaseKnxDevice implements KnxDevice
 	Logger logger()
 	{
 		return logger;
+	}
+
+	private void initTableProperties(final InterfaceObject io, final int memAddress) {
+		final int idx = io.getIndex();
+		ios.setProperty(idx, PID.LOAD_STATE_CONTROL, 1, 1, (byte) LoadState.Unloaded.ordinal());
+		ios.setProperty(idx, PID.TABLE_REFERENCE, 1, 1, ByteBuffer.allocate(4).putInt(memAddress).array());
+
+		final int pdt = io.getType() == InterfaceObject.ASSOCIATIONTABLE_OBJECT ? PropertyTypes.PDT_GENERIC_04
+				: PropertyTypes.PDT_GENERIC_02;
+		ios.setDescription(new Description(idx, 0, PID.TABLE, 0, pdt, true, 0, 100, 3, 3), true);
+
+		ios.setProperty(idx, PID.MCB_TABLE, 1, 1, new byte[8]);
 	}
 
 	private synchronized void resetNotifiers() throws KNXLinkClosedException
