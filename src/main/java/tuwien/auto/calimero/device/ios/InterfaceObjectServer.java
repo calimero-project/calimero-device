@@ -646,8 +646,10 @@ public class InterfaceObjectServer implements PropertyAccess
 				if (io.getType() == objectType && ++inst == objectInstance)
 					return io;
 			}
-			throw new KnxPropertyException("no object instance " + objectInstance + " of "
-					+ PropertyClient.getObjectTypeName(objectType) + " in IOS");
+			String ot = PropertyClient.getObjectTypeName(objectType);
+			if (ot.isEmpty())
+				ot = "object type " + objectType;
+			throw new KnxPropertyException("no object instance " + objectInstance + " of " + ot + " in IOS");
 		}
 	}
 
