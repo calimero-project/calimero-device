@@ -109,8 +109,13 @@ class ManagementServiceNotifierTest {
 				new IndividualAddress(0, 0x02, 0xff), linkStub, null, mgmtServices);
 		mgmtServices.setDevice(device);
 		final var ios = device.getInterfaceObjectServer();
-		ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
-		groupObjectTableIndex = 7;
+		for (final var io : ios.getInterfaceObjects()) {
+			if (io.getType() == InterfaceObject.GROUP_OBJECT_TABLE_OBJECT) {
+				groupObjectTableIndex = io.getIndex();
+				break;
+			}
+		}
+
 		ios.setDescription(
 				new Description(groupObjectTableIndex, 0, 66, 0, PropertyTypes.PDT_FUNCTION, true, 1, 1, 3, 3), true);
 
