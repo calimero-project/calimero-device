@@ -36,11 +36,16 @@
 
 package tuwien.auto.calimero.device;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.IntUnaryOperator;
 
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
@@ -70,6 +75,12 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 	private final BaseKnxDevice device;
 	private final SecurityInterface securityInterface;
 
+	@SuppressWarnings("serial")
+	private final Set<byte[]> lastFailures = Collections.newSetFromMap(new LinkedHashMap<>() {
+		protected boolean removeEldestEntry(final Map.Entry<byte[], Boolean> eldest) { return size() > 10; }
+	});
+
+
 	DeviceSecureApplicationLayer(final BaseKnxDevice device) {
 		this(device, new SecurityInterface(device.getInterfaceObjectServer()));
 	}
@@ -92,15 +103,28 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		else
 			updateSequenceNumber(true, toolSeqNo);
 
-		// TODO set initial failure counter values in base class
-		final var failureCounters = securityInterface.get(Pid.SecurityFailuresLog);
+		// load failure log: property value = { 4 * counters (2 bytes each), last failures (12 bytes each) }
+		final var failureLog = ByteBuffer.wrap(securityInterface.get(Pid.SecurityFailuresLog));
+		initFailureCounter(InvalidScf, failureLog.getShort() & 0xffff);
+		initFailureCounter(SeqNoError, failureLog.getShort() & 0xffff);
+		initFailureCounter(CryptoError, failureLog.getShort() & 0xffff);
+		initFailureCounter(AccessAndRoleError, failureLog.getShort() & 0xffff);
+		while (failureLog.hasRemaining()) {
+			final byte[] buf = new byte[12];
+			failureLog.get(buf);
+			lastFailures.add(buf);
+		}
 
 		Security.groupKeys().forEach(this::addSecuredGroupAddress);
 	}
 
 	@Override
 	public void close() {
-		securityInterface.set(Pid.SecurityFailuresLog, failureCountersArray());
+		// persist failure log
+		final var baos = new ByteArrayOutputStream();
+		baos.writeBytes(failureCountersArray());
+		lastFailures.forEach(baos::writeBytes);
+		securityInterface.set(Pid.SecurityFailuresLog, baos.toByteArray());
 	}
 
 	@Override
@@ -238,6 +262,18 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 			transportLayer.sendData(remote, Priority.SYSTEM, secureApdu);
 	}
 
+	@Override
+	protected void securityFailure(final int errorType, final IntUnaryOperator updateFunction,
+			final IndividualAddress src, final KNXAddress dst, final int ctrlExtended, final long seqNo) {
+		super.securityFailure(errorType, updateFunction, src, dst, ctrlExtended, seqNo);
+
+		if (src == null)
+			return;
+		final var buffer = ByteBuffer.allocate(12).put(src.toByteArray()).put(dst.toByteArray())
+				.put((byte) ctrlExtended).put(sixBytes(seqNo)).put((byte) errorType);
+		lastFailures.add(buffer.array());
+	}
+
 	boolean isSecurityModeEnabled() {
 		return securityInterface.get(Pid.SecurityMode, 1, 1)[0] == 1;
 	}
@@ -269,11 +305,6 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		return new ServiceResult(ReturnCode.Error);
 	}
 
-	private static final int InvalidScf = 1;
-	private static final int SeqNoError = 2;
-	private static final int CryptoError = 3;
-	private static final int AccessAndRoleError = 4;
-
 	ServiceResult securityFailuresLog(final boolean command, final byte[] functionInput) {
 		if (functionInput.length != 3)
 			return new ServiceResult(ReturnCode.DataVoid);
@@ -282,28 +313,27 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		final int info = functionInput[2] & 0xff;
 		if (command) {
 			if (id == 0 && info == 0) {
-				// TODO clear failure log data
-//				return new ServiceResult((byte) id);
+				clearFailureLog();
+				return new ServiceResult((byte) id);
 			}
 		}
 		else {
+			// failure counters
 			if (id == 0 && info == 0) {
 				final var counters = ByteBuffer.allocate(10).put((byte) id).put((byte) info).put(failureCountersArray());
 				return new ServiceResult(counters.array());
 			}
-			if (id == 1) {
+			// query latest failure by index
+			else if (id == 1) {
 				final int index = info;
-				if (index > 9)
-					return new ServiceResult(ReturnCode.DataVoid, (byte) id);
-				// NYI fetch actual message
-				final var sender = new IndividualAddress(0);
-				final var dst = new GroupAddress(0);
-				final int ctrlE = 0x80;
-				final var seqno = new byte[6];
-				final int errorType = InvalidScf;
-				final var message = ByteBuffer.allocate(14).put((byte) id).put((byte) index).put(sender.toByteArray())
-						.put(dst.toByteArray()).put((byte) ctrlE).put(seqno).put((byte) errorType);
-				return new ServiceResult(message.array());
+				int i = 0;
+				for (final var msgInfo : lastFailures) {
+					if (i++ == index)
+						return new ServiceResult(ByteBuffer.allocate(2 + msgInfo.length).put((byte) id)
+								.put((byte) index).put(msgInfo).array());
+				}
+
+				return new ServiceResult(ReturnCode.DataVoid, (byte) id);
 			}
 		}
 		return new ServiceResult(ReturnCode.InvalidCommand);
@@ -311,6 +341,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 
 	void factoryReset() {
 		resetToolAccessSequence();
+		clearFailureLog();
 	}
 
 	private Map<IndividualAddress, AggregatorProxy> transportLayerProxies() {
@@ -328,6 +359,10 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		return null;
 	}
 
+	private void initFailureCounter(final int errorType, final int value) {
+		securityFailure(errorType, __ -> value, null, null, 0, 0);
+	}
+
 	private byte[] failureCountersArray() {
 		final int scf = failureCounter(InvalidScf);
 		final int seqno = failureCounter(SeqNoError);
@@ -335,6 +370,14 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		final int role = failureCounter(AccessAndRoleError);
 		return ByteBuffer.allocate(8).putShort((short) scf).putShort((short) seqno).putShort((short) crypto)
 				.putShort((short) role).array();
+	}
+
+	private void clearFailureLog() {
+		initFailureCounter(InvalidScf, 0);
+		initFailureCounter(SeqNoError, 0);
+		initFailureCounter(CryptoError, 0);
+		initFailureCounter(AccessAndRoleError, 0);
+		lastFailures.clear();
 	}
 
 	private void resetToolAccessSequence() {
