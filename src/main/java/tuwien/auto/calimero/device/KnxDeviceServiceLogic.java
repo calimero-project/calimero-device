@@ -44,6 +44,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Random;
 import java.util.WeakHashMap;
 
@@ -64,10 +65,12 @@ import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
+import tuwien.auto.calimero.datapoint.StateDP;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
+import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
@@ -76,6 +79,7 @@ import tuwien.auto.calimero.link.medium.PLSettings;
 import tuwien.auto.calimero.link.medium.RFSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
+import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
@@ -780,6 +784,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final String type = masterReset ? "master reset (" + eraseCode + ")" : "basic restart";
 		logger.info("received request for {}", type);
 		setProgrammingMode(false);
+		syncDatapoints();
 		if (masterReset) {
 			final byte errorCode = 0;
 			final byte processTimeSeconds = 3;
@@ -801,6 +806,123 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public boolean isVerifyModeEnabled()
 	{
 		return false;
+	}
+
+	private void syncDatapoints() {
+		syncTableWithMemory(InterfaceObject.ADDRESSTABLE_OBJECT);
+		syncTableWithMemory(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
+		syncTableWithMemory(GROUP_OBJECT_TABLE_OBJECT);
+
+		final var ios = device.getInterfaceObjectServer();
+		final byte[] table = ios.getProperty(ADDRESSTABLE_OBJECT, 1, PID.TABLE, 1, Integer.MAX_VALUE);
+		final var buffer = ByteBuffer.wrap(table);
+
+		while (buffer.hasRemaining()) {
+			final var group = new GroupAddress(buffer.getShort() & 0xffff);
+			if (!datapoints.contains(group)) {
+				try {
+					final var optFlags = groupAddressIndex(group)
+							.flatMap(this::groupObjectIndex).map(groupObjectIndex -> ios
+									.getProperty(GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, groupObjectIndex, 1))
+							.map(KnxDeviceServiceLogic::groupObjectDescriptor);
+					if (optFlags.isEmpty())
+						continue;
+					final var flags = optFlags.get();
+
+					final var mainType = TranslatorTypes.ofBitSize((int) flags[0]).get(0);
+					final String dpt = mainType.getSubTypes().keySet().iterator().next();
+					final var dp = new StateDP(group, group.toString(), mainType.getMainNumber(), dpt);
+					dp.setPriority((Priority) flags[1]);
+					datapoints.add(dp);
+				}
+				catch (final KnxPropertyException | KNXException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	private void syncTableWithMemory(final int objectType) {
+		final int objectInstance = 1;
+		final var ios = device.getInterfaceObjectServer();
+		final int ref = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.TABLE_REFERENCE, 1, 1));
+
+		final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
+		final var description = ios.getDescription(idx, PID.TABLE);
+		final int typeSize = PropertyTypes.bitSize(description.getPDT()).orElse(16) / 8;
+
+		final var mem = getDeviceMemory();
+		final int size = (mem[ref] & 0xff) << 8 | mem[ref + 1] & 0xff;
+		final var buffer = ByteBuffer.wrap(mem, ref + 2, size * typeSize);
+		final var data = new byte[buffer.remaining()];
+		buffer.get(data);
+		if (size > 0) {
+			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, 0, true, 0, size, 3, 3), true);
+			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, size, data);
+		}
+	}
+
+	private Optional<Integer> groupAddressIndex(final GroupAddress address) {
+		final var ios = device.getInterfaceObjectServer();
+		return groupAddressIndex(ios, address);
+	}
+
+	// returns 1-based index of address in group address table
+	static Optional<Integer> groupAddressIndex(final InterfaceObjectServer ios, final GroupAddress address) {
+		final byte[] addresses = ios.getProperty(ADDRESSTABLE_OBJECT, 1, PropertyAccess.PID.TABLE, 1,
+				Integer.MAX_VALUE);
+
+		final var addr = address.toByteArray();
+		final int entrySize = addr.length;
+		for (int offset = 0; offset < addresses.length; offset += entrySize) {
+			if (Arrays.equals(addr, 0, addr.length, addresses, offset, offset + 2))
+				return Optional.of(offset / entrySize + 1);
+		}
+		return Optional.empty();
+	}
+
+	// returns 1-based index of group object table
+	private Optional<Integer> groupObjectIndex(final int groupAddressIndex) {
+		return groupObjectIndex(device.getInterfaceObjectServer(),
+				groupAddressIndex);
+	}
+
+	static Optional<Integer> groupObjectIndex(final InterfaceObjectServer ios, final int groupAddressIndex) {
+		final byte[] assoc = ios.getProperty(InterfaceObject.ASSOCIATIONTABLE_OBJECT, 1, PropertyAccess.PID.TABLE, 1,
+				Integer.MAX_VALUE);
+		final var buffer = ByteBuffer.wrap(assoc);
+		while (buffer.hasRemaining()) {
+			if ((buffer.getShort() & 0xffff) == groupAddressIndex)
+				return Optional.of(buffer.getShort() & 0xffff);
+			buffer.getShort();
+		}
+		return Optional.empty();
+	}
+
+	private static Object[] groupObjectDescriptor(final byte[] descriptor) {
+		final int flags = descriptor[0] & 0xff;
+		final int priority = flags & 0x3;
+		final boolean enable = (flags & 0x04) != 0;
+		final boolean responder = enable && (flags & 0x08) != 0;
+		final boolean update = (flags & 0x80) != 0;
+
+		final int bitsize = valueFieldTypeToBits(descriptor[1] & 0xff);
+
+		return new Object[] { bitsize, Priority.get(priority), responder, update };
+	}
+
+	// decodes group object descriptor value field type into PDT bit size
+	private static int valueFieldTypeToBits(final int code) {
+		final int[] lowerFieldTypes = { 1, 2, 3, 4, 5, 6, 7, 8,
+			2 * 8, 3 * 8, 4 * 8, 6 * 8, 8 * 8, 10 * 8, 14 * 8,
+			5 * 8, 7 * 8, 9 * 8, 11 * 8, 12 * 8, 13 * 8
+		};
+
+		if (code < lowerFieldTypes.length)
+			return lowerFieldTypes[code];
+		if (code == 255)
+			return 252 * 8;
+		return (code - 6) * 8;
 	}
 
 	void destinationDisconnected(final Destination remote) {
@@ -827,5 +949,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private void setAccessLevel(final Destination remote, final int accessLevel) {
 		accessLevels.put(remote, accessLevel);
 		logger.info("authorize {} for access level {}", remote.getAddress(), accessLevel);
+	}
+
+	private static long unsigned(final byte[] data) {
+		long v = 0;
+		for (final byte b : data)
+			v = (v << 8) + (b & 0xff);
+		return v;
 	}
 }

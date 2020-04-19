@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntUnaryOperator;
@@ -56,8 +57,6 @@ import tuwien.auto.calimero.KnxSecureException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.device.SecurityInterface.Pid;
-import tuwien.auto.calimero.device.ios.InterfaceObject;
-import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.internal.SecureApplicationLayer;
 import tuwien.auto.calimero.internal.Security;
@@ -150,10 +149,8 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 			return null;
 		}
 		else {
-			final var group = (GroupAddress) addr;
-			final int addressIndex = groupAddressIndex(group);
-			if (addressIndex == -1)
-				throw new KnxSecureException("no group key for " + group);
+			final int addressIndex = groupAddressIndex((GroupAddress) addr)
+					.orElseThrow(() -> new KnxSecureException("no group key for " + addr));
 			return groupKey(addressIndex);
 		}
 	}
@@ -223,7 +220,13 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 
 	@Override
 	protected int groupObjectSecurity(final GroupAddress group) {
-		return groupObjectSecurity(groupAddressIndex(group));
+		try {
+			// security table uses same index as group object table
+			return groupAddressIndex(group).flatMap(this::groupObjectIndex).map(this::groupObjectSecurity).orElse(0);
+		}
+		catch (final KnxPropertyException e) {
+			return 0;
+		}
 	}
 
 	private static final int DataConnected = 0x40;
@@ -416,7 +419,8 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 			throw new KNXIllegalArgumentException("group key with invalid length " + groupKey.length);
 		final byte[] addresses = securityInterface.get(Pid.GroupKeyTable);
 
-		final int gaIndex = groupAddressIndex(address);
+		final int gaIndex = groupAddressIndex(address)
+				.orElseThrow(() -> new KnxSecureException(address + " not in address table"));
 		int insert = 0;
 		// precondition: array size is multiple of entrySize
 		final int entrySize = 2 + KeySize;
@@ -448,19 +452,13 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 	}
 
 	// returns 1-based index of address in group address table
-	private int groupAddressIndex(final GroupAddress address) {
-		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
-		final byte[] addresses = ios.getProperty(InterfaceObject.ADDRESSTABLE_OBJECT, 1, PropertyAccess.PID.TABLE, 1,
-				Integer.MAX_VALUE);
+	private Optional<Integer> groupAddressIndex(final GroupAddress address) {
+		return KnxDeviceServiceLogic.groupAddressIndex(device.getInterfaceObjectServer(), address);
+	}
 
-		final var addr = address.toByteArray();
-		final int entrySize = addr.length;
-		// precondition: array size is multiple of entrySize
-		for (int offset = 0; offset < addresses.length; offset += entrySize) {
-			if (Arrays.equals(addr, 0, addr.length, addresses, offset, offset + 2))
-				return offset / entrySize + 1;
-		}
-		return -1;
+	// returns 1-based index of address in group address table
+	private Optional<Integer> groupObjectIndex(final int groupAddressIndex) {
+		return KnxDeviceServiceLogic.groupObjectIndex(device.getInterfaceObjectServer(), groupAddressIndex);
 	}
 
 	// returns p2p key for IA index
@@ -493,8 +491,8 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		return null;
 	}
 
-	private int groupObjectSecurity(final int goIndex) {
-		return securityInterface.get(Pid.GOSecurityFlags, goIndex, 1)[0] & 0xff;
+	private int groupObjectSecurity(final int groupObjectIndex) {
+		return securityInterface.get(Pid.GOSecurityFlags, groupObjectIndex, 1)[0] & 0xff;
 	}
 
 	private static long unsigned(final byte[] data) {
