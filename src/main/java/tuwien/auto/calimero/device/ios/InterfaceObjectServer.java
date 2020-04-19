@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 
@@ -756,9 +757,8 @@ public class InterfaceObjectServer implements PropertyAccess
 			// 3) use dptId
 			// 4) trust input parameters and calculate type size
 
-			int typeSize = 0;
 			int pdt = -1;
-			String dptId = null;
+			Optional<String> dptId = Optional.empty();
 			Description d = null;
 			boolean createDescription = false;
 			try {
@@ -773,31 +773,15 @@ public class InterfaceObjectServer implements PropertyAccess
 				final Property p = getDefinition(io.getType(), pid);
 				if (p != null) {
 					pdt = p.getPDT();
-					dptId = p.getDPT();
+					dptId = p.dpt();
 				}
 			}
-			if (pdt != -1) {
-				try {
-					typeSize = PropertyTypes.createTranslator(pdt).getTypeSize();
-					// round bit values up to 1 byte
-					if (typeSize == 0)
-						typeSize = 1;
-				}
-				catch (final KNXException e) {}
-			}
-			if (typeSize == 0 && dptId != null)
-				try {
-					typeSize = TranslatorTypes.createTranslator(0, dptId).getTypeSize();
-					// round bit values up to 1 byte
-					if (typeSize == 0)
-						typeSize = 1;
-				}
-				catch (final KNXException e) {}
 
-			// if typeSize != 0, enforce correct type size, otherwise trust input
-			if (typeSize == 0)
-				typeSize = data.length / elements;
-			else if (typeSize != data.length / elements)
+			final var id = dptId;
+			final int typeSize = PropertyTypes.bitSize(pdt).or(() -> id.flatMap(this::dptBitSize))
+					.map(size -> Math.max(size / 8, 1)).orElseGet(() -> elements > 0 ? data.length / elements : 1);
+
+			if (elements > 0 && typeSize != data.length / elements)
 				throw new KnxPropertyException("property type size is " + typeSize + ", not " + data.length / elements,
 						ErrorCodes.TYPE_CONFLICT);
 
@@ -839,6 +823,14 @@ public class InterfaceObjectServer implements PropertyAccess
 				firePropertyChanged(io, pid, start, elements, data);
 		}
 
+		private Optional<Integer> dptBitSize(final String dptId) {
+			try {
+				return Optional.of(TranslatorTypes.createTranslator(0, dptId).bitSize());
+			}
+			catch (final KNXException e) {}
+			return Optional.empty();
+		}
+
 		private byte[] getProperty(final InterfaceObject io, final int pid, final int start, final int elements)
 			throws KnxPropertyException
 		{
@@ -870,7 +862,10 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (currElems < size)
 				throw new KnxPropertyException("requested elements exceed past last property value",
 						ErrorCodes.PROP_INDEX_RANGE_ERROR);
-			final int typeSize = (values.length - 2) / currElems;
+			final var desc = io.pidToDescription.get(pid);
+			final int pdt = desc != null ? desc.getPDT() : 0;
+			final int typeSize = PropertyTypes.bitSize(pdt).map(bits -> Math.max(bits, 8) / 8)
+					.orElseGet(() -> (values.length - 2) / currElems);
 			final byte[] data = new byte[actualElements * typeSize];
 			int d = 0;
 			for (int i = 2 + (start - 1) * typeSize; i < 2 + size * typeSize; ++i)
