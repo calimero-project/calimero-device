@@ -176,41 +176,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		this.process = process;
 		this.mgmt = mgmt;
 
-		if (iosResource != null) {
-			try {
-				ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
-				logger.debug("loading interface object server from {}", iosResource);
-				ios.loadInterfaceObjects(iosResource.toString());
-			}
-			catch (final UncheckedIOException e) {
-				logger.info("could not open {}, create resource on closing device ({})", iosResource, e.getCause().getMessage());
-			}
-			catch (final KNXException e) {
-				throw new KnxRuntimeException("loading interface object server", e);
-			}
-		}
-		else {
-			final var addressTable = ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
-			initTableProperties(addressTable, 0x0116);
-
-			final var assocTable = ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
-			initTableProperties(assocTable, 0x1000);
-
-			final var groupObjectTable = ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
-			initTableProperties(groupObjectTable, 0x3000);
-			final int pidGODiagnostics = 66;
-			ios.setDescription(new Description(groupObjectTable.getIndex(), 0, pidGODiagnostics,
-					PropertyTypes.PDT_FUNCTION, 0, true, 0, 1, 3, 3), true);
-
-			final var appObject = ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
-			ios.setProperty(appObject.getIndex(), PID.LOAD_STATE_CONTROL, 1, 1, (byte) 1);
-			ios.setProperty(appObject.getIndex(), PID.TABLE_REFERENCE, 1, 1, ByteBuffer.allocate(4).putInt(0x4000).array());
-
-			ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
-			ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
-
-			initDeviceInfo();
-		}
+		initIos();
 	}
 
 	/**
@@ -482,6 +448,45 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		return logger;
 	}
 
+	private void initIos() {
+		if (iosResource != null) {
+			try {
+				ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
+				logger.debug("loading interface object server from {}", iosResource);
+				ios.loadInterfaceObjects(iosResource.toString());
+				return;
+			}
+			catch (final UncheckedIOException e) {
+				logger.info("could not open {}, create resource on closing device ({})", iosResource, e.getCause().getMessage());
+				// re-add device object
+				ios.addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
+			}
+			catch (final KNXException e) {
+				throw new KnxRuntimeException("loading interface object server", e);
+			}
+		}
+
+		final var addressTable = ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
+		initTableProperties(addressTable, 0x0116);
+
+		final var assocTable = ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
+		initTableProperties(assocTable, 0x1000);
+
+		final var groupObjectTable = ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
+		initTableProperties(groupObjectTable, 0x3000);
+		final int pidGODiagnostics = 66;
+		ios.setDescription(new Description(groupObjectTable.getIndex(), 0, pidGODiagnostics,
+				PropertyTypes.PDT_FUNCTION, 0, true, 0, 1, 3, 3), true);
+
+		final var appObject = ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
+		initTableProperties(appObject, 0x4000);
+
+		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
+
+		initDeviceInfo();
+	}
+
 	private void initTableProperties(final InterfaceObject io, final int memAddress) {
 		final int idx = io.getIndex();
 		ios.setProperty(idx, PID.LOAD_STATE_CONTROL, 1, 1, (byte) LoadState.Unloaded.ordinal());
@@ -491,18 +496,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				: PropertyTypes.PDT_GENERIC_02;
 		ios.setDescription(new Description(idx, 0, PID.TABLE, 0, pdt, true, 0, 100, 3, 3), true);
 
-		ios.setProperty(idx, PID.MCB_TABLE, 1, 1, new byte[8]);
-	}
-
-	private synchronized void resetNotifiers() throws KNXLinkClosedException
-	{
-		if (procNotifier != null)
-			procNotifier.close();
-		procNotifier = link != null && process != null ? new ProcessServiceNotifier(this, process) : null;
-
-		if (mgmtNotifier != null)
-			mgmtNotifier.close();
-		mgmtNotifier = link != null && mgmt != null ? new ManagementServiceNotifier(this, mgmt) : null;
+		final int elems = 4;
+		ios.setProperty(idx, PID.MCB_TABLE, 1, elems, new byte[elems * 8]);
 	}
 
 	private void initDeviceInfo() throws KnxPropertyException
@@ -572,6 +567,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// Physical PEI
 		setDeviceProperty(PID.PEI_TYPE, (byte) peiType);
 
+		final int pidDownloadCounter = 30;
+		setDeviceProperty(pidDownloadCounter, (byte) 0, (byte) 0);
 
 		// cEMI server object setttings
 
@@ -598,7 +595,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// TODO format is usage dependent: 1 byte read / 10 bytes write
 		final int runState = runStateEnum[1];
 		// Run State
-		ios.setProperty(appProgamObject, objectInstance, PID.RUN_STATE_CONTROL, 1, 1, fromWord(runState));
+		ios.setProperty(appProgamObject, objectInstance, PID.RUN_STATE_CONTROL, 1, 1, (byte) runState);
 
 		// Application ID
 		final byte[] applicationVersion = new byte[5]; // PDT Generic 5 bytes
@@ -633,6 +630,17 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final Field f = cl.getDeclaredField(field);
 		f.setAccessible(true);
 		return (T) f.get(obj);
+	}
+
+	private synchronized void resetNotifiers() throws KNXLinkClosedException
+	{
+		if (procNotifier != null)
+			procNotifier.close();
+		procNotifier = link != null && process != null ? new ProcessServiceNotifier(this, process) : null;
+
+		if (mgmtNotifier != null)
+			mgmtNotifier.close();
+		mgmtNotifier = link != null && mgmt != null ? new ManagementServiceNotifier(this, mgmt) : null;
 	}
 
 	private void initKnxipProperties() {
