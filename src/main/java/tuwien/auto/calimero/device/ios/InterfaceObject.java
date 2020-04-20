@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2019 B. Malinowsky
+    Copyright (c) 2010, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -272,22 +272,20 @@ public class InterfaceObject
 	{
 		final PropertyKey key = new PropertyKey(getType(), pid);
 		final byte[] v = values.get(key);
-		if (v != null) {
-			if (maxElements == 0) {
-				values.put(key, null);
-				return;
-			}
-			// extract first two bytes
-			final int elems = (v[0] & 0xff) << 8 | (v[1] & 0xff);
-			if (elems > maxElements) {
-				final int elemsFieldSize = 2;
-				final int typeSize = (v.length - elemsFieldSize) / elems;
-				final byte[] ba = new byte[elemsFieldSize + maxElements * typeSize];
-				System.arraycopy(v, elemsFieldSize, ba, elemsFieldSize, ba.length - elemsFieldSize);
-				ba[0] = (byte) (maxElements >> 8);
-				ba[1] = (byte) maxElements;
-				values.put(key, ba);
-			}
+		if (maxElements == 0 || v == null) {
+			values.put(key, new byte[2]);
+			return;
+		}
+		// extract first two bytes
+		final int elems = (v[0] & 0xff) << 8 | (v[1] & 0xff);
+		if (elems > maxElements) {
+			final int elemsFieldSize = 2;
+			final int typeSize = (v.length - elemsFieldSize) / elems;
+			final byte[] ba = new byte[elemsFieldSize + maxElements * typeSize];
+			System.arraycopy(v, elemsFieldSize, ba, elemsFieldSize, ba.length - elemsFieldSize);
+			ba[0] = (byte) (maxElements >> 8);
+			ba[1] = (byte) maxElements;
+			values.put(key, ba);
 		}
 	}
 }
