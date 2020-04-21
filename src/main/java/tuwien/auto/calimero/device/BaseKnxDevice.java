@@ -489,7 +489,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	private void initTableProperties(final InterfaceObject io, final int memAddress) {
 		final int idx = io.getIndex();
-		ios.setProperty(idx, PID.LOAD_STATE_CONTROL, 1, 1, (byte) LoadState.Unloaded.ordinal());
+		ios.setProperty(idx, PID.LOAD_STATE_CONTROL, 1, 1, (byte) LoadState.Loaded.ordinal());
 		ios.setProperty(idx, PID.TABLE_REFERENCE, 1, 1, ByteBuffer.allocate(4).putInt(memAddress).array());
 
 		final int pdt = io.getType() == InterfaceObject.ASSOCIATIONTABLE_OBJECT ? PropertyTypes.PDT_GENERIC_04
@@ -498,6 +498,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		final int elems = 4;
 		ios.setProperty(idx, PID.MCB_TABLE, 1, elems, new byte[elems * 8]);
+		ios.setProperty(idx, PID.MCB_TABLE, 0, 1, new byte[2]);
 	}
 
 	private void initDeviceInfo() throws KnxPropertyException

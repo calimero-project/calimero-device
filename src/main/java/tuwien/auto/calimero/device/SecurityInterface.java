@@ -38,6 +38,7 @@ package tuwien.auto.calimero.device;
 
 import static tuwien.auto.calimero.device.ios.InterfaceObject.SECURITY_OBJECT;
 
+import tuwien.auto.calimero.device.KnxDeviceServiceLogic.LoadState;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.mgmt.Description;
 
@@ -106,15 +107,15 @@ final class SecurityInterface {
 		}
 		if (index == 0) {
 			final var io = ios.addInterfaceObject(SECURITY_OBJECT);
-			index = io.getIndex();
+			objIndex = io.getIndex();
 			populateWithDefaults();
 		}
-		objIndex = index;
+		else
+			objIndex = index;
 	}
 
 	byte[] get(final int pid) {
-		final var desc = ios.getDescription(objIndex, pid);
-		return get(pid, 1, desc.getCurrentElements());
+		return get(pid, 1, Integer.MAX_VALUE);
 	}
 
 	byte[] get(final int pid, final int start, final int elements) {
@@ -130,35 +131,27 @@ final class SecurityInterface {
 	}
 
 	private void populateWithDefaults() {
-		final byte[] loaded = { 1 };
-		set(Pid.LoadstateControl, loaded);
-
+		set(Pid.LoadstateControl, (byte) LoadState.Loaded.ordinal());
 		set(Pid.SecurityMode, (byte) 0);
-		final byte[] p2pKeys = new byte[40];
-
-		set(Pid.P2PKeyTable, 1, 1, p2pKeys);
-		final byte[] dummy = new byte[100];
-		set(Pid.GroupKeyTable, 1, 1, dummy);
+		set(Pid.P2PKeyTable, 1, 0, new byte[0]);
 		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GroupKeyTable, 0, 0, true, 0, 50, 3, 3),
 				true);
-		set(Pid.SecurityIndividualAddressTable, 1, 1, dummy);
+		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.SecurityIndividualAddressTable, 0, 0, true,
+				0, 500, 3, 3), true);
 		set(Pid.SecurityFailuresLog, 1, 1, new byte[8]);
 
 		final byte[] toolkey = new byte[16];
-		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.ToolKey, 0, 0, true, 0, 1, 3, 3), true);
 		set(Pid.ToolKey, toolkey);
 
 		set(Pid.SecurityReport, (byte) 0);
 		set(Pid.SecurityReportControl, (byte) 1);
-
-		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.SequenceNumberSending, 0, 0, true, 0, 1, 3, 3), true);
 		set(Pid.SequenceNumberSending, new byte[6]);
 
 		final int goFlags = 4000;
-		set(Pid.GOSecurityFlags, new byte[goFlags]);
+		set(Pid.GOSecurityFlags, 1, 4000, new byte[goFlags]);
 		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GOSecurityFlags, 0, 0, true, 0, goFlags, 3, 3),
 				true);
 
-		set(Pid.RoleTable, 1, 1, dummy);
+		set(Pid.RoleTable, 1, 0, new byte[0]);
 	}
 }
