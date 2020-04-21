@@ -834,26 +834,20 @@ public class InterfaceObjectServer implements PropertyAccess
 		private byte[] getProperty(final InterfaceObject io, final int pid, final int start, final int elements)
 			throws KnxPropertyException
 		{
-			final byte[] values = io.values.get(new PropertyKey(io.getType(), pid));
+			final var desc = findByPid(io, pid);
+			if (desc == null)
+				throw new KnxPropertyException(
+						"no property ID " + pid + " in " + io.getTypeName() + " (index " + io.getIndex() + ")",
+						ErrorCodes.VOID_DP);
 
+			final byte[] values = io.values.get(new PropertyKey(io.getType(), pid));
 			if (start == 0) {
 				if (elements > 1)
 					throw new KnxPropertyException("current number of elements consists of only 1 element",
 							ErrorCodes.UNSPECIFIED_ERROR);
 
-				if (values != null && values.length > 1)
-					return new byte[] { values[0], values[1] };
-
-				// no current number of elements field yet since values array is null:
-				// check if description exists, if yes return 0 elements, otherwise throw
-				if (findByPid(io, pid) != null)
-					return new byte[] { 0, 0 };
+				return new byte[] { values[0], values[1] };
 			}
-
-			if (values == null)
-				throw new KnxPropertyException(
-						"no property ID " + pid + " in " + io.getTypeName() + " (index " + io.getIndex() + ")",
-						ErrorCodes.VOID_DP);
 
 			final int currElems = (values[0] & 0xff) << 8 | (values[1] & 0xff);
 			// treat MAX_VALUE special, in that it returns all elements in range [start, currElems]
@@ -862,9 +856,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (currElems < size)
 				throw new KnxPropertyException("requested elements exceed past last property value",
 						ErrorCodes.PROP_INDEX_RANGE_ERROR);
-			final var desc = io.pidToDescription.get(pid);
-			final int pdt = desc != null ? desc.getPDT() : 0;
-			final int typeSize = PropertyTypes.bitSize(pdt).map(bits -> Math.max(bits, 8) / 8)
+			final int typeSize = PropertyTypes.bitSize(desc.getPDT()).map(bits -> Math.max(bits, 8) / 8)
 					.orElseGet(() -> (values.length - 2) / currElems);
 			final byte[] data = new byte[actualElements * typeSize];
 			int d = 0;
@@ -901,11 +893,8 @@ public class InterfaceObjectServer implements PropertyAccess
 		private Description createNewDescription(final int objIndex, final int pid, final boolean writeEnabled)
 		{
 			final InterfaceObject io = getIfObject(objIndex);
-			int elems = 0;
-			try {
-				elems = toInt(getProperty(objIndex, pid, 0, 1));
-			}
-			catch (final KnxPropertyException e) {}
+			final byte[] values = io.values.get(new PropertyKey(io.getType(), pid));
+			final int elems = (values[0] & 0xff) << 8 | (values[1] & 0xff);
 			final int maxElems = Math.max(elems, 1);
 
 			int pdt = -1;
@@ -913,7 +902,6 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (p != null)
 				pdt = p.getPDT();
 			if (pdt == -1 && elems > 0) {
-				final var values = io.values.get(new PropertyKey(io.getType(), pid));
 				final int size = (values.length - 2) / elems;
 				pdt = PropertyTypes.PDT_GENERIC_01 + size - 1;
 			}
