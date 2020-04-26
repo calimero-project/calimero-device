@@ -814,10 +814,8 @@ public class InterfaceObjectServer implements PropertyAccess
 			}
 
 			// make sure we provide a minimum description
-			if (createDescription) {
-				final Description defDesc = createNewDescription(io.getIndex(), pid, true);
-				logger.trace("init description {}", defDesc);
-			}
+			if (createDescription)
+				createNewDescription(io.getIndex(), pid, true);
 
 			if (changed)
 				firePropertyChanged(io, pid, start, elements, data);
@@ -890,7 +888,7 @@ public class InterfaceObjectServer implements PropertyAccess
 							+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
 		}
 
-		private Description createNewDescription(final int objIndex, final int pid, final boolean writeEnabled)
+		private void createNewDescription(final int objIndex, final int pid, final boolean writeEnabled)
 		{
 			final InterfaceObject io = getIfObject(objIndex);
 			final byte[] values = io.values.get(new PropertyKey(io.getType(), pid));
@@ -915,7 +913,6 @@ public class InterfaceObjectServer implements PropertyAccess
 					readLevel, writeLevel);
 			io.descriptions.add(d);
 			io.pidToDescription.put(pid, d);
-			return d;
 		}
 
 		private Description findByPid(final InterfaceObject io, final int pid) {
