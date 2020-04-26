@@ -46,7 +46,7 @@ final class SecurityInterface {
 
 	interface Pid {
 		// Load Control (PDT CONTROL)
-		int LoadstateControl = 5;
+		int LoadStateControl = 5;
 
 		// Security Mode (PDT FUNCTION)
 		int SecurityMode = 51;
@@ -114,6 +114,11 @@ final class SecurityInterface {
 			objIndex = index;
 	}
 
+	boolean isLoaded() {
+		final int state = get(Pid.LoadStateControl)[0] & 0xff;
+		return LoadState.values()[state] == LoadState.Loaded;
+	}
+
 	byte[] get(final int pid) {
 		return get(pid, 1, Integer.MAX_VALUE);
 	}
@@ -131,7 +136,7 @@ final class SecurityInterface {
 	}
 
 	private void populateWithDefaults() {
-		set(Pid.LoadstateControl, (byte) LoadState.Loaded.ordinal());
+		set(Pid.LoadStateControl, (byte) LoadState.Loaded.ordinal());
 		set(Pid.SecurityMode, (byte) 0);
 		set(Pid.P2PKeyTable, 1, 0, new byte[0]);
 		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GroupKeyTable, 0, 0, true, 0, 50, 3, 3),

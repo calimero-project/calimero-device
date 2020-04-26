@@ -463,6 +463,9 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 
 	// returns p2p key for IA index
 	private byte[] p2pKey(final int addressIndex) {
+		if (!securityInterface.isLoaded())
+			return null;
+
 		final byte[] keyArray = securityInterface.get(Pid.P2PKeyTable);
 		final int entrySize = 2 + KeySize + 2;
 		// precondition: array size is multiple of entrySize
@@ -478,6 +481,9 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 
 	// returns group key for group address index
 	private byte[] groupKey(final int addressIndex) {
+		if (!securityInterface.isLoaded())
+			return null;
+
 		final byte[] keyArray = securityInterface.get(Pid.GroupKeyTable);
 		final int entrySize = 2 + KeySize;
 		// precondition: array size is multiple of entrySize
