@@ -779,6 +779,21 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		setProgrammingMode(false);
 		syncDatapoints();
 		if (masterReset) {
+
+			// increase download counter except for confirmed restart
+			if (eraseCode.ordinal() > 1) {
+				final int pidDownloadCounter = 30;
+				try {
+					final double counter = ios.getPropertyTranslated(0, pidDownloadCounter, 1, 1).getNumericValue();
+					final double inc = Math.min(0xffff, counter + 1);
+					ios.setProperty(0, pidDownloadCounter, 1, 1,
+							ByteBuffer.allocate(2).putShort((short) inc).array());
+				}
+				catch (KNXException | KnxPropertyException e) {
+					e.printStackTrace();
+				}
+			}
+
 			final byte errorCode = 0;
 			final byte processTimeSeconds = 3;
 			return new ServiceResult(errorCode, (byte) 0, processTimeSeconds);
