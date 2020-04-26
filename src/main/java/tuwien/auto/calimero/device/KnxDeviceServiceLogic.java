@@ -96,6 +96,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 {
 	/** The KNX device associated with this service logic. */
 	protected KnxDevice device;
+	private InterfaceObjectServer ios;
 	private Logger logger;
 
 	private final DatapointModel<Datapoint> datapoints = new DatapointMap<>();
@@ -115,6 +116,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public void setDevice(final KnxDevice device)
 	{
 		this.device = device;
+		ios = device.getInterfaceObjectServer();
 		logger = (device instanceof BaseKnxDevice) ? ((BaseKnxDevice) device).logger()
 				: LoggerFactory.getLogger(KnxDeviceServiceLogic.class);
 
@@ -184,7 +186,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		try {
 			final byte state = (byte) (inProgrammingMode ? 1 : 0);
-			device.getInterfaceObjectServer().setProperty(0, PID.PROGMODE, 1, 1, state);
+			ios.setProperty(0, PID.PROGMODE, 1, 1, state);
 		}
 		catch (final KnxPropertyException ignore) {}
 
@@ -201,7 +203,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		byte value;
 		try {
-			value = device.getInterfaceObjectServer().getProperty(0, PID.PROGMODE, 1, 1)[0];
+			value = ios.getProperty(0, PID.PROGMODE, 1, 1)[0];
 		}
 		catch (final KnxPropertyException e) {
 			value = getDeviceMemory()[0x60];
@@ -252,7 +254,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readProperty(final Destination remote, final int objectIndex,
 		final int propertyId, final int startIndex, final int elements)
 	{
-		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		try {
 			final Description d = ios.getDescription(objectIndex, propertyId);
 			final Integer level = accessLevel(remote);
@@ -266,11 +267,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			// getProperty will fail and provide a more accurate error
 		}
 		final byte[] res = ios.getProperty(objectIndex, propertyId, startIndex, elements);
-		if (propertyId == PID.LOAD_STATE_CONTROL) {
-			if (res.length > 1)
-				return new ServiceResult(res[0]);
-		}
-
 		return new ServiceResult(res);
 	}
 
@@ -281,7 +277,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult writeProperty(final Destination remote, final int objectIndex,
 		final int propertyId, final int startIndex, final int elements, final byte[] data)
 	{
-		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		Description d = null;
 		try {
 			d = ios.getDescription(objectIndex, propertyId);
@@ -321,7 +316,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	private ServiceResult changeLoadState(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements, final byte[] data) {
-		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 
 		final var event = LoadEvent.values()[data[0] & 0xff];
 		logger.debug("load state control event for OI {}: {}", objectIndex, event);
@@ -348,7 +342,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId, final int propertyIndex)
 	{
-		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
 		final Description d;
 		if (propertyId > 0)
 			d = ios.getDescription(objectIndex, propertyId);
@@ -363,7 +356,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
 		final byte[] command) {
 		final int serviceId = command[1] & 0xff;
-		final int objectType = device.getInterfaceObjectServer().getInterfaceObjects()[objectIndex].getType();
+		final int objectType = ios.getInterfaceObjects()[objectIndex].getType();
 
 		if (propertyId == PID.LOAD_STATE_CONTROL)
 			return changeLoadState(remote, objectIndex, propertyId, 1, 1, command);
@@ -511,7 +504,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int propertyId, final byte[] functionInput) {
 
 		final int serviceId = functionInput[1] & 0xff;
-		final int objectType = device.getInterfaceObjectServer().getInterfaceObjects()[objectIndex].getType();
+		final int objectType = ios.getInterfaceObjects()[objectIndex].getType();
 		if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
 			final int pidGODiagnostics = 66;
 			if (propertyId == pidGODiagnostics)
@@ -595,7 +588,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readAddressSerial(final byte[] serialNo)
 	{
-		final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+		final byte[] myserial = ios.getProperty(0, PID.SERIAL_NUMBER, 1, 1);
 		if (Arrays.equals(myserial, serialNo)) {
 			return ServiceResult.Empty;
 		}
@@ -613,7 +606,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public void writeAddressSerial(final byte[] serialNo,
 		final IndividualAddress newAddress)
 	{
-		final byte[] myserial = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+		final byte[] myserial = ios.getProperty(0, PID.SERIAL_NUMBER, 1, 1);
 		if (Arrays.equals(myserial, serialNo))
 			setDeviceAddress(newAddress);
 	}
@@ -690,7 +683,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final int pidRFDomainAddress = 82;
 			final int pid = domain.length == 2 ? PID.DOMAIN_ADDRESS : pidRFDomainAddress;
 			try {
-				device.getInterfaceObjectServer().setProperty(0, pid, 1, 1, domain);
+				ios.setProperty(0, pid, 1, 1, domain);
 			}
 			catch (final KnxPropertyException e) {
 				logger.error("setting DoA {} in interface object server", DataUnitBuilder.toHex(domain, " "), e);
@@ -722,7 +715,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (maxWaitSeconds > 0) {
 				// TODO don't block, schedule it
 				randomWait(maxWaitSeconds * 1000);
-				final var sn = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+				final var sn = ios.getProperty(0, PID.SERIAL_NUMBER, 1, 1);
 				return new ServiceResult(sn);
 			}
 		}
@@ -744,7 +737,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readDescriptor(final int type)
 	{
 		if (type == 0)
-			return new ServiceResult(device.getInterfaceObjectServer().getProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1));
+			return new ServiceResult(ios.getProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1));
 		if (device instanceof BaseKnxDevice) {
 			final DeviceDescriptor dd = ((BaseKnxDevice) device).deviceDescriptor();
 			if (dd instanceof DeviceDescriptor.DD2)
@@ -813,7 +806,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		syncTableWithMemory(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
 		syncTableWithMemory(GROUP_OBJECT_TABLE_OBJECT);
 
-		final var ios = device.getInterfaceObjectServer();
 		final byte[] table = ios.getProperty(ADDRESSTABLE_OBJECT, 1, PID.TABLE, 1, Integer.MAX_VALUE);
 		final var buffer = ByteBuffer.wrap(table);
 
@@ -844,7 +836,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	private void syncTableWithMemory(final int objectType) {
 		final int objectInstance = 1;
-		final var ios = device.getInterfaceObjectServer();
 		final int ref = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.TABLE_REFERENCE, 1, 1));
 
 		final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
@@ -863,7 +854,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private Optional<Integer> groupAddressIndex(final GroupAddress address) {
-		final var ios = device.getInterfaceObjectServer();
 		return groupAddressIndex(ios, address);
 	}
 
@@ -883,8 +873,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	// returns 1-based index of group object table
 	private Optional<Integer> groupObjectIndex(final int groupAddressIndex) {
-		return groupObjectIndex(device.getInterfaceObjectServer(),
-				groupAddressIndex);
+		return groupObjectIndex(ios, groupAddressIndex);
 	}
 
 	static Optional<Integer> groupObjectIndex(final InterfaceObjectServer ios, final int groupAddressIndex) {
