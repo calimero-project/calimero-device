@@ -161,7 +161,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private final byte[] memory = new byte[deviceMemorySize];
 
 
-	BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
+	public BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
 		final ManagementService mgmt, final URI iosResource) throws KnxPropertyException
 	{
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
