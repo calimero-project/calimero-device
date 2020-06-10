@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2019 B. Malinowsky
+    Copyright (c) 2011, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -169,7 +169,7 @@ public class BaseKnxDeviceTest extends TestCase
 		public ServiceResult writeProperty(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements, final byte[] data)
 		{
-			return null;
+			return ServiceResult.Empty;
 		}
 
 		@Override
@@ -194,14 +194,14 @@ public class BaseKnxDeviceTest extends TestCase
 		public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId,
 			final int propertyIndex)
 		{
-			return null;
+			return ServiceResult.Empty;
 		}
 
 		@Override
 		public ServiceResult readProperty(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements)
 		{
-			return null;
+			return ServiceResult.Empty;
 		}
 
 		@Override

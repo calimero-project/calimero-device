@@ -293,24 +293,24 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 	ServiceResult securityMode(final boolean command, final byte[] functionInput) {
 		final int serviceId = functionInput[1] & 0xff;
 		if (serviceId != 0)
-			return new ServiceResult(ReturnCode.InvalidCommand);
+			return ServiceResult.error(ReturnCode.InvalidCommand);
 
 		if (command && functionInput.length == 3) {
 			final int mode = functionInput[2] & 0xff;
 			if (mode > 1)
-				return new ServiceResult(ReturnCode.DataVoid);
+				return ServiceResult.error(ReturnCode.DataVoid);
 			setSecurityMode(mode == 1);
 			return new ServiceResult((byte) serviceId);
 		}
 		else if (!command && functionInput.length == 2) {
 			return new ServiceResult(new byte[] { (byte) serviceId, (byte) (isSecurityModeEnabled() ? 1 : 0) });
 		}
-		return new ServiceResult(ReturnCode.Error);
+		return ServiceResult.error(ReturnCode.Error);
 	}
 
 	ServiceResult securityFailuresLog(final boolean command, final byte[] functionInput) {
 		if (functionInput.length != 3)
-			return new ServiceResult(ReturnCode.DataVoid);
+			return ServiceResult.error(ReturnCode.DataVoid);
 
 		final int id = functionInput[1] & 0xff;
 		final int info = functionInput[2] & 0xff;
@@ -339,7 +339,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 				return new ServiceResult(ReturnCode.DataVoid, (byte) id);
 			}
 		}
-		return new ServiceResult(ReturnCode.InvalidCommand);
+		return ServiceResult.error(ReturnCode.InvalidCommand);
 	}
 
 	void factoryReset() {

@@ -1255,11 +1255,11 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 							: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
 			}
 			else
-				sr = new ServiceResult(ReturnCode.DataTypeConflict);
+				sr = ServiceResult.error(ReturnCode.DataTypeConflict);
 		}
 		catch (final KnxPropertyException e) {
 			logger.warn("{}->{} {} {}({})|{}", respondTo.getAddress(), dst, name, iot, oi, pid, e);
-			sr = new ServiceResult(ReturnCode.AddressVoid);
+			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
 		byte[] state = {};

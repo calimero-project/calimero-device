@@ -256,11 +256,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		try {
 			final Description d = ios.getDescription(objectIndex, propertyId);
+			if (d.getPDT() == PropertyTypes.PDT_FUNCTION)
+				return ServiceResult.error(ReturnCode.DataVoid);
 			final Integer level = accessLevel(remote);
 			if (level > d.getReadLevel()) {
 				logger.warn("deny {} read access to property {}|{} (access level {}, requires {})", remote.getAddress(),
 						objectIndex, propertyId, level, d.getReadLevel());
-				return null;
+				return ServiceResult.error(ReturnCode.AccessDenied);
 			}
 		}
 		catch (final KnxPropertyException ignore) {
@@ -292,13 +294,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (d != null && !inProgrammingMode()) {
 			if (!d.isWriteEnabled()) {
 				logger.warn("property {}|{} is {}", objectIndex, propertyId, CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
-				return null;
+				return ServiceResult.error(ReturnCode.AccessReadOnly);
 			}
 			final int level = accessLevel(remote);
 			if (level > d.getWriteLevel()) {
 				logger.warn("deny {} write access to property {}|{} (access level {}, requires {})", remote.getAddress(), objectIndex,
 						propertyId, level, d.getWriteLevel());
-				return null;
+				return ServiceResult.error(ReturnCode.AccessDenied);
 			}
 		}
 
@@ -391,7 +393,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (propertyId == pidGODiagnostics)
 				return writeGroupObjectDiagnostics(command, serviceId);
 		}
-		return new ServiceResult(ReturnCode.Error);
+		return ServiceResult.error(ReturnCode.Error);
 	}
 
 	private ServiceResult writeGroupObjectDiagnostics(final byte[] command, final int serviceId) {
@@ -405,7 +407,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int limitGroupServiceSenders = 4;
 
 		if (serviceId == limitGroupServiceSenders) // only available in diagnostic operation mode
-			return new ServiceResult(ReturnCode.ImpossibleCommand);
+			return ServiceResult.error(ReturnCode.ImpossibleCommand);
 
 		final var dataVoidResult = new ServiceResult(ReturnCode.DataVoid, (byte) serviceId);
 		final var invalidCommandResult = new ServiceResult(ReturnCode.InvalidCommand, (byte) serviceId);
@@ -511,7 +513,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return readGroupObjectDiagnostics(functionInput, serviceId);
 		}
 
-		return ServiceResult.Empty;
+		return ServiceResult.error(ReturnCode.InvalidCommand);
 	}
 
 	private ServiceResult readGroupObjectDiagnostics(final byte[] functionInput, final int serviceId) {
@@ -542,9 +544,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		final byte[] mem = getDeviceMemory();
 		if (startAddress >= mem.length)
-			return new ServiceResult(ReturnCode.AddressVoid);
+			return ServiceResult.error(ReturnCode.AddressVoid);
 		if (startAddress + bytes >= mem.length)
-			return new ServiceResult(ReturnCode.AccessDenied);
+			return ServiceResult.error(ReturnCode.AccessDenied);
 
 		final Collection<Datapoint> c = ((DatapointMap<Datapoint>) datapoints).getDatapoints();
 		final int groupAddrTableSize = 3 + c.size() * 2;
@@ -565,9 +567,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		final byte[] mem = getDeviceMemory();
 		if (startAddress >= mem.length)
-			return new ServiceResult(ReturnCode.AddressVoid);
+			return ServiceResult.error(ReturnCode.AddressVoid);
 		if (startAddress + data.length >= mem.length)
-			return new ServiceResult(ReturnCode.MemoryError);
+			return ServiceResult.error(ReturnCode.MemoryError);
 		for (int i = 0; i < data.length; i++) {
 			final byte b = data[i];
 			mem[startAddress + i] = b;

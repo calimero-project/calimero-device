@@ -51,6 +51,7 @@ import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXTimeoutException;
+import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
@@ -154,11 +155,13 @@ class ManagementServiceTest
 		mgmt.authorize(dst, authKey);
 		ServiceResult r = mgmt.readProperty(dst, objectIndex, propertyId, 1, 1);
 		byte[] data = r.getResult();
-		assertNull(mgmt.writeProperty(null, objectIndex, propertyId, 1, 1, data));
+		final var sr = mgmt.writeProperty(null, objectIndex, propertyId, 1, 1, data);
+		assertEquals(ReturnCode.AccessReadOnly, sr.returnCode());
 
 		r = mgmt.readProperty(dst, 1, propertyId, 1, 1);
 		data = r.getResult();
-		assertNull(mgmt.writeProperty(dst, 1, propertyId, 1, 1, data));
+		final var sr2 = mgmt.writeProperty(dst, 1, propertyId, 1, 1, data);
+		assertEquals(ReturnCode.AccessReadOnly, sr2.returnCode());
 	}
 
 	@Test
