@@ -1088,10 +1088,10 @@ public class InterfaceObjectServer implements PropertyAccess
 				// not validating the xml schema, this should be enough.
 				boolean valueExpected = false;
 
+				int index = 0;
 				while (r.next() != XmlReader.END_DOCUMENT) {
 					if (r.getEventType() == XmlReader.START_ELEMENT) {
 						if (r.getLocalName().equals(TAG_PROPERTY)) {
-							final int index = toInt(r.getAttributeValue(null, ATTR_INDEX));
 							final int maxElems = toInt(r.getAttributeValue(null, ATTR_MAXELEMS));
 							final int[] rw = parseRW(r.getAttributeValue(null, ATTR_RW));
 							final Description d = new Description(oi, type,
@@ -1100,6 +1100,7 @@ public class InterfaceObjectServer implements PropertyAccess
 									toInt(r.getAttributeValue(null, ATTR_WRITE)) == 1, 0,
 									maxElems, rw[0], rw[1]);
 							descriptions.add(d);
+							index++;
 							if (valueExpected)
 								values.add(new byte[2]);
 							valueExpected = true;
@@ -1144,7 +1145,6 @@ public class InterfaceObjectServer implements PropertyAccess
 				final Description d = i.next();
 				final byte[] data = k.next();
 				w.writeStartElement(TAG_PROPERTY);
-				w.writeAttribute(ATTR_INDEX, Integer.toString(d.getPropIndex()));
 				w.writeAttribute(ATTR_PID, Integer.toString(d.getPID()));
 				w.writeAttribute(ATTR_PDT, d.getPDT() == -1 ? "<tbd>" : Integer.toString(d.getPDT()));
 				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements()));
