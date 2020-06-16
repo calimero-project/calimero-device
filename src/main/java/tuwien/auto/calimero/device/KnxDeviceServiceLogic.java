@@ -136,6 +136,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		for (int i = 0; i < 16; i++)
 			authKeys[i] = defaultAuthKey;
+
+		syncDatapoints();
 	}
 
 	/**
