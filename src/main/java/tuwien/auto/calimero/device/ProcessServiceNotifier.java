@@ -68,9 +68,10 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 			throw new NullPointerException("KNX device network link is required");
 		this.device = device;
 		svc = service;
+
 		recv = new ProcessCommunicatorImpl(device.getDeviceLink(), device.sal);
+		res = new ProcessCommunicationResponder(device.getDeviceLink(), device.sal);
 		recv.addProcessListener(this);
-		res = new ProcessCommunicationResponder(device.getDeviceLink());
 	}
 
 	@Override

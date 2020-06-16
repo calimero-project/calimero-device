@@ -42,6 +42,12 @@ import java.util.Map;
 import java.util.Set;
 
 import tuwien.auto.calimero.KNXIllegalArgumentException;
+import tuwien.auto.calimero.SecurityControl;
+import tuwien.auto.calimero.SecurityControl.DataSecurity;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
+import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.mgmt.PropertyClient.Property;
+import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
 final class AccessPolicies {
 
@@ -86,6 +92,8 @@ final class AccessPolicies {
 	private static final Set<Integer> writeServices = Set.of(AuthorizeRequest, DomainAddressWrite,
 			IndividualAddressSerialNumberWrite, IndividualAddressWrite, KeyWrite);
 
+	static Map<PropertyKey, Property> definitions;
+
 	// Role
 	static final int Unlisted = 0;
 	static final int RoleX = 1;
@@ -104,48 +112,70 @@ final class AccessPolicies {
 
 	// service level access policies
 
-	static boolean checkAccess(final int service, final boolean securityMode, final int role, final int security) {
+	static boolean checkServiceAccess(final int service, final boolean securityMode,
+			final SecurityControl securityCtrl) {
 		final boolean write = AccessPolicies.writeServices.contains(service);
 		if (write)
-			return AccessPolicies.hasWriteAccess(service, securityMode, role, security);
-		return AccessPolicies.hasReadAccess(service, securityMode, role, security);
+			return AccessPolicies.hasWriteAccess(service, securityMode, securityCtrl);
+		return AccessPolicies.hasReadAccess(service, securityMode, securityCtrl);
 	}
 
-	private static boolean hasWriteAccess(final int service, final boolean securityMode, final int role,
-		final int security) {
-		return (accessLevel(service, securityMode, role, security) & Write) == Write;
+	private static boolean hasWriteAccess(final int service, final boolean securityMode,
+			final SecurityControl securityCtrl) {
+		return (accessLevel(service, securityMode, securityCtrl) & Write) == Write;
 	}
 
-	private static boolean hasReadAccess(final int service, final boolean securityMode, final int role,
-		final int security) {
-		return (accessLevel(service, securityMode, role, security) & Read) == Read;
+	private static boolean hasReadAccess(final int service, final boolean securityMode,
+			final SecurityControl securityCtrl) {
+		return (accessLevel(service, securityMode, securityCtrl) & Read) == Read;
 	}
 
 	private static final int allAllowed = accessPolicy("3ff/3ff");
 
-	private static int accessLevel(final int service, final boolean securityMode, final int role, final int security) {
+	private static int accessLevel(final int service, final boolean securityMode, final SecurityControl securityCtrl) {
 		final int policy = serviceLevelAccessPolicies.getOrDefault(service, allAllowed);
-		return readWrite(policy, securityMode, role, security);
+		return readWrite(policy, securityMode, securityCtrl);
 	}
 
 	// data level access policies
 
+	static boolean checkPropertyAccess(final int objType, final int pid, final boolean read, final boolean securityMode,
+			final SecurityControl securityCtrl) {
+		final var key = pid <= 50 ? new PropertyKey(pid) : new PropertyKey(objType, pid);
+		final var property = definitions.get(key);
+		if (property == null) {
+			if (objType == InterfaceObject.SECURITY_OBJECT)
+				return false;
+			return true;
+		}
+
+		final int policy = objType == InterfaceObject.SECURITY_OBJECT && pid == PID.LOAD_STATE_CONTROL
+				? accessPolicy("00C/00C") : property.accessPolicy();
+		if (policy == 0 && objType == InterfaceObject.SECURITY_OBJECT)
+			return false;
+		if (policy == 0)
+			return true;
+
+		final int rw = read ? Read : Write;
+		return (readWrite(policy, securityMode, securityCtrl) & rw) == rw;
+	}
+
 	private static final int DoASerialNumberRead = 0;
 	private static final int DoASerialNumberWrite = 0;
 
-	boolean readDomainAddressSerial(final int service, final int domainSize, final boolean securityMode, final int role,
-		final int security) {
-		return (doASerialAccessLevel(service, domainSize, securityMode, role, security) & Read) == Read;
+	boolean readDomainAddressSerial(final int service, final int domainSize, final boolean securityMode,
+			final SecurityControl securityCtrl) {
+		return (doASerialAccessLevel(service, domainSize, securityMode, securityCtrl) & Read) == Read;
 	}
 
-	boolean writeDomainAddressSerial(final int service, final int domainSize, final boolean securityMode, final int role,
-		final int security) {
-		return (doASerialAccessLevel(service, domainSize, securityMode, role, security) & Write) == Write;
+	boolean writeDomainAddressSerial(final int service, final int domainSize, final boolean securityMode,
+			final SecurityControl securityCtrl) {
+		return (doASerialAccessLevel(service, domainSize, securityMode, securityCtrl) & Write) == Write;
 	}
 
 	private static int doASerialAccessLevel(final int service, final int domainSize, final boolean securityMode,
-		final int role, final int security) {
-		return readWrite(doASerialPolicy(service, domainSize), securityMode, role, security);
+			final SecurityControl securityCtrl) {
+		return readWrite(doASerialPolicy(service, domainSize), securityMode, securityCtrl);
 	}
 
 	private static int doASerialPolicy(final int service, final int doASize) {
@@ -188,8 +218,11 @@ final class AccessPolicies {
 	// relative bit offsets within a role
 	private static final int[] securityOffset = { 0, 0, 2 };
 
-	private static int readWrite(final int policy, final boolean securityMode, final int role, final int security) {
-		final int shift = (securityMode ? 0 : unsecuredModeOffset) + roleOffset[role] + securityOffset[security];
+	private static int readWrite(final int policy, final boolean securityMode, final SecurityControl securityCtrl) {
+		final var sec = securityCtrl.security();
+		final int role = sec == DataSecurity.None ? AccessPolicies.Unlisted
+				: securityCtrl.toolAccess() ? AccessPolicies.Tool : AccessPolicies.RoleX;
+		final int shift = (securityMode ? 0 : unsecuredModeOffset) + roleOffset[role] + securityOffset[sec.ordinal()];
 		return (policy >> shift) & ReadWrite;
 	}
 }

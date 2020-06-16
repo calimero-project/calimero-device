@@ -87,6 +87,7 @@ import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.TransportLayer;
+import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 
 /**
  * Implementation of a KNX device for common device tasks. This type can either be used directly, with the device logic
@@ -148,10 +149,12 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	private final URI iosResource;
 
+	TransportLayer tl;
+	DeviceSecureApplicationLayer sal;
+
 	private final ProcessCommunicationService process;
 	private final ManagementService mgmt;
 
-	DeviceSecureApplicationLayer sal;
 
 	private ProcessServiceNotifier procNotifier;
 	ManagementServiceNotifier mgmtNotifier;
@@ -350,14 +353,15 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (address.getDevice() != 0)
 			setAddress(address);
 
-		if (sal != null)
-			sal.close();
-		sal = new DeviceSecureApplicationLayer(this);
-
 		if (process instanceof KnxDeviceServiceLogic)
 			((KnxDeviceServiceLogic) process).setDevice(this);
 		else if (mgmt instanceof KnxDeviceServiceLogic)
 			((KnxDeviceServiceLogic) mgmt).setDevice(this);
+
+		tl = new TransportLayerImpl(link, true);
+		if (sal != null)
+			sal.close();
+		sal = new DeviceSecureApplicationLayer(this);
 		resetNotifiers();
 	}
 
@@ -382,7 +386,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		return executor;
 	}
 
-	public final TransportLayer transportLayer() { return mgmtNotifier.transportLayer(); }
+	public final TransportLayer transportLayer() { return tl; }
 
 	@Override
 	public void close() {

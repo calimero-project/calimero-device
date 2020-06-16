@@ -52,22 +52,19 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
-import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.KnxSecureException;
-import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
+import tuwien.auto.calimero.SecurityControl;
+import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.device.SecurityInterface.Pid;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
-import tuwien.auto.calimero.internal.SecureApplicationLayer;
 import tuwien.auto.calimero.internal.Security;
-import tuwien.auto.calimero.link.KNXLinkClosedException;
-import tuwien.auto.calimero.mgmt.Destination.AggregatorProxy;
-import tuwien.auto.calimero.mgmt.KNXDisconnectException;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
+import tuwien.auto.calimero.mgmt.SecureManagement;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
 
-final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
+final class DeviceSecureApplicationLayer extends SecureManagement {
 	private static final int SeqSize = 6;
 	private static final int KeySize = 16;
 
@@ -85,7 +82,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 	}
 
 	private DeviceSecureApplicationLayer(final BaseKnxDevice device, final SecurityInterface securityInterface) {
-		super(device.getDeviceLink(),
+		super((TransportLayerImpl) device.transportLayer(),
 				device.getInterfaceObjectServer().getProperty(0, PropertyAccess.PID.SERIAL_NUMBER, 1, 1),
 				unsigned(securityInterface.get(Pid.SequenceNumberSending)), Map.of());
 
@@ -195,27 +192,27 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		return 0;
 	}
 
+	// TODO check access group objects: failure counter is required
+
 	@Override
-	protected boolean checkAccess(final KNXAddress dst, final int service, final boolean toolAccess,
-		final boolean authOnly) {
+	protected boolean checkAccess(final KNXAddress dst, final int service, final SecurityControl securityCtrl) {
 		if (dst instanceof GroupAddress && service == ProcessServiceNotifier.GROUP_READ
 				|| service == ProcessServiceNotifier.GROUP_WRITE) {
 			final int goSecurity = groupObjectSecurity((GroupAddress) dst);
 			final boolean conf = (goSecurity & 2) == 2;
 			final boolean auth = (goSecurity & 1) == 1;
+			final var required = SecurityControl.of(
+					conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
 			// if group object security does not match exactly, complete service is ignored
-			if (authOnly == conf || authOnly && !auth) {
-				device.logger().warn(
-						"group object {} security mismatch: requested {}, required {}, ignore", dst,
-						authOnly ? "auth-only" : "auth+conf", auth ? conf ? "auth+conf" : "auth-only" : "none");
+			if (!securityCtrl.equals(required)) {
+				device.logger().warn("group object {} security mismatch: requested {} but requires {}, ignore", dst,
+						securityCtrl, required);
 				return false;
 			}
 			return true;
 		}
 
-		final int role = toolAccess ? AccessPolicies.Tool : AccessPolicies.RoleX;
-		final int security = authOnly ? AccessPolicies.AuthOnly : AccessPolicies.AuthConf;
-		return AccessPolicies.checkAccess(service, isSecurityModeEnabled(), role, security);
+		return AccessPolicies.checkServiceAccess(service, isSecurityModeEnabled(), securityCtrl);
 	}
 
 	@Override
@@ -227,42 +224,6 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 		catch (final KnxPropertyException e) {
 			return 0;
 		}
-	}
-
-	private static final int DataConnected = 0x40;
-
-	@Override
-	protected int tpci(final KNXAddress dst) {
-		final var proxies = transportLayerProxies();
-		final var proxy = proxies.get(dst);
-
-		int seqSend = 0;
-		int tlMode = 0;
-		if (proxy != null) {
-			final var destination = proxy.getDestination();
-			tlMode = destination.isConnectionOriented() ? DataConnected : 0;
-			seqSend = proxy.getSeqSend();
-		}
-		final int tpci = tlMode | seqSend << 2;
-		return tpci;
-	}
-
-	@Override
-	protected void send(final KNXAddress remote, final byte[] secureApdu)
-			throws KNXTimeoutException, KNXLinkClosedException {
-		final var transportLayer = (TransportLayerImpl) device.transportLayer();
-		final boolean ia = remote instanceof IndividualAddress;
-		final var destination = ia ? transportLayer.getDestination((IndividualAddress) remote) : null;
-		if (destination != null && destination.isConnectionOriented()) {
-			try {
-				transportLayer.sendData(destination, Priority.SYSTEM, secureApdu);
-			}
-			catch (final KNXDisconnectException e) {
-				throw new KNXTimeoutException("timeout caused by disconnect from " + remote, e);
-			}
-		}
-		else
-			transportLayer.sendData(remote, Priority.SYSTEM, secureApdu);
 	}
 
 	@Override
@@ -287,7 +248,7 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 
 	byte[] decrypt(final ProcessEvent pe) throws GeneralSecurityException {
 		final int tpci = 0x00 | (SecureService >> 8);
-		return decrypt(pe.getSourceAddr(), pe.getDestination(), tpci, pe.getASDU());
+		return decrypt(pe.getSourceAddr(), pe.getDestination(), tpci, pe.getASDU()).apdu();
 	}
 
 	ServiceResult securityMode(final boolean command, final byte[] functionInput) {
@@ -345,21 +306,6 @@ final class DeviceSecureApplicationLayer extends SecureApplicationLayer {
 	void factoryReset() {
 		resetToolAccessSequence();
 		clearFailureLog();
-	}
-
-	private Map<IndividualAddress, AggregatorProxy> transportLayerProxies() {
-		final var transportLayer = device.transportLayer();
-		try {
-			final var field = transportLayer.getClass().getDeclaredField("proxies");
-			field.setAccessible(true);
-			@SuppressWarnings("unchecked")
-			final var map = (Map<IndividualAddress, AggregatorProxy>) field.get(transportLayer);
-			return map;
-		}
-		catch (NoSuchFieldException | IllegalAccessException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 
 	private void initFailureCounter(final int errorType, final int value) {

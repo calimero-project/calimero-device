@@ -90,7 +90,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 					@Override
 					public void run()
 					{
-						try (var responder = new ProcessCommunicationResponder(device1.getDeviceLink())) {
+						try (var responder = new ProcessCommunicationResponder(device1.getDeviceLink(), device1.sal)) {
 							responder.write(dp.getMainAddress(), dpState);
 						}
 						catch (final KNXTimeoutException e) {

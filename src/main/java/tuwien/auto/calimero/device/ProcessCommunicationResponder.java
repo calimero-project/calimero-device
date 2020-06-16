@@ -77,6 +77,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	private static final int GROUP_RESPONSE = 0x40;
 
 	private final KNXNetworkLink lnk;
+	private final DeviceSecureApplicationLayer sal;
 	private final EventListeners<ProcessListener> listeners;
 	private volatile Priority priority = Priority.LOW;
 
@@ -90,14 +91,16 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	 * <code>link.getName()</code>.
 	 *
 	 * @param link network link used for communication with a KNX network
+	 * @param sal security application layer
 	 * @throws KNXLinkClosedException if the network link is closed
 	 */
-	public ProcessCommunicationResponder(final KNXNetworkLink link) throws KNXLinkClosedException
-	{
+	public ProcessCommunicationResponder(final KNXNetworkLink link, final DeviceSecureApplicationLayer sal)
+			throws KNXLinkClosedException {
 		if (!link.isOpen())
 			throw new KNXLinkClosedException(
 					"cannot initialize process communication using closed link " + link.getName());
 		lnk = link;
+		this.sal = sal;
 		logger = LogService.getLogger("calimero.device.communication " + link.getName());
 		listeners = new EventListeners<>(logger);
 	}
@@ -208,7 +211,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 				? DataUnitBuilder.createLengthOptimizedAPDU(GROUP_RESPONSE, asdu)
 				: DataUnitBuilder.createAPDU(GROUP_RESPONSE, asdu);
 
-		lnk.sendRequest(dst, priority, buf);
+		send(dst, priority, buf);
 	}
 
 	@Override
@@ -244,7 +247,21 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	{
 		if (detached)
 			throw new IllegalStateException("process communicator detached");
-		lnk.sendRequest(dst, p, createGroupAPDU(GROUP_RESPONSE, t));
+
+		final byte[] plainApdu = createGroupAPDU(GROUP_RESPONSE, t);
+		send(dst, p, plainApdu);
+	}
+
+	private void send(final GroupAddress dst, final Priority p, final byte[] plainApdu)
+			throws KNXTimeoutException, KNXLinkClosedException {
+		final var src = lnk.getKNXMedium().getDeviceAddress();
+		try {
+			final byte[] apdu = sal.secureGroupObject(src, dst, plainApdu).orElse(plainApdu);
+			lnk.sendRequest(dst, p, apdu);
+		}
+		catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private void fireDetached()

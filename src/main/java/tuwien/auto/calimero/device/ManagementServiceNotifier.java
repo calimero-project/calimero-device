@@ -58,6 +58,7 @@ import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
+import tuwien.auto.calimero.SecurityControl;
 import tuwien.auto.calimero.cemi.CEMI;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.cemi.CemiTData;
@@ -66,7 +67,6 @@ import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
-import tuwien.auto.calimero.internal.SecureApplicationLayer;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.mgmt.Description;
@@ -173,11 +173,13 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private final int lengthDoA;
 
+	private SecurityControl securityCtrl;
+
 	// pre-condition: device != null, link != null
 	ManagementServiceNotifier(final BaseKnxDevice device, final ManagementService mgmt) throws KNXLinkClosedException
 	{
 		this.device = device;
-		tl = new TransportLayerImpl(device.getDeviceLink(), true);
+		tl = device.transportLayer();
 		sal = device.sal;
 		mgmtSvc = mgmt;
 		logger = device.logger();
@@ -190,7 +192,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		else
 			lengthDoA = 0;
 
-		tl.addTransportListener(this);
+		sal.addListener(this);
+		AccessPolicies.definitions = device.getInterfaceObjectServer().propertyDefinitions();
 	}
 
 	@Override
@@ -232,10 +235,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.info("attached link was closed");
 	}
 
-	boolean securedService;
-
-	private Priority priority = Priority.LOW;
-
 	public void respond(final EventObject e, final ServiceResult sr)
 	{
 		// since our service code is not split up in request/response, just do everything here
@@ -245,33 +244,24 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final IndividualAddress sender;
 		final KNXAddress dst;
 		Destination d;
-		final byte[] tpdu;
+		final byte[] tpdu = cemi.getPayload();
 
+		final TransportLayerImpl impl = (TransportLayerImpl) tl;
 		if (cemi instanceof CemiTData) {
 			sender = new IndividualAddress(0);
 			dst = new IndividualAddress(0);
-			tpdu = cemi.getPayload();
-			final TransportLayerImpl impl = (TransportLayerImpl) tl;
 			d = impl.createDestination(sender, false);
 			d.close();
 		}
 		else {
 			final CEMILData ldata = (CEMILData) cemi;
-
 			sender = ldata.getSource();
-			tpdu = sal.extractApdu(ldata);
-			if (tpdu == null)
-				return;
-
-			final TransportLayerImpl impl = (TransportLayerImpl) tl;
 			d = impl.getDestination(sender);
 			// TODO actually this check is for CL mode and should be made in transport layer
 			if (d == null)
 				d = impl.createDestination(sender, false);
 
-			securedService = DataUnitBuilder.getAPDUService(cemi.getPayload()) == SecureApplicationLayer.SecureService;
 			dst = ldata.getDestination();
-			priority = ldata.getPriority();
 		}
 
 		final int svc = DataUnitBuilder.getAPDUService(tpdu);
@@ -284,7 +274,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 
 		try {
-			dispatchToService(svc, asdu, dst, d);
+			dispatchToService(svc, asdu, dst, d, fe.security().orElse(SecurityControl.Plain));
 		}
 		catch (final RuntimeException rte) {
 			logger.error("failed to execute service {}->{} {}: {}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
@@ -297,8 +287,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	{
 		tl.detach();
 	}
-
-	TransportLayer transportLayer() { return tl; }
 
 	private void dispatchAndRespond(final FrameEvent e)
 	{
@@ -313,8 +301,13 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		device.dispatch(e, () -> ServiceResult.Empty, this::respond);
 	}
 
-	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo)
-	{
+	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo,
+			final SecurityControl secCtrl) {
+		final boolean granted = AccessPolicies.checkServiceAccess(svc, sal.isSecurityModeEnabled(), secCtrl);
+		if (!granted)
+			return;
+
+		securityCtrl = secCtrl;
 		final String name = decodeAPCI(svc);
 		if (svc == MEMORY_READ)
 			onMemoryRead(name, respondTo, data);
@@ -1181,8 +1174,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		else
 			System.arraycopy(sr.getResult(), 0, asdu, 8, length);
 
-		final var prio = sr == null ? priority : sr.getPriority();
-		send(respondTo, PropertyExtResponse, asdu, prio);
+		send(respondTo, PropertyExtResponse, asdu, sr.getPriority());
 	}
 
 	private void onPropertyExtWrite(final String name, final KNXAddress dst, final Destination respondTo, final byte[] data,
@@ -1321,9 +1313,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->[{} broadcast] {} {}", device.getAddress(), type, service, DataUnitBuilder.toHex(apdu, " "));
 		final var dst = new GroupAddress(0);
 		try {
-			var tsdu = apdu;
-			if (securedService)
-				tsdu = sal.secureData(device.getAddress(), dst, apdu, toolAccess, confidentiality).orElse(apdu);
+			final var tsdu = sal.secureData(device.getAddress(), dst, apdu, securityCtrl).orElse(apdu);
 			tl.broadcast(system, p, tsdu);
 		}
 		catch (final InterruptedException e) {
@@ -1341,9 +1331,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		send(respondTo, apdu, p, decodeAPCI(service));
 	}
 
-	final boolean toolAccess = true;
-	final boolean confidentiality = true;
-
 	void send(final Destination respondTo, final byte[] apdu, final Priority p, final String service)
 	{
 		// if we received a disconnect from the remote, the destination got destroyed to avoid keeping it around
@@ -1353,10 +1340,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 		final IndividualAddress dst = respondTo.getAddress();
 		logger.trace("{}->{} {} {}", device.getAddress(), dst, service, DataUnitBuilder.toHex(apdu, " "));
-		byte[] tsdu = apdu;
 		try {
-			if (securedService)
-				tsdu = sal.secureData(device.getAddress(), respondTo.getAddress(), apdu, toolAccess, confidentiality).orElse(apdu);
+			final byte[] tsdu = sal.secureData(device.getAddress(), respondTo.getAddress(), apdu, securityCtrl).orElse(apdu);
 			if (respondTo.isConnectionOriented())
 				tl.sendData(respondTo, p, tsdu);
 			else
