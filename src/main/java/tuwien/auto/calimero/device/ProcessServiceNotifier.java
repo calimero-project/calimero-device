@@ -41,7 +41,6 @@ import java.util.EventObject;
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DetachEvent;
 import tuwien.auto.calimero.GroupAddress;
-import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.process.ProcessCommunicator;
@@ -60,6 +59,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 	private final ProcessCommunicator recv;
 	private final ProcessCommunicationResponder res;
 
+
 	// pre-condition: device != null, device.link != null
 	ProcessServiceNotifier(final BaseKnxDevice device, final ProcessCommunicationService service)
 		throws KNXLinkClosedException
@@ -77,36 +77,22 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 	@Override
 	public void groupReadRequest(final ProcessEvent e)
 	{
-		device.dispatch(e, () -> dispatch(e), this::respond);
+		device.dispatch(e, () -> svc.groupReadRequest(e), this::respond);
 	}
 
 	@Override
 	public void groupReadResponse(final ProcessEvent e)
 	{
-		device.dispatch(e, () -> dispatch(e), this::respond);
+		device.dispatch(e, () -> { svc.groupResponse(e); return null; }, this::respond);
 	}
 	@Override
 	public void groupWrite(final ProcessEvent e)
 	{
-		device.dispatch(e, () -> dispatch(e), this::respond);
+		device.dispatch(e, () -> { svc.groupWrite(e); return null; }, this::respond);
 	}
 
 	@Override
 	public void detached(final DetachEvent e) {}
-
-	ServiceResult dispatch(final ProcessEvent pe)
-	{
-		final int svcCode = pe.getServiceCode();
-		if (svcCode == GROUP_READ)
-			return svc.groupReadRequest(pe);
-		else if (svcCode == GROUP_WRITE)
-			svc.groupWrite(pe);
-		else if (svcCode == GROUP_RESPONSE)
-			svc.groupResponse(pe);
-		else
-			throw new KNXIllegalArgumentException("no KNX process service of type " + svcCode);
-		return null;
-	}
 
 	void respond(final EventObject event, final ServiceResult sr)
 	{

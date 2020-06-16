@@ -162,17 +162,14 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 
 	@Override
 	public void write(final GroupAddress dst, final double value, final boolean use4ByteFloat)
-		throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException
-	{
+			throws KNXTimeoutException, KNXFormatException, KNXLinkClosedException {
 		if (use4ByteFloat) {
-			final DPTXlator4ByteFloat t = new DPTXlator4ByteFloat(
-					DPTXlator4ByteFloat.DPT_TEMPERATURE_DIFFERENCE);
+			final DPTXlator4ByteFloat t = new DPTXlator4ByteFloat(DPTXlator4ByteFloat.DPT_TEMPERATURE_DIFFERENCE);
 			t.setValue((float) value);
 			write(dst, priority, t);
 		}
 		else {
-			final DPTXlator2ByteFloat t = new DPTXlator2ByteFloat(
-					DPTXlator2ByteFloat.DPT_RAIN_AMOUNT);
+			final DPTXlator2ByteFloat t = new DPTXlator2ByteFloat(DPTXlator2ByteFloat.DPT_RAIN_AMOUNT);
 			t.setValue(value);
 			write(dst, priority, t);
 		}
@@ -232,13 +229,12 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	public KNXNetworkLink detach()
 	{
 		synchronized (this) {
-			// wait of response time seconds
 			if (detached)
 				return null;
 			detached = true;
 		}
 		fireDetached();
-		logger.info("detached from " + lnk.getName());
+		logger.debug("detached from " + lnk.getName());
 		return lnk;
 	}
 

@@ -60,6 +60,8 @@ import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
+import tuwien.auto.calimero.SecurityControl;
+import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.datapoint.Datapoint;
@@ -307,7 +309,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (propertyId == PID.LOAD_STATE_CONTROL)
 			return changeLoadState(remote, objectIndex, propertyId, startIndex, elements, data);
 
-		// if we set a non-existing property, we won't have a description (it won't show up in a property editor)
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases
 		if (propertyId == PID.PROGMODE)
@@ -436,7 +437,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (datapoint == null)
 				return dataVoidResult;
 
-			logger.debug("send group value write to {}, conf {} auth {}", ga, conf, auth);
+			final var secCtrl = SecurityControl.of(conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
+			logger.debug("send group value write to {} ({})", ga, secCtrl);
 			try {
 				final var translator = TranslatorTypes.createTranslator(datapoint.getDPT(), data);
 				updateDatapointValue(datapoint, translator);
@@ -465,11 +467,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final boolean conf = (flags & 0x02) != 0;
 			final var ga = new GroupAddress(Arrays.copyOfRange(command, 3, 5));
 
+
 			final var datapoint = datapoints.get(ga);
 			if (datapoint == null)
 				return dataVoidResult;
 
-			logger.info("send group value read to {}, conf {} auth {}", ga, conf, auth);
+			final var secCtrl = SecurityControl.of(conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
+			logger.info("send group value read to {} ({})", ga, secCtrl);
 			try {
 				sendGroupValue(ga, ProcessServiceNotifier.GROUP_READ, true, new byte[0], datapoint.getPriority());
 				final var translator = requestDatapointValue(datapoint);
