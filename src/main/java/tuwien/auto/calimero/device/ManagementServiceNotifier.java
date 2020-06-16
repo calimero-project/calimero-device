@@ -745,19 +745,17 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}|{}{} {}..{}", d.getAddress(), dst, name,
 				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1);
 
-		ServiceResult sr;
-		try {
-			sr = mgmtSvc.readProperty(d, objIndex, pid, start, elements);
-			// service result might be null to indicate an (illegal) access problem, or protected memory;
-			// in that case, set number of elements 0, with no property values included
-			if (sr == null)
-				sr = ServiceResult.Empty;
-			if (ignoreOrSchedule(sr))
-				return;
-		}
-		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("{}", e.getMessage());
-			sr = ServiceResult.Empty;
+
+		ServiceResult sr = ServiceResult.Empty;
+		if (checkPropertyAccess(objIndex, pid, true)) {
+			try {
+				sr = mgmtSvc.readProperty(d, objIndex, pid, start, elements);
+				if (ignoreOrSchedule(sr))
+					return;
+			}
+			catch (KNXIllegalArgumentException | KnxPropertyException e) {
+				logger.warn("{}", e.getMessage());
+			}
 		}
 
 		final byte[] res = sr.getResult();
@@ -788,25 +786,22 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}|{}{} {}..{}: {}", d.getAddress(), dst, name,
 				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, ""));
 
-		ServiceResult sr = null;
-		try {
-			sr = mgmtSvc.writeProperty(d, objIndex, pid, start, elements, propertyData);
-			// service result might be null to indicate an (illegal) access problem, or protected memory;
-			// in that case, set number of elements 0, with no property values included
-			if (sr == null)
-				sr = ServiceResult.Empty;
-			if (ignoreOrSchedule(sr))
-				return;
-		}
-		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("{}->{} {} {}|{}{} {}", d.getAddress(), dst, name,
-					objIndex, pid, propertyName(objIndex, pid), e.getMessage());
-			sr = ServiceResult.Empty;
+		ServiceResult sr = ServiceResult.Empty;
+		if (checkPropertyAccess(objIndex, pid, true)) {
+			try {
+				sr = mgmtSvc.writeProperty(d, objIndex, pid, start, elements, propertyData);
+				if (ignoreOrSchedule(sr))
+					return;
+			}
+			catch (KNXIllegalArgumentException | KnxPropertyException e) {
+				logger.warn("{}->{} {} {}|{}{} {}", d.getAddress(), dst, name, objIndex, pid,
+						propertyName(objIndex, pid), e.getMessage());
+			}
 		}
 
 		final byte[] res = sr.getResult();
 		int written = res.length;
-		if (res.length != propertyData.length && pid != PID.LOAD_STATE_CONTROL) {
+		if (sr.returnCode() != ReturnCode.Success) {
 			elements = 0;
 			written = 0;
 		}
@@ -878,21 +873,24 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}|{}{} {}", respondTo.getAddress(), dst, name, objIndex,
 				pid, propertyName(objIndex, pid), toHex(functionInput, " "));
 
-		ServiceResult sr = ServiceResult.Empty;
-		try {
-			final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
-			if (description.getPDT() == PropertyTypes.PDT_FUNCTION)
-				sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
-						: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
-			else
-				logger.warn("property {}|{} is not a function property", objIndex, pid);
 
-			if (ignoreOrSchedule(sr))
-				return;
-		}
-		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("{}", e.getMessage());
-			sr = ServiceResult.Empty;
+		ServiceResult sr = ServiceResult.error(ReturnCode.AccessDenied);
+		if (checkPropertyAccess(objIndex, pid, !isCommand)) {
+			try {
+				final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
+				if (description.getPDT() == PropertyTypes.PDT_FUNCTION)
+					sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
+							: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
+				else
+					logger.warn("property {}|{} is not a function property", objIndex, pid);
+
+				if (ignoreOrSchedule(sr))
+					return;
+			}
+			catch (KNXIllegalArgumentException | KnxPropertyException e) {
+				logger.warn("{}", e.getMessage());
+				sr = ServiceResult.error(ReturnCode.AddressVoid);
+			}
 		}
 
 		// if the property is not a function (PDT_FUNCTION), the response shall not contain a return code and no data
@@ -1107,18 +1105,18 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}()|{} pidx {}{}", respondTo.getAddress(), dst, name, iot,
 				instance, pid, propIndex, propertyName(objIndex, pid));
 
-		ServiceResult sr = null;
+		ServiceResult sr = ServiceResult.Empty;
 		try {
 			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
+			if (ignoreOrSchedule(sr))
+				return;
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
 			logger.warn("read property description: {}", e.getMessage());
 		}
 
-		// TODO adapt rest of method
-
-		// answer with non-existent property description on no result
-		if (sr == null) {
+		// answer with non-existent property description on empty result
+		if (sr.getResult().length == 0) {
 			final byte[] asdu = new byte[7];
 			asdu[0] = (byte) instance;
 			asdu[1] = (byte) pid;
@@ -1126,8 +1124,6 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			send(respondTo, PropertyExtDescriptionResponse, asdu, Priority.LOW);
 			return;
 		}
-		if (ignoreOrSchedule(sr))
-			return;
 
 		final int typeDontCare = 0;
 		final Description desc = new Description(typeDontCare, sr.getResult());
@@ -1157,20 +1153,24 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}({})|{}{} {}..{}", respondTo.getAddress(), dst, name, iot,
 				instance, pid, propertyName(objIndex, pid), start, start + elements - 1);
 
-		ServiceResult sr = null;
-		try {
-			sr = mgmtSvc.readProperty(respondTo, objIndex, pid, start, elements);
-		}
-		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("reading property data: {}", e.getMessage());
+		ServiceResult sr = ServiceResult.error(ReturnCode.AccessDenied);
+		if (checkPropertyAccess(objIndex, pid, true)) {
+			try {
+				sr = mgmtSvc.readProperty(respondTo, objIndex, pid, start, elements);
+			}
+			catch (KNXIllegalArgumentException | KnxPropertyException e) {
+				logger.warn("reading property data: {}", e.getMessage());
+				sr = ServiceResult.error(ReturnCode.AddressVoid);
+			}
 		}
 
-		final int length = sr == null ? 1 : sr.getResult().length;
+		final int length = Math.max(1, sr.getResult().length);
 		final byte[] asdu = Arrays.copyOfRange(data, 0, 8 + length);
-		if (sr == null) {
+		final var returnCode = sr.returnCode();
+		asdu[8] = (byte) sr.returnCode().code();
+
+		if (returnCode != ReturnCode.Success)
 			asdu[5] = 0;
-			asdu[8] = (byte) ReturnCode.AddressVoid.code();
-		}
 		else
 			System.arraycopy(sr.getResult(), 0, asdu, 8, length);
 
@@ -1193,27 +1193,26 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}({})|{}{} {}..{}: {}", respondTo.getAddress(), dst, name, iot,
 				instance, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, " "));
 
-		ServiceResult sr = null;
-		try {
-			sr = mgmtSvc.writeProperty(respondTo, objIndex, pid, start, elements, propertyData);
+		ServiceResult sr = ServiceResult.error(ReturnCode.AccessDenied);
+		if (checkPropertyAccess(objIndex, pid, false)) {
+			try {
+				sr = mgmtSvc.writeProperty(respondTo, objIndex, pid, start, elements, propertyData);
+			}
+			catch (KNXIllegalArgumentException | KnxPropertyException e) {
+				logger.warn("writing property data: {}", e.getMessage());
+				sr = ServiceResult.error(ReturnCode.AddressVoid);
+			}
 		}
-		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("writing property data: {}", e.getMessage());
-		}
-
 		if (!confirm)
 			return;
 
 		final byte[] asdu = Arrays.copyOfRange(data, 0, 9);
-		if (sr == null) {
+		final var returnCode = sr.returnCode();
+		if (returnCode != ReturnCode.Success)
 			asdu[5] = 0;
-			asdu[8] = (byte) ReturnCode.AddressVoid.code();
-		}
-		else
-			asdu[8] = (byte) ReturnCode.Success.code();
+		asdu[8] = (byte) returnCode.code();
 
-		final var priority = sr == null ? Priority.LOW : sr.getPriority();
-		send(respondTo, PropertyExtWriteConResponse, asdu, priority);
+		send(respondTo, PropertyExtWriteConResponse, asdu, sr.getPriority());
 	}
 
 	private void onFunctionPropertyExtCommandOrState(final String name, final KNXAddress dst,
@@ -1228,15 +1227,17 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} IOT {} OI {} PID {} {}", respondTo.getAddress(), dst, name, iot, oi, pid,
 				toHex(functionInput, " "));
 
-		ServiceResult sr;
+
+		ServiceResult sr = ServiceResult.error(ReturnCode.Error);
 		try {
 			final int objIndex = objectIndex(iot, oi);
 			final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
-			// TODO enforce access policy
-
 			final int reserved = functionInput[0] & 0xff;
-			if (description.getPDT() == PropertyTypes.PDT_FUNCTION && reserved != 0)
-				sr = new ServiceResult(ReturnCode.DataVoid);
+
+			if (!checkPropertyAccess(objIndex, pid, !isCommand))
+				sr = ServiceResult.error(ReturnCode.AccessDenied);
+			else if (description.getPDT() == PropertyTypes.PDT_FUNCTION && reserved != 0)
+				sr = ServiceResult.error(ReturnCode.DataVoid);
 			else if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityInterface.Pid.SecurityMode)
 				sr = sal.securityMode(isCommand, functionInput);
 			else if (description.getPDT() == PropertyTypes.PDT_FUNCTION || description.getPDT() == PropertyTypes.PDT_CONTROL) {
@@ -1254,18 +1255,15 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
-		byte[] state = {};
 		final byte[] result = sr.getResult();
-		ReturnCode rc = sr.returnCode();
-		if (rc == ReturnCode.Success)
-			state = result;
-
-		if (result == null)
-			rc = ReturnCode.AddressVoid;
-		else if (result.length == 0)
-			rc = ReturnCode.AccessDenied;
-		else if (result.length > getMaxApduLength() - 2 - 5)
+		final ReturnCode rc;
+		byte[] state = {};
+		if (result.length > getMaxApduLength() - 2 - 5)
 			rc = ReturnCode.ExceedsMaxApduLength;
+		else {
+			rc = sr.returnCode();
+			state = result;
+		}
 
 		final byte[] asdu = new byte[6 + state.length];
 		asdu[0] = (byte) (iot >> 8);
@@ -1356,9 +1354,23 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 	}
 
+	private boolean checkPropertyAccess(final int objectIndex, final int pid, final boolean read) {
+		final int objectType = objectType(objectIndex);
+		final boolean allowed = AccessPolicies.checkPropertyAccess(objectType, pid, read, sal.isSecurityModeEnabled(),
+				securityCtrl);
+		if (!allowed)
+			logger.info("property {} access to {}|{} denied - {}{}", read ? "read" : "write", objectIndex, pid,
+					PropertyClient.getObjectTypeName(objectType), propertyName(objectIndex, pid));
+		return allowed;
+	}
+
 	private int objectIndex(final int iot, final int oi) {
 		final var data = device.getInterfaceObjectServer().getProperty(iot, oi, PID.OBJECT_INDEX, 1, 1);
 		return toUnsigned(data);
+	}
+
+	private int objectType(final int objectIndex) {
+		return toUnsigned(device.getInterfaceObjectServer().getProperty(objectIndex, PID.OBJECT_TYPE, 1, 1));
 	}
 
 	private String propertyName(final int objectIndex, final int pid) {
