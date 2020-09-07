@@ -36,6 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
+import static tuwien.auto.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
+import static tuwien.auto.calimero.device.ios.InterfaceObject.ASSOCIATIONTABLE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.KNXNETIP_PARAMETER_OBJECT;
 
@@ -71,13 +73,16 @@ import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KnxRuntimeException;
+import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.Settings;
+import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.device.KnxDeviceServiceLogic.LoadState;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.device.ios.PropertyEvent;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
+import tuwien.auto.calimero.internal.SecureApplicationLayer;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
@@ -85,6 +90,7 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
+import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
@@ -343,13 +349,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (link == null)
 			return;
 
-		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(link.getKNXMedium().maxApduLength()));
-		final int medium = link.getKNXMedium().getMedium();
+		final var settings = link.getKNXMedium();
+		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(settings.maxApduLength()));
+		final int medium = settings.getMedium();
 		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, (byte) 0, (byte) medium);
 		if (medium == KNXMediumSettings.MEDIUM_KNXIP)
 			initKnxipProperties();
 
-		final IndividualAddress address = link.getKNXMedium().getDeviceAddress();
+		final IndividualAddress address = settings.getDeviceAddress();
 		if (address.getDevice() != 0)
 			setAddress(address);
 
@@ -387,6 +394,59 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	public final TransportLayer transportLayer() { return tl; }
+
+	public final SecureApplicationLayer secureApplicationLayer() { return sal; }
+
+	public final void addGroupObject(final Datapoint dp, final DataSecurity security, final boolean update) {
+		final int goSecurity = groupObjectSecurity(security);
+
+		final var group = dp.getMainAddress();
+		final var optGaIdx = KnxDeviceServiceLogic.groupAddressIndex(ios, group);
+		if (optGaIdx.isPresent()) {
+			final int idx = optGaIdx.orElseThrow();
+			final long sec = unsigned(ios.getProperty(InterfaceObject.SECURITY_OBJECT, objectInstance,
+					SecurityInterface.Pid.GOSecurityFlags, idx, 1));
+			if (sec < goSecurity)
+				ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityInterface.Pid.GOSecurityFlags,
+						idx, 1, (byte) goSecurity);
+		}
+		else {
+			final int lastGaIdx = (int) unsigned(
+					ios.getProperty(ADDRESSTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, 0, 1));
+			final int newGaIdx = lastGaIdx + 1;
+			ios.setProperty(ADDRESSTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, newGaIdx, 1,
+					group.toByteArray());
+			ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityInterface.Pid.GOSecurityFlags,
+					newGaIdx, 1, (byte) goSecurity);
+
+			final byte[] table = ios.getProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, 1,
+					Integer.MAX_VALUE);
+			final var buffer = ByteBuffer.wrap(table);
+			int maxGoIdx = 0;
+			while (buffer.hasRemaining()) {
+				buffer.getShort();
+				maxGoIdx = Math.max(maxGoIdx, (buffer.getShort() & 0xffff));
+			}
+
+			final int newGoIdx = maxGoIdx + 1;
+			final int newAssocIdx = table.length / 4 + 1;
+			final byte[] assoc = ByteBuffer.allocate(4).putShort((short) newGaIdx).putShort((short) newGoIdx).array();
+			ios.setProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, newAssocIdx, 1, assoc);
+			ios.setProperty(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, newGoIdx, 1,
+					KnxDeviceServiceLogic.groupObjectDescriptor(dp.getDPT(), dp.getPriority(), false, update));
+		}
+	}
+
+	private static int groupObjectSecurity(final DataSecurity security) {
+		return security == DataSecurity.AuthConf ? 3 : security.ordinal();
+	}
+
+	private static long unsigned(final byte[] data) {
+		long v = 0;
+		for (final byte b : data)
+			v = (v << 8) + (b & 0xff);
+		return v;
+	}
 
 	@Override
 	public void close() {
@@ -470,10 +530,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			}
 		}
 
-		final var addressTable = ios.addInterfaceObject(InterfaceObject.ADDRESSTABLE_OBJECT);
+		final var addressTable = ios.addInterfaceObject(ADDRESSTABLE_OBJECT);
 		initTableProperties(addressTable, 0x0116);
 
-		final var assocTable = ios.addInterfaceObject(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
+		final var assocTable = ios.addInterfaceObject(ASSOCIATIONTABLE_OBJECT);
 		initTableProperties(assocTable, 0x1000);
 
 		final var groupObjectTable = ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
@@ -488,6 +548,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
 		ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
 
+		new SecurityInterface(ios);
+
 		initDeviceInfo();
 	}
 
@@ -496,7 +558,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(idx, PID.LOAD_STATE_CONTROL, 1, 1, (byte) LoadState.Loaded.ordinal());
 		ios.setProperty(idx, PID.TABLE_REFERENCE, 1, 1, ByteBuffer.allocate(4).putInt(memAddress).array());
 
-		final int pdt = io.getType() == InterfaceObject.ASSOCIATIONTABLE_OBJECT ? PropertyTypes.PDT_GENERIC_04
+		final int pdt = io.getType() == ASSOCIATIONTABLE_OBJECT ? PropertyTypes.PDT_GENERIC_04
 				: PropertyTypes.PDT_GENERIC_02;
 		ios.setDescription(new Description(idx, 0, PID.TABLE, 0, pdt, true, 0, 100, 3, 3), true);
 

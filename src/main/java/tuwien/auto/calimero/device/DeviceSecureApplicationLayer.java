@@ -111,7 +111,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 			lastFailures.add(buf);
 		}
 
-		Security.groupKeys().forEach(this::addSecuredGroupAddress);
+		Security.groupKeys().forEach(this::tryAddSecuredGroupAddress);
 	}
 
 	@Override
@@ -358,6 +358,13 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		}
 		final var element = ByteBuffer.allocate(entrySize).putShort((short) raw).put(sixBytes(lastValidSeqNo)).array();
 		securityInterface.set(Pid.SecurityIndividualAddressTable, 1 + insert, 1, element);
+	}
+
+	private void tryAddSecuredGroupAddress(final GroupAddress address, final byte[] groupKey) {
+		try {
+			addSecuredGroupAddress(address, groupKey);
+		}
+		catch (final KnxSecureException e) {}
 	}
 
 	private void addSecuredGroupAddress(final GroupAddress address, final byte[] groupKey) {

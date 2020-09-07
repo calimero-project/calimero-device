@@ -923,6 +923,21 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return new Object[] { bitsize, Priority.get(priority), responder, update };
 	}
 
+	static byte[] groupObjectDescriptor(final String dpt, final Priority p, final boolean responder,
+			final boolean update) {
+		final int enableFlag = 0x04;
+		final int respondFlag = responder ? 0x08 : 0;
+		final int updateFlag = update ? 0x80 : 0;
+		int bitsize = 1;
+		try {
+			bitsize = TranslatorTypes.createTranslator(dpt).bitSize();
+		}
+		catch (final KNXException e) {
+			e.printStackTrace();
+		}
+		return new byte[] { (byte) (updateFlag | respondFlag | enableFlag | p.value), (byte) bitsToValueFieldType(bitsize) };
+	}
+
 	// decodes group object descriptor value field type into PDT bit size
 	private static int valueFieldTypeToBits(final int code) {
 		final int[] lowerFieldTypes = { 1, 2, 3, 4, 5, 6, 7, 8,
@@ -935,6 +950,24 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (code == 255)
 			return 252 * 8;
 		return (code - 6) * 8;
+	}
+
+	// encodes a PDT bit size into a group object descriptor value field type
+	private static int bitsToValueFieldType(final int bitsize) {
+		if (bitsize < 9)
+			return bitsize - 1;
+		final int bytes = bitsize / 8;
+		switch (bytes) {
+			case 2: return 8;
+			case 3: return 9;
+			case 4: return 10;
+			case 6: return 11;
+			case 8: return 12;
+			case 10: return 13;
+			case 14: return 14;
+			case 252: return 255;
+		}
+		return bytes + 6;
 	}
 
 	void destinationDisconnected(final Destination remote) {
