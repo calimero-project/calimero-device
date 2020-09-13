@@ -194,11 +194,11 @@ public class InterfaceObject
 		return idx;
 	}
 
-	void load(final IosResourceHandler rh, final String resource) throws KNXException
+	void load(final IosResourceHandler rh) throws KNXException
 	{
 		final List<Description> loadDescriptions = new ArrayList<>();
 		final List<byte[]> loadValues = new ArrayList<>();
-		rh.loadProperties(resource, loadDescriptions, loadValues);
+		rh.loadProperties(loadDescriptions, loadValues);
 
 		final Iterator<byte[]> k = loadValues.iterator();
 		for (final Iterator<Description> i = loadDescriptions.iterator(); i.hasNext()
@@ -211,7 +211,7 @@ public class InterfaceObject
 		}
 	}
 
-	void save(final IosResourceHandler rh, final String resource) throws KNXException
+	void save(final IosResourceHandler rh) throws KNXException
 	{
 		// list to save with descriptions, containing no null entries
 		final List<Description> saveDesc = new ArrayList<>(descriptions);
@@ -241,7 +241,7 @@ public class InterfaceObject
 			saveVal.add(remaining.get(key).clone());
 		}
 		// save them
-		rh.saveProperties(resource, saveDesc, saveVal);
+		rh.saveProperties(saveDesc, saveVal);
 	}
 
 	@Override

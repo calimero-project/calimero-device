@@ -41,6 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Iterator;
@@ -86,9 +88,19 @@ class InterfaceObjectServerTest
 			{}
 
 			@Override
+			public void saveProperties(final Collection<Description> descriptions, final Collection<byte[]> values)
+					throws KNXException {
+			}
+
+			@Override
 			public void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects)
 				throws KNXException
 			{}
+
+			@Override
+			public void saveInterfaceObjects(final OutputStream os, final Collection<InterfaceObject> ifObjects)
+					throws KNXException {
+			}
 
 			@Override
 			public void loadProperties(final String resource, final Collection<Description> descriptions,
@@ -96,8 +108,18 @@ class InterfaceObjectServerTest
 			{}
 
 			@Override
+			public void loadProperties(final Collection<Description> descriptions, final Collection<byte[]> values)
+				throws KNXException {
+			}
+
+			@Override
 			public Collection<InterfaceObject> loadInterfaceObjects(final String resource) throws KNXException
 			{
+				return null;
+			}
+
+			@Override
+			public Collection<InterfaceObject> loadInterfaceObjects(final InputStream is) throws KNXException {
 				return null;
 			}
 		});
