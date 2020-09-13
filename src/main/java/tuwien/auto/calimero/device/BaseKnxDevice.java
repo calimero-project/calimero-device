@@ -57,6 +57,7 @@ import java.util.Arrays;
 import java.util.EventObject;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -72,11 +73,13 @@ import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.device.KnxDeviceServiceLogic.LoadState;
+import tuwien.auto.calimero.device.SecurityInterface.Pid;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
@@ -369,7 +372,40 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (sal != null)
 			sal.close();
 		sal = new DeviceSecureApplicationLayer(this);
+		ensureInitializedSeqNumber();
 		resetNotifiers();
+	}
+
+	private void ensureInitializedSeqNumber() throws KNXLinkClosedException {
+		final var secif = new SecurityInterface(getInterfaceObjectServer());
+		if (!secif.isLoaded() || !sal.isSecurityModeEnabled())
+			return;
+		if (unsigned(secif.get(SecurityInterface.Pid.SequenceNumberSending)) > 1)
+			return;
+		secif.set(Pid.SequenceNumberSending, sixBytes(1).array());
+
+		final var requests = new ArrayList<CompletableFuture<Void>>();
+		final var table = ByteBuffer.wrap(secif.get(Pid.SecurityIndividualAddressTable));
+		while (table.hasRemaining()) {
+			final var remote = new IndividualAddress(table.getShort() & 0xffff);
+			table.get(new byte[SeqSize]);
+			try {
+				requests.add(sal.sendSyncRequest(remote, false));
+				final int maxRequests = 5;
+				if (requests.size() >= maxRequests)
+					break;
+			}
+			catch (final KNXTimeoutException e) {}
+		}
+
+		try {
+			final var success = new CompletableFuture<>();
+			requests.forEach(r -> r.thenAccept(success::complete));
+			success.orTimeout(6, TimeUnit.SECONDS).join();
+		}
+		catch (final RuntimeException e) {
+			logger.warn("awaiting sync.res for initializing sequence number", e.getCause());
+		}
 	}
 
 	@Override
@@ -435,6 +471,12 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			ios.setProperty(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, newGoIdx, 1,
 					KnxDeviceServiceLogic.groupObjectDescriptor(dp.getDPT(), dp.getPriority(), false, update));
 		}
+	}
+
+	private static final int SeqSize = 6;
+
+	private static ByteBuffer sixBytes(final long num) {
+		return ByteBuffer.allocate(6).putShort((short) (num >> 32)).putInt((int) num).flip();
 	}
 
 	private static int groupObjectSecurity(final DataSecurity security) {
