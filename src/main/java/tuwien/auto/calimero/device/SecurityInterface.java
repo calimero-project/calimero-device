@@ -138,7 +138,8 @@ final class SecurityInterface {
 	private void populateWithDefaults() {
 		set(Pid.LoadStateControl, (byte) LoadState.Loaded.ordinal());
 		set(Pid.SecurityMode, (byte) 0);
-		set(Pid.P2PKeyTable, 1, 0, new byte[0]);
+		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.P2PKeyTable, 0, 0, true, 0, 50, 3, 3),
+				true);
 		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GroupKeyTable, 0, 0, true, 0, 50, 3, 3),
 				true);
 		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.SecurityIndividualAddressTable, 0, 0, true,
@@ -150,7 +151,7 @@ final class SecurityInterface {
 
 		set(Pid.SecurityReport, (byte) 0);
 		set(Pid.SecurityReportControl, (byte) 1);
-		set(Pid.SequenceNumberSending, new byte[6]);
+		set(Pid.SequenceNumberSending, new byte[] { 0, 0, 0, 0, 0, 1 });
 
 		final int goFlags = 4000;
 		set(Pid.GOSecurityFlags, 1, 4000, new byte[goFlags]);
