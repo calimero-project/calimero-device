@@ -160,17 +160,11 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		}
 		else {
 			final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
-			final var addr = remote.toByteArray();
-
-			final int entrySize = addr.length + SeqSize;
-			// precondition: array size is multiple of entrySize
-			for (int offset = 0; offset < addresses.length; offset += entrySize) {
-				if (Arrays.equals(addr, 0, addr.length, addresses, offset, offset + 2)) {
-					final var start = 1 + offset / entrySize;
-					final var data = ByteBuffer.allocate(8).put(addr).put(sixBytes(seqNo));
-					securityInterface.set(Pid.SecurityIndividualAddressTable, start, 1, data.array());
-					break;
-				}
+			final int entrySize = 2 + SeqSize;
+			final int idx = binarySearch(addresses, entrySize, 0, 2, remote.getRawAddress());
+			if (idx >= 0) {
+				final var data = ByteBuffer.allocate(8).put(remote.toByteArray()).put(sixBytes(seqNo));
+				securityInterface.set(Pid.SecurityIndividualAddressTable, idx + 1, 1, data.array());
 			}
 		}
 	}
@@ -179,17 +173,14 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	protected long lastValidSequenceNumber(final boolean toolAccess, final IndividualAddress remote) {
 		if (toolAccess)
 			return super.lastValidSequenceNumber(toolAccess, remote);
-		else {
-			final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
-			final var addr = remote.toByteArray();
-			// precondition: array size is multiple of entrySize
-			final int entrySize = 2 + SeqSize;
-			for (int offset = 0; offset < addresses.length; offset += entrySize) {
-				if (Arrays.equals(addr, 0, addr.length, addresses, offset, offset + 2))
-					return unsigned(Arrays.copyOfRange(addresses, offset + 2, offset + 2 + SeqSize));
-			}
-		}
-		return 0;
+
+		final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
+		final int entrySize = 2 + SeqSize;
+		final int idx = binarySearch(addresses, entrySize, 0, 2, remote.getRawAddress());
+		if (idx < 0)
+			return 0;
+		final int offset = idx * entrySize + 2;
+		return unsigned(Arrays.copyOfRange(addresses, offset, offset + SeqSize));
 	}
 
 	// TODO check access group objects: failure counter is required
@@ -343,21 +334,13 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	private void addSecureLink(final IndividualAddress address, final long lastValidSeqNo) {
 		final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
-
 		final int raw = address.getRawAddress();
-		int insert = 0;
-		// precondition: array size is multiple of entrySize
 		final int entrySize = 2 + SeqSize;
-		for (int offset = 0; offset < addresses.length; offset += entrySize) {
-			final byte[] entry = Arrays.copyOfRange(addresses, offset, offset + 2);
-			final long ia = unsigned(entry);
-			if (raw > ia)
-				insert++;
-			else
-				break;
-		}
+		final int idx = binarySearch(addresses, entrySize, 0, 2, raw);
+
+		final int insert = idx < 0 ? -idx : idx + 1;
 		final var element = ByteBuffer.allocate(entrySize).putShort((short) raw).put(sixBytes(lastValidSeqNo)).array();
-		securityInterface.set(Pid.SecurityIndividualAddressTable, 1 + insert, 1, element);
+		securityInterface.set(Pid.SecurityIndividualAddressTable, insert, 1, element);
 	}
 
 	private void tryAddSecuredGroupAddress(final GroupAddress address, final byte[] groupKey) {
@@ -370,38 +353,24 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	private void addSecuredGroupAddress(final GroupAddress address, final byte[] groupKey) {
 		if (groupKey.length != 0 && groupKey.length != 16)
 			throw new KNXIllegalArgumentException("group key with invalid length " + groupKey.length);
-		final byte[] addresses = securityInterface.get(Pid.GroupKeyTable);
 
 		final int gaIndex = groupAddressIndex(address)
 				.orElseThrow(() -> new KnxSecureException(address + " not in address table"));
-		int insert = 0;
-		// precondition: array size is multiple of entrySize
-		final int entrySize = 2 + KeySize;
-		for (int offset = 0; offset < addresses.length; offset += entrySize) {
-			final byte[] entry = Arrays.copyOfRange(addresses, offset, offset + 2);
-			final long index = unsigned(entry);
-			if (gaIndex > index)
-				insert++;
-			else
-				break;
-		}
 
+		final byte[] addresses = securityInterface.get(Pid.GroupKeyTable);
+		final int entrySize = 2 + KeySize;
+		final int idx = binarySearch(addresses, entrySize, 0, 2, gaIndex);
+
+		final int insert = idx < 0 ? -idx : idx + 1;
 		final var element = ByteBuffer.allocate(entrySize).putShort((short) gaIndex).put(groupKey).array();
-		securityInterface.set(Pid.GroupKeyTable, 1 + insert, 1, element);
+		securityInterface.set(Pid.GroupKeyTable, insert, 1, element);
 	}
 
 	// returns 1-based index of address in security IA table
 	private int indAddressIndex(final IndividualAddress address) {
 		final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
-		final var addr = address.toByteArray();
-
-		final int entrySize = addr.length + SeqSize;
-		// precondition: array size is multiple of entrySize
-		for (int offset = 0; offset < addresses.length; offset += entrySize) {
-			if (Arrays.equals(addr, 0, addr.length, addresses, offset, offset + 2))
-				return offset / entrySize + 1;
-		}
-		return -1;
+		final int entrySize = 2 + SeqSize;
+		return 1 + binarySearch(addresses, entrySize, 0, 2, address.getRawAddress());
 	}
 
 	// returns 1-based index of address in group address table
@@ -416,42 +385,52 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	// returns p2p key for IA index
 	private byte[] p2pKey(final int addressIndex) {
-		if (!securityInterface.isLoaded())
-			return null;
-
-		final byte[] keyArray = securityInterface.get(Pid.P2PKeyTable);
-		final int entrySize = 2 + KeySize + 2;
-		// precondition: array size is multiple of entrySize
-		for (int offset = 0; offset < keyArray.length; offset += entrySize) {
-			final int idx = ((keyArray[offset] & 0xff) << 8) | (keyArray[offset + 1] & 0xff);
-			if (idx > addressIndex)
-				return null;
-			if (idx == addressIndex)
-				return Arrays.copyOfRange(keyArray, offset + 2, offset + 2 + KeySize);
-		}
-		return null;
+		return lookupKey(Pid.P2PKeyTable, addressIndex, 2 + KeySize + 2);
 	}
 
 	// returns group key for group address index
 	private byte[] groupKey(final int addressIndex) {
+		return lookupKey(Pid.GroupKeyTable, addressIndex, 2 + KeySize);
+	}
+
+	private byte[] lookupKey(final int pidTable, final int addressIndex, final int entrySize) {
 		if (!securityInterface.isLoaded())
 			return null;
 
-		final byte[] keyArray = securityInterface.get(Pid.GroupKeyTable);
-		final int entrySize = 2 + KeySize;
-		// precondition: array size is multiple of entrySize
-		for (int offset = 0; offset < keyArray.length; offset += entrySize) {
-			final int idx = ((keyArray[offset] & 0xff) << 8) | (keyArray[offset + 1] & 0xff);
-			if (idx > addressIndex)
-				return null;
-			if (idx == addressIndex)
-				return Arrays.copyOfRange(keyArray, offset + 2, offset + 2 + KeySize);
-		}
-		return null;
+		final byte[] keyArray = securityInterface.get(pidTable);
+		final int idx = binarySearch(keyArray, entrySize, 0, 2, addressIndex);
+		if (idx < 0)
+			return null;
+		final int offset = idx * entrySize + 2;
+		return Arrays.copyOfRange(keyArray, offset, offset + KeySize);
 	}
 
 	private int groupObjectSecurity(final int groupObjectIndex) {
 		return securityInterface.get(Pid.GOSecurityFlags, groupObjectIndex, 1)[0] & 0xff;
+	}
+
+	static int binarySearch(final byte[] a, final int entrySize, final int valueOffset, final int typeSize,
+			final long key) {
+		assert entrySize >= valueOffset + typeSize;
+		assert a.length % entrySize == 0;
+
+		int low = 0;
+		int high = a.length / entrySize - 1;
+
+		while (low <= high) {
+			final int mid = (low + high) >>> 1;
+			final int from = mid * entrySize + valueOffset;
+			final byte[] midVal = Arrays.copyOfRange(a, from, from + typeSize);
+			final long u = unsigned(midVal);
+			final long cmp = u - key;
+			if (cmp < 0)
+				low = mid + 1;
+			else if (cmp > 0)
+				high = mid - 1;
+			else
+				return mid;
+		}
+		return -(low + 1);
 	}
 
 	private static long unsigned(final byte[] data) {
