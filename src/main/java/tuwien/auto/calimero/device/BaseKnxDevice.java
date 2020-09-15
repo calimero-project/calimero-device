@@ -52,6 +52,10 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EventObject;
@@ -66,6 +70,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
+
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.slf4j.Logger;
 
@@ -157,6 +169,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private final Logger logger;
 
 	private final URI iosResource;
+	private final char[] iosPwd;
+	private static final char[] NoPwd = new char[0];
 
 	TransportLayer tl;
 	DeviceSecureApplicationLayer sal;
@@ -174,7 +188,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 
 	public BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
-		final ManagementService mgmt, final URI iosResource) throws KnxPropertyException
+		final ManagementService mgmt, final URI iosResource, final char[] iosPassword) throws KnxPropertyException
 	{
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
 		this.name = name;
@@ -184,6 +198,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		logger = LogService.getLogger("calimero.device." + name);
 
 		this.iosResource = iosResource;
+		iosPwd = iosPassword;
 
 		this.process = process;
 		this.mgmt = mgmt;
@@ -217,7 +232,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
 		final KNXNetworkLink link) throws KNXLinkClosedException, KnxPropertyException
 	{
-		this(name, dd, (ProcessCommunicationService) null, null, null);
+		this(name, dd, (ProcessCommunicationService) null, null, null, NoPwd);
 		setDeviceLink(link);
 		setAddress(device);
 	}
@@ -252,7 +267,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final KNXNetworkLink link, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
 	{
-		this(name, dd, process, mgmt, null);
+		this(name, dd, process, mgmt, null, NoPwd);
 		setDeviceLink(link);
 		setAddress(device);
 	}
@@ -266,7 +281,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * @throws KnxPropertyException on error initializing the device KNX properties
 	 */
 	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic) throws KnxPropertyException {
-		this(name, logic, (URI) null);
+		this(name, logic, (URI) null, NoPwd);
 	}
 
 	/**
@@ -276,11 +291,12 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * @param name KNX device name, used for human readable naming or device identification
 	 * @param logic KNX device service logic
 	 * @param iosResource interface object server resource to load
+	 * @param iosPassword password of encrypted interface object server resource, empty char array if plain text
 	 * @throws KnxPropertyException on error initializing the device KNX properties
 	 */
-	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic, final URI iosResource)
-			throws KnxPropertyException {
-		this(name, DeviceDescriptor.DD0.TYPE_5705, logic, logic, iosResource);
+	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic, final URI iosResource,
+			final char[] iosPassword) throws KnxPropertyException {
+		this(name, DeviceDescriptor.DD0.TYPE_5705, logic, logic, iosResource, iosPassword);
 		logic.setDevice(this);
 	}
 
@@ -495,15 +511,61 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (sal != null)
 			sal.close();
 
-		if (iosResource != null) {
-			try {
-				logger.debug("saving interface object server to {}", iosResource);
+		saveIos();
+	}
+
+	private void saveIos() {
+		if (iosResource == null)
+			return;
+
+		try {
+			logger.debug("saving interface object server to {}", iosResource);
+			if (iosPwd.length > 0)
+				saveEncryptedIos(iosPwd);
+			else
 				ios.saveInterfaceObjects(iosResource.toString());
-			}
-			catch (final KNXException e) {
-				logger.error("saving interface object server", e);
-			}
 		}
+		catch (GeneralSecurityException | IOException | KNXException | RuntimeException e) {
+			logger.error("saving interface object server", e);
+		}
+	}
+
+	private void saveEncryptedIos(final char[] pwd) throws GeneralSecurityException, IOException, KNXException {
+		final var os = Files.newOutputStream(Path.of(iosResource));
+		final var generatedSalt = new byte[16];
+		final var cipher = iosCipher(pwd, generatedSalt, null);
+		try (var cos = new CipherOutputStream(os, cipher)) {
+			os.write(generatedSalt);
+			os.write(cipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV());
+			ios.saveInterfaceObjects(cos);
+		}
+	}
+
+	private void loadEncryptedIos(final char[] pwd) throws GeneralSecurityException, IOException, KNXException {
+		final var is = Files.newInputStream(Path.of(iosResource));
+		try (var cis = new CipherInputStream(is, iosCipher(pwd, is.readNBytes(16), is.readNBytes(16)))) {
+			ios.loadInterfaceObjects(cis);
+		}
+	}
+
+	// salt is input param on decrypt, output param on encrypt
+	// useIv is null on encrypt
+	private static Cipher iosCipher(final char[] pwd, final byte[] salt, final byte[] useIv)
+			throws GeneralSecurityException {
+		final boolean encrypt = useIv == null;
+		if (encrypt)
+			new SecureRandom().nextBytes(salt);
+
+		final var spec = new PBEKeySpec(pwd, salt, 65_536, 256);
+		final var tmp = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec);
+		final var secret = new SecretKeySpec(tmp.getEncoded(), "AES");
+
+		final var cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+		if (encrypt)
+			cipher.init(Cipher.ENCRYPT_MODE, secret);
+		else
+			cipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(useIv));
+		return cipher;
 	}
 
 	@Override
@@ -559,7 +621,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			try {
 				ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
 				logger.debug("loading interface object server from {}", iosResource);
-				ios.loadInterfaceObjects(iosResource.toString());
+				if (iosPwd.length > 0 && Path.of(iosResource).toFile().exists())
+					loadEncryptedIos(iosPwd);
+				else
+					ios.loadInterfaceObjects(iosResource.toString());
 				return;
 			}
 			catch (final UncheckedIOException e) {
@@ -567,7 +632,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				// re-add device object
 				ios.addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
 			}
-			catch (final KNXException e) {
+			catch (final GeneralSecurityException | IOException | KNXException e) {
 				throw new KnxRuntimeException("loading interface object server", e);
 			}
 		}
