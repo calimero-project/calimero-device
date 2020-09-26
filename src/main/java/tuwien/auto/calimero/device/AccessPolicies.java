@@ -49,7 +49,7 @@ import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
-final class AccessPolicies {
+public final class AccessPolicies {
 
 	private static final int AuthorizeRequest = 0x03D1;
 	private static final int DeviceDescriptorRead = 0x300;
@@ -139,8 +139,8 @@ final class AccessPolicies {
 
 	// data level access policies
 
-	static boolean checkPropertyAccess(final int objType, final int pid, final boolean read, final boolean securityMode,
-			final SecurityControl securityCtrl) {
+	public static boolean checkPropertyAccess(final int objType, final int pid, final boolean read,
+			final boolean securityMode, final SecurityControl securityCtrl) {
 		final var key = pid <= 50 ? new PropertyKey(pid) : new PropertyKey(objType, pid);
 		final var property = definitions.get(key);
 		if (property == null) {
