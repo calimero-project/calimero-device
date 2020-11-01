@@ -36,8 +36,11 @@
 
 package tuwien.auto.calimero.device;
 
+import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,6 +51,8 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntUnaryOperator;
 
+import org.slf4j.Logger;
+
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
@@ -57,10 +62,14 @@ import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SecurityControl;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.device.SecurityInterface.Pid;
+import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.internal.Security;
+import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
+import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.SecureManagement;
+import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
 
@@ -68,8 +77,12 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	private static final int SeqSize = 6;
 	private static final int KeySize = 16;
 
-	private final BaseKnxDevice device;
+	private static final String secureSymbol = new String(Character.toChars(0x1F512));
+
+	private final InterfaceObjectServer ios;
 	private final SecurityInterface securityInterface;
+
+	private final Logger logger;
 
 	@SuppressWarnings("serial")
 	private final Set<byte[]> lastFailures = Collections.newSetFromMap(new LinkedHashMap<>() {
@@ -78,16 +91,24 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 
 	DeviceSecureApplicationLayer(final BaseKnxDevice device) {
-		this(device, new SecurityInterface(device.getInterfaceObjectServer()));
+		this(device.transportLayer(), device.getInterfaceObjectServer());
 	}
 
-	private DeviceSecureApplicationLayer(final BaseKnxDevice device, final SecurityInterface securityInterface) {
-		super((TransportLayerImpl) device.transportLayer(),
-				device.getInterfaceObjectServer().getProperty(0, PropertyAccess.PID.SERIAL_NUMBER, 1, 1),
+	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios) {
+		this(tl, ios, new SecurityInterface(ios));
+	}
+
+	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios,
+			final SecurityInterface securityInterface) {
+		super((TransportLayerImpl) tl, ios.getProperty(0, PropertyAccess.PID.SERIAL_NUMBER, 1, 1),
 				unsigned(securityInterface.get(Pid.SequenceNumberSending)), Map.of());
 
-		this.device = device;
+		this.ios = ios;
 		this.securityInterface = securityInterface;
+
+		final var bytes = ios.getProperty(DEVICE_OBJECT, 1, PID.DESCRIPTION, 1, Integer.MAX_VALUE);
+		final var name = new String(bytes, StandardCharsets.ISO_8859_1);
+		logger = LogService.getLogger("calimero.device." + secureSymbol + "-AL " + name);
 
 		long toolSeqNo = 0;
 		try {
@@ -196,7 +217,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 					conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
 			// if group object security does not match exactly, complete service is ignored
 			if (!securityCtrl.equals(required)) {
-				device.logger().warn("group object {} security mismatch: requested {} but requires {}, ignore", dst,
+				logger.warn("group object {} security mismatch: requested {} but requires {}, ignore", dst,
 						securityCtrl, required);
 				return false;
 			}
@@ -324,7 +345,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		final int pidDownloadCounter = 30;
 		long counter = 0;
 		try {
-			counter = unsigned(device.getInterfaceObjectServer().getProperty(0, pidDownloadCounter, 1, 1));
+			counter = unsigned(ios.getProperty(0, pidDownloadCounter, 1, 1));
 		}
 		catch (final KnxPropertyException ignore) {}
 		// always reset seq to > 1, to avoid triggering sync.req during securing data
@@ -375,12 +396,12 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	// returns 1-based index of address in group address table
 	private Optional<Integer> groupAddressIndex(final GroupAddress address) {
-		return KnxDeviceServiceLogic.groupAddressIndex(device.getInterfaceObjectServer(), address);
+		return KnxDeviceServiceLogic.groupAddressIndex(ios, address);
 	}
 
 	// returns 1-based index of address in group address table
 	private Optional<Integer> groupObjectIndex(final int groupAddressIndex) {
-		return KnxDeviceServiceLogic.groupObjectIndex(device.getInterfaceObjectServer(), groupAddressIndex);
+		return KnxDeviceServiceLogic.groupObjectIndex(ios, groupAddressIndex);
 	}
 
 	// returns p2p key for IA index
