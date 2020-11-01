@@ -42,11 +42,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer.IosResourceHandler;
+import tuwien.auto.calimero.dptxlator.PropertyTypes;
+import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyClient;
+import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
 /**
@@ -136,9 +141,9 @@ public class InterfaceObject
 	public static final int RF_MEDIUM_OBJECT = 19;
 
 	// list holding Description objects or null entries
-	List<Description> descriptions = new ArrayList<>();
-	Map<Integer, Description> pidToDescription = new HashMap<>();
-	Map<PropertyKey, byte[]> values = new HashMap<>();
+	private final List<Description> descriptions = new ArrayList<>();
+	private final Map<Integer, Description> pidToDescription = new HashMap<>();
+	final Map<PropertyKey, byte[]> values = new HashMap<>();
 
 	private final int type;
 	private volatile int idx;
@@ -247,7 +252,155 @@ public class InterfaceObject
 	@Override
 	public String toString()
 	{
-		return PropertyClient.getObjectTypeName(type) + " (index " + idx + ")";
+		return getTypeName() + " (index " + idx + ")";
+	}
+
+	byte[] getProperty(final int pid, final int start, final int elements) throws KnxPropertyException {
+		final var desc = findByPid(pid);
+		if (desc == null)
+			throw new KnxPropertyException(
+					"no property ID " + pid + " in " + getTypeName() + " (index " + getIndex() + ")",
+					ErrorCodes.VOID_DP);
+
+		final byte[] bytes = values.get(new PropertyKey(getType(), pid));
+		if (start == 0) {
+			if (elements > 1)
+				throw new KnxPropertyException("current number of elements consists of only 1 element",
+						ErrorCodes.UNSPECIFIED_ERROR);
+
+			return new byte[] { bytes[0], bytes[1] };
+		}
+
+		final int currElems = (bytes[0] & 0xff) << 8 | (bytes[1] & 0xff);
+		// treat MAX_VALUE special, in that it returns all elements in range [start, currElems]
+		final int actualElements = elements == Integer.MAX_VALUE ? (currElems - start + 1) : elements;
+		final int size = start + actualElements - 1;
+		if (currElems < size)
+			throw new KnxPropertyException("requested elements exceed past last property value",
+					ErrorCodes.PROP_INDEX_RANGE_ERROR);
+		final int typeSize = PropertyTypes.bitSize(desc.getPDT()).map(bits -> Math.max(bits, 8) / 8)
+				.orElseGet(() -> (bytes.length - 2) / currElems);
+		final byte[] data = new byte[actualElements * typeSize];
+		int d = 0;
+		for (int i = 2 + (start - 1) * typeSize; i < 2 + size * typeSize; ++i)
+			data[d++] = bytes[i];
+		return data;
+	}
+
+	boolean setProperty(final int pid, final int start, final int elements, final byte[] data, final boolean strictMode,
+			final Map<PropertyKey, Property> definitions) throws KnxPropertyException {
+		final PropertyKey key = new PropertyKey(getType(), pid);
+		byte[] bytes = values.get(key);
+
+		if (start == 0) {
+			// Document Application IF Layer (03/04/01) v1.1, 4.2.1:
+			// Write value 0 on index 0 to reset element values
+			if (elements == 1 && data.length == 2 && data[0] == 0 && data[1] == 0) {
+				truncateValueArray(pid, 0);
+				return false;
+			}
+			throw new KnxPropertyException("set current number of elements", ErrorCodes.READ_ONLY);
+		}
+
+		// try to get property type size, using the following order:
+		// 1) query description
+		// 2) query definitions
+		// 3) use dptId
+		// 4) trust input parameters and calculate type size
+
+		int pdt = -1;
+		Optional<String> dptId = Optional.empty();
+		Description d = null;
+		boolean createDescription = false;
+		try {
+			d = new Description(getType(), getDescription(pid, 0));
+			pdt = d.getPDT();
+		}
+		catch (final KnxPropertyException e) {
+			if (strictMode)
+				throw new KnxPropertyException(
+						"strict mode: no description found for " + getTypeName() + " PID " + pid);
+			createDescription = true;
+			final Property p = getDefinition(getType(), pid, definitions);
+			if (p != null) {
+				pdt = p.getPDT();
+				dptId = p.dpt();
+			}
+		}
+
+		final var id = dptId;
+		final int typeSize = PropertyTypes.bitSize(pdt).or(() -> id.flatMap(InterfaceObject::dptBitSize))
+				.map(size -> Math.max(size / 8, 1)).orElseGet(() -> elements > 0 ? data.length / elements : 1);
+
+		if (elements > 0 && typeSize != data.length / elements)
+			throw new KnxPropertyException("property type size is " + typeSize + ", not " + data.length / elements,
+					ErrorCodes.TYPE_CONFLICT);
+
+		// I dynamically increase the value array if the new element size exceeds
+		// the current element size, and adjust the current element number
+		// correspondingly.
+		final int size = start + elements - 1;
+		if (bytes == null || size > (bytes.length - 2) / typeSize) {
+			final int maxElements = d == null ? elements : d.getMaxElements();
+			if (size > maxElements)
+				throw new KnxPropertyException("property values index range [" + start + "..." + size + "] exceeds "
+						+ maxElements + " maximum elements", ErrorCodes.PROP_INDEX_RANGE_ERROR);
+			// create resized array
+			final byte[] resize = new byte[2 + size * typeSize];
+			resize[0] = (byte) (size >> 8);
+			resize[1] = (byte) size;
+			// copy over existing values, if any
+			if (bytes != null)
+				for (int i = 2; i < bytes.length; ++i)
+					resize[i] = bytes[i];
+
+			values.put(key, resize);
+			bytes = resize;
+		}
+		int k = 0;
+		boolean changed = false;
+		for (int i = 2 + (start - 1) * typeSize; i < 2 + size * typeSize; ++i) {
+			changed |= bytes[i] != data[k];
+			bytes[i] = data[k++];
+		}
+
+		// make sure we provide a minimum description
+		if (createDescription)
+			createNewDescription(pid, true, definitions);
+
+		return changed;
+	}
+
+	byte[] getDescription(final int pid, final int propIndex) throws KnxPropertyException {
+		Description d = null;
+		if (pid != 0)
+			d = findByPid(pid);
+		else if (propIndex < descriptions.size())
+			d = descriptions.get(propIndex);
+
+		if (d != null) {
+			// actual property values might not exist yet
+			int elems = 0;
+			try {
+				elems = toInt(getProperty(pid, 0, 1));
+			}
+			catch (final KnxPropertyException e) {}
+			return new Description(getIndex(), d.getObjectType(), d.getPID(), d.getPropIndex(), d.getPDT(),
+					d.isWriteEnabled(), elems, d.getMaxElements(), d.getReadLevel(), d.getWriteLevel()).toByteArray();
+		}
+		throw new KnxPropertyException("no description found for " + getTypeName()
+				+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
+	}
+
+	private Description findByPid(final int pid) {
+		return pidToDescription.get(pid);
+	}
+
+	int findFreeSlot() {
+		int i = descriptions.indexOf(null);
+		if (i == -1)
+			i = descriptions.size();
+		return i;
 	}
 
 	// this method also ensures the value array is truncated accordingly
@@ -261,6 +414,35 @@ public class InterfaceObject
 		// truncate property elements based on max. allowed elements
 		truncateValueArray(d.getPID(), d.getMaxElements());
 		pidToDescription.put(d.getPID(), d);
+	}
+
+	void createNewDescription(final int pid, final boolean writeEnabled, final Map<PropertyKey, Property> definitions) {
+		final byte[] data = values.get(new PropertyKey(getType(), pid));
+		final int elems = (data[0] & 0xff) << 8 | (data[1] & 0xff);
+		final int maxElems = Math.max(elems, 1);
+
+		int pdt = -1;
+		final Property p = getDefinition(getType(), pid, definitions);
+		if (p != null)
+			pdt = p.getPDT();
+		if (pdt == -1 && elems > 0) {
+			final int size = (data.length - 2) / elems;
+			pdt = PropertyTypes.PDT_GENERIC_01 + size - 1;
+		}
+
+		final int pIndex = descriptions.size();
+		final boolean writable = p != null ? !p.readOnly() : writeEnabled;
+		// level is between 0 (max. access rights required) and 3 or 15 (min. rights required)
+		final int readLevel = p != null ? p.readLevel() : 0;
+		final int writeLevel = p != null ? Math.max(0, p.writeLevel()) : 0;
+		final Description d = new Description(getIndex(), getType(), pid, pIndex, pdt, writable, elems, maxElems,
+				readLevel, writeLevel);
+		descriptions.add(d);
+		pidToDescription.put(pid, d);
+	}
+
+	void removeDescription(final int existingIdx) {
+		descriptions.set(existingIdx, null);
 	}
 
 	void setIndex(final int index)
@@ -287,5 +469,29 @@ public class InterfaceObject
 			ba[1] = (byte) maxElements;
 			values.put(key, ba);
 		}
+	}
+
+	private Property getDefinition(final int objectType, final int pid, final Map<PropertyKey, Property> definitions) {
+		Property p = definitions.get(new PropertyKey(objectType, pid));
+		if (p == null && pid < 50)
+			p = definitions.get(new PropertyKey(pid));
+		return p;
+	}
+
+	private static Optional<Integer> dptBitSize(final String dptId) {
+		try {
+			return Optional.of(TranslatorTypes.createTranslator(0, dptId).bitSize());
+		}
+		catch (final KNXException e) {}
+		return Optional.empty();
+	}
+
+	private static int toInt(final byte[] data)
+	{
+		if (data.length == 1)
+			return data[0] & 0xff;
+		if (data.length == 2)
+			return (data[0] & 0xff) << 8 | (data[1] & 0xff);
+		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | (data[3] & 0xff);
 	}
 }
