@@ -74,7 +74,7 @@ class ManagementServiceNotifierTest {
 	private ManagementServiceNotifier notifier;
 
 	// link stub, does nothing
-	private final KNXNetworkLink linkStub = new AbstractLink<AutoCloseable>("test link", TPSettings.TP1) {
+	private final KNXNetworkLink linkStub = new AbstractLink<AutoCloseable>("test link", new TPSettings()) {
 		@Override
 		protected void onSend(final CEMILData msg, final boolean waitForCon) {}
 

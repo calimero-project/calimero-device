@@ -126,7 +126,7 @@ public class BaseKnxDeviceTest extends TestCase
 		@Override
 		public KNXMediumSettings getKNXMedium()
 		{
-			return TPSettings.TP1;
+			return new TPSettings();
 		}
 
 		@Override
@@ -306,17 +306,14 @@ public class BaseKnxDeviceTest extends TestCase
 	 */
 	public final void testKnxDevice() throws KNXLinkClosedException
 	{
-		new BaseKnxDevice("test", dd0, addr, link, null, mgmtLogic);
+		try (var dev = new BaseKnxDevice("test", dd0, addr, link, null, mgmtLogic)) {}
 
-		try {
-			new BaseKnxDevice("test", dd0, null, link, processLogic, mgmtLogic);
+		try (var dev = new BaseKnxDevice("test", dd0, null, link, processLogic, mgmtLogic)) {
 			fail("device address null");
 		}
 		catch (final NullPointerException expected) {}
 
-//		assertThrows(NullPointerException.class, () -> new BaseKnxDevice("test", dd0, addr, null, processLogic, mgmtLogic), "link is null");
-
-		new BaseKnxDevice("test", dd0, addr, link, processLogic, mgmtLogic);
+		try (var dev = new BaseKnxDevice("test", dd0, addr, link, processLogic, mgmtLogic)) {}
 	}
 
 	private static final class MyKnxDevice extends BaseKnxDevice
@@ -342,15 +339,15 @@ public class BaseKnxDeviceTest extends TestCase
 	 */
 	public final void testSetAddress() throws KNXLinkClosedException
 	{
-		final MyKnxDevice dev2 = new MyKnxDevice("test", addr, link, processLogic, mgmtLogic);
+		try (var dev2 = new MyKnxDevice("test", addr, link, processLogic, mgmtLogic)) {
+			final IndividualAddress address = new IndividualAddress(4, 4, 4);
+			dev2.mySetAddress(address);
+			assertEquals(address, dev2.getAddress());
 
-		final IndividualAddress address = new IndividualAddress(4, 4, 4);
-		dev2.mySetAddress(address);
-		assertEquals(address, dev2.getAddress());
-
-		final IndividualAddress address2 = new IndividualAddress(5, 5, 5);
-		dev2.mySetAddress(address2);
-		assertEquals(address2, dev2.getAddress());
+			final IndividualAddress address2 = new IndividualAddress(5, 5, 5);
+			dev2.mySetAddress(address2);
+			assertEquals(address2, dev2.getAddress());
+		}
 	}
 
 	/**

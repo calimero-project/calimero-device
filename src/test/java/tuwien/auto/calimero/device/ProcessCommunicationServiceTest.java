@@ -189,11 +189,11 @@ public class ProcessCommunicationServiceTest extends TestCase
 		// client link
 		if (useRouting) {
 			remoteHost = new InetSocketAddress("224.0.23.12", 0);
-			link = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, remoteHost.getAddress(), TPSettings.TP1);
+			link = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, remoteHost.getAddress(), new TPSettings());
 		}
 		else {
 			remoteHost = Util.getServer();
-			link = KNXNetworkLinkIP.newTunnelingLink(null, remoteHost, false, TPSettings.TP1);
+			link = KNXNetworkLinkIP.newTunnelingLink(null, remoteHost, false, new TPSettings());
 		}
 	}
 

@@ -82,7 +82,7 @@ class ManagementServiceTest
 	@BeforeEach
 	void init() throws Exception
 	{
-		final KNXNetworkLink link = new AbstractLink<AutoCloseable>("test link", TPSettings.TP1) {
+		final KNXNetworkLink link = new AbstractLink<AutoCloseable>("test link", new TPSettings()) {
 			@Override
 			protected void onSend(final CEMILData msg, final boolean waitForCon) {}
 
