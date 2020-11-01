@@ -52,6 +52,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
@@ -678,7 +679,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	{
 		// Device Object settings
 
-		final byte[] desc = name.getBytes(Charset.forName("ISO-8859-1"));
+		final byte[] desc = name.getBytes(StandardCharsets.ISO_8859_1);
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, desc.length, desc);
 
 		final String[] sver = Settings.getLibraryVersion().split("\\.| |-", 0);
