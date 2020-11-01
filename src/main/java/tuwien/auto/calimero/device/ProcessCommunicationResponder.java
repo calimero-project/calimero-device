@@ -56,6 +56,7 @@ import tuwien.auto.calimero.dptxlator.DPTXlatorBoolean;
 import tuwien.auto.calimero.dptxlator.DPTXlatorString;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.internal.EventListeners;
+import tuwien.auto.calimero.internal.SecureApplicationLayer;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.log.LogService;
@@ -77,7 +78,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	private static final int GROUP_RESPONSE = 0x40;
 
 	private final KNXNetworkLink lnk;
-	private final DeviceSecureApplicationLayer sal;
+	private final SecureApplicationLayer sal;
 	private final EventListeners<ProcessListener> listeners;
 	private volatile Priority priority = Priority.LOW;
 
@@ -94,7 +95,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	 * @param sal security application layer
 	 * @throws KNXLinkClosedException if the network link is closed
 	 */
-	public ProcessCommunicationResponder(final KNXNetworkLink link, final DeviceSecureApplicationLayer sal)
+	public ProcessCommunicationResponder(final KNXNetworkLink link, final SecureApplicationLayer sal)
 			throws KNXLinkClosedException {
 		if (!link.isOpen())
 			throw new KNXLinkClosedException(
