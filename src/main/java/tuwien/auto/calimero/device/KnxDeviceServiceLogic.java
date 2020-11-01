@@ -277,7 +277,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	enum LoadEvent { NoOperation, StartLoading, LoadCompleted, AdditionalLoadControls, Unload }
-	enum LoadState { Unloaded, Loaded, Loading, Error, Unloading, LoadCompleting }
+	public enum LoadState { Unloaded, Loaded, Loading, Error, Unloading, LoadCompleting }
 
 	@Override
 	public ServiceResult writeProperty(final Destination remote, final int objectIndex,

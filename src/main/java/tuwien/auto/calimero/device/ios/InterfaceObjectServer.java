@@ -305,14 +305,23 @@ public class InterfaceObjectServer implements PropertyAccess
 		final int index;
 		synchronized (objects) {
 			index = objects.size();
-			io = new InterfaceObject(objectType, index);
+			io = newInterfaceObject(objectType, index);
 			objects.add(io);
 			updateIoList();
 		}
 		initIoProperties(io, true);
 		if (objectType == InterfaceObject.DEVICE_OBJECT)
 			adapter.createNewDescription(0, PID.IO_LIST, false);
+		if (io instanceof SecurityInterface)
+			((SecurityInterface) io).populateWithDefaults(this);
+
 		return io;
+	}
+
+	private static InterfaceObject newInterfaceObject(final int objectType, final int index) {
+		if (objectType == InterfaceObject.SECURITY_OBJECT)
+			return new SecurityInterface(objectType, index);
+		return new InterfaceObject(objectType, index);
 	}
 
 	/**
@@ -892,7 +901,7 @@ public class InterfaceObjectServer implements PropertyAccess
 						// on no type attribute, toInt() throws, that's ok
 						final int type = toInt(r.getAttributeValue(null, ATTR_OBJECTTYPE));
 						final int index = toInt(r.getAttributeValue(null, ATTR_INDEX));
-						final InterfaceObject io = new InterfaceObject(type, index);
+						final InterfaceObject io = newInterfaceObject(type, index);
 						list.add(io);
 						io.load(this);
 					}

@@ -61,9 +61,10 @@ import tuwien.auto.calimero.KnxSecureException;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SecurityControl;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
-import tuwien.auto.calimero.device.SecurityInterface.Pid;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
+import tuwien.auto.calimero.device.ios.SecurityInterface;
+import tuwien.auto.calimero.device.ios.SecurityInterface.Pid;
 import tuwien.auto.calimero.internal.Security;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
@@ -95,7 +96,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios) {
-		this(tl, ios, new SecurityInterface(ios));
+		this(tl, ios, SecurityInterface.lookup(ios));
 	}
 
 	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios,
@@ -427,7 +428,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private int groupObjectSecurity(final int groupObjectIndex) {
-		return securityInterface.get(Pid.GOSecurityFlags, groupObjectIndex, 1)[0] & 0xff;
+		return securityInterface.get(Pid.GoSecurityFlags, groupObjectIndex, 1)[0] & 0xff;
 	}
 
 	static int binarySearch(final byte[] a, final int entrySize, final int valueOffset, final int typeSize,

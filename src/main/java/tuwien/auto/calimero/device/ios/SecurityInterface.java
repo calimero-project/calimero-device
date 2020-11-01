@@ -34,17 +34,18 @@
     version.
 */
 
-package tuwien.auto.calimero.device;
+package tuwien.auto.calimero.device.ios;
 
-import static tuwien.auto.calimero.device.ios.InterfaceObject.SECURITY_OBJECT;
+import java.util.Map;
 
 import tuwien.auto.calimero.device.KnxDeviceServiceLogic.LoadState;
-import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.mgmt.Description;
+import tuwien.auto.calimero.mgmt.PropertyClient.Property;
+import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
-final class SecurityInterface {
+public final class SecurityInterface extends InterfaceObject {
 
-	interface Pid {
+	public interface Pid {
 		// Load Control (PDT CONTROL)
 		int LoadStateControl = 5;
 
@@ -79,7 +80,7 @@ final class SecurityInterface {
 		int ZoneKeyTable = 60;
 
 		// Group Object Security Flags (PDT GENERIC_01[])
-		int GOSecurityFlags = 61;
+		int GoSecurityFlags = 61;
 
 		// Role Table (PDT GENERIC_01[])
 		int RoleTable = 62;
@@ -91,53 +92,46 @@ final class SecurityInterface {
 		int ToolSequenceNumberSending = 250;
 	}
 
-	private final InterfaceObjectServer ios;
-	private final int objectInstance = 1;
-	private final int objIndex;
-
-	SecurityInterface(final InterfaceObjectServer ios) {
-		this.ios = ios;
-		final var interfaceObjects = ios.getInterfaceObjects();
-		int index = 0;
-		for (final var interfaceObject : interfaceObjects) {
-			if (interfaceObject.getType() == SECURITY_OBJECT) {
-				index = interfaceObject.getIndex();
-				break;
-			}
+	// > 1 security interfaces are not supported by a device
+	public static SecurityInterface lookup(final InterfaceObjectServer ios) {
+		for (final var interfaceObject : ios.getInterfaceObjects()) {
+			if (interfaceObject.getType() == SECURITY_OBJECT)
+				return (SecurityInterface) interfaceObject;
 		}
-		if (index == 0) {
-			final var io = ios.addInterfaceObject(SECURITY_OBJECT);
-			objIndex = io.getIndex();
-			populateWithDefaults();
-		}
-		else
-			objIndex = index;
+		throw new KnxPropertyException("no security interface object found");
 	}
 
-	boolean isLoaded() {
+	SecurityInterface(final int objectType, final int index) {
+		super(objectType, index);
+	}
+
+	public boolean isLoaded() {
 		final int state = get(Pid.LoadStateControl)[0] & 0xff;
 		return LoadState.values()[state] == LoadState.Loaded;
 	}
 
-	byte[] get(final int pid) {
+	public byte[] get(final int pid) {
 		return get(pid, 1, Integer.MAX_VALUE);
 	}
 
-	byte[] get(final int pid, final int start, final int elements) {
-		return ios.getProperty(SECURITY_OBJECT, objectInstance, pid, start, elements);
+	public byte[] get(final int pid, final int start, final int elements) {
+		return getProperty(pid, start, elements);
 	}
 
-	void set(final int pid, final byte... data) {
+	public void set(final int pid, final byte... data) {
 		set(pid, 1, 1, data);
 	}
 
-	void set(final int pid, final int start, final int elements, final byte... data) {
-		ios.setProperty(SECURITY_OBJECT, objectInstance, pid, start, elements, data);
+	public void set(final int pid, final int start, final int elements, final byte... data) {
+		final boolean strictMode = false;
+		final Map<PropertyKey, Property> definitions = Map.of();
+		setProperty(pid, start, elements, data, strictMode, definitions);
 	}
 
-	private void populateWithDefaults() {
+	void populateWithDefaults(final InterfaceObjectServer ios) {
 		set(Pid.LoadStateControl, (byte) LoadState.Loaded.ordinal());
 		set(Pid.SecurityMode, (byte) 0);
+		final int objIndex = getIndex();
 		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.P2PKeyTable, 0, 0, true, 0, 50, 3, 3),
 				true);
 		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GroupKeyTable, 0, 0, true, 0, 50, 3, 3),
@@ -154,8 +148,8 @@ final class SecurityInterface {
 		set(Pid.SequenceNumberSending, new byte[] { 0, 0, 0, 0, 0, 1 });
 
 		final int goFlags = 4000;
-		set(Pid.GOSecurityFlags, 1, 4000, new byte[goFlags]);
-		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GOSecurityFlags, 0, 0, true, 0, goFlags, 3, 3),
+		set(Pid.GoSecurityFlags, 1, 4000, new byte[goFlags]);
+		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GoSecurityFlags, 0, 0, true, 0, goFlags, 3, 3),
 				true);
 
 		set(Pid.RoleTable, 1, 0, new byte[0]);

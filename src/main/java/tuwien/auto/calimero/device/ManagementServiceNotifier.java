@@ -66,6 +66,7 @@ import tuwien.auto.calimero.device.ManagementService.EraseCode;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
+import tuwien.auto.calimero.device.ios.SecurityInterface;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
