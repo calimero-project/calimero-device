@@ -1034,16 +1034,15 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// res null or length 0 indicate memory access problems, i.e.,
 		// read protection, invalid address, partial read.
 		int bytesRead = length;
-		if (res == null || res.length != bytesRead)
+		if (res.length != bytesRead)
 			bytesRead = 0;
 
 		final byte[] asdu = new byte[3 + bytesRead];
 		asdu[0] = (byte) bytesRead;
 		asdu[1] = (byte) (address >> 8);
 		asdu[2] = (byte) address;
-		if (res != null)
-			for (int i = 0; i < bytesRead; ++i)
-				asdu[3 + i] = res[i];
+		for (int i = 0; i < bytesRead; ++i)
+			asdu[3 + i] = res[i];
 
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority(), decodeAPCI(MEMORY_RESPONSE));
