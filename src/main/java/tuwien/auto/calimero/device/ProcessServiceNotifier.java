@@ -85,6 +85,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 	{
 		device.dispatch(e, () -> { svc.groupResponse(e); return null; }, this::respond);
 	}
+
 	@Override
 	public void groupWrite(final ProcessEvent e)
 	{
