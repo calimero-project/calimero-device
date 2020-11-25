@@ -133,7 +133,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 			lastFailures.add(buf);
 		}
 
-		Security.groupKeys().forEach(this::tryAddSecuredGroupAddress);
+		Security.defaultInstallation().groupKeys().forEach(this::tryAddSecuredGroupAddress);
 	}
 
 	@Override
