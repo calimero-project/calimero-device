@@ -103,6 +103,7 @@ import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
+import tuwien.auto.calimero.link.KNXNetworkLinkUsb;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
@@ -347,6 +348,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final IndividualAddress address = settings.getDeviceAddress();
 		if (address.getDevice() != 0)
 			setAddress(address);
+		else if (address.getRawAddress() == 0 && !(link instanceof KNXNetworkLinkUsb))
+			settings.setDeviceAddress(getAddress());
 
 		if (process instanceof KnxDeviceServiceLogic)
 			((KnxDeviceServiceLogic) process).setDevice(this);
