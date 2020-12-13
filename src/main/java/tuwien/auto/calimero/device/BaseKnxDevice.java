@@ -51,7 +51,6 @@ import java.net.NetworkInterface;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -188,7 +187,20 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private static final int deviceMemorySize = 0x10010;
 	private final byte[] memory = new byte[deviceMemorySize];
 
-
+	/**
+	 * Creates a new KNX device with a specific device descriptor and a URI locating an interface object server
+	 * resource.
+	 * Implementation note: iosResource for an encrypted IOS is currently always interpreted as {@link Path}
+	 *
+	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param dd device descriptor
+	 * @param process the device process communication service handler
+	 * @param mgmt the device management service handler
+	 * @param iosResource location of an interface object server resource to load for this device
+	 * @param iosPassword the password to encrypt/decrypt the interface object server resource; an empty char array will
+	 *        load/store a plain (unencrypted) interface object server
+	 * @throws KnxPropertyException on error setting KNX properties during device initialization
+	 */
 	public BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
 		final ManagementService mgmt, final URI iosResource, final char[] iosPassword) throws KnxPropertyException
 	{
@@ -472,7 +484,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void saveIos() {
-		if (iosResource == null)
+		if (iosResource == null || "".equals(iosResource.toString()))
 			return;
 
 		try {
@@ -574,25 +586,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void initIos() {
-		if (iosResource != null) {
-			try {
-				ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
-				logger.debug("loading interface object server from {}", iosResource);
-				if (iosPwd.length > 0 && Path.of(iosResource).toFile().exists())
-					loadEncryptedIos(iosPwd);
-				else
-					ios.loadInterfaceObjects(iosResource.toString());
-				return;
-			}
-			catch (final UncheckedIOException e) {
-				logger.info("could not open {}, create resource on closing device ({})", iosResource, e.getCause().getMessage());
-				// re-add device object
-				ios.addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
-			}
-			catch (final GeneralSecurityException | IOException | KNXException e) {
-				throw new KnxRuntimeException("loading interface object server", e);
-			}
-		}
+		if (loadIosFromResource())
+			return;
 
 		final var addressTable = ios.addInterfaceObject(ADDRESSTABLE_OBJECT);
 		initTableProperties(addressTable, 0x0116);
@@ -614,6 +609,30 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.addInterfaceObject(InterfaceObject.SECURITY_OBJECT);
 
 		initDeviceInfo();
+	}
+
+	private boolean loadIosFromResource() {
+		if (iosResource == null || "".equals(iosResource.toString()))
+			return false;
+		try {
+			ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
+			logger.debug("loading interface object server from {}", iosResource);
+			if (iosPwd.length > 0 && Path.of(iosResource).toFile().exists())
+				loadEncryptedIos(iosPwd);
+			else
+				ios.loadInterfaceObjects(iosResource.toString());
+			return true;
+		}
+		catch (final UncheckedIOException e) {
+			logger.info("could not open {}, create resource on closing device ({})", iosResource,
+					e.getCause().getMessage());
+			// re-add device object
+			ios.addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
+			return false;
+		}
+		catch (final GeneralSecurityException | IOException | KNXException e) {
+			throw new KnxRuntimeException("loading interface object server", e);
+		}
 	}
 
 	private void initTableProperties(final InterfaceObject io, final int memAddress) {
@@ -852,7 +871,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		setIpProperty(PID.MSG_TRANSMIT_TO_IP, new byte[4]);
 
 		// friendly name property entry is an array of 30 characters
-		final byte[] data = Arrays.copyOf(name.getBytes(Charset.forName("ISO-8859-1")), 30);
+		final byte[] data = Arrays.copyOf(name.getBytes(StandardCharsets.ISO_8859_1), 30);
 		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, PID.FRIENDLY_NAME, 1, data.length, data);
 
 		// 100 ms is the default busy wait time

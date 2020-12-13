@@ -186,7 +186,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 * @param inProgrammingMode <code>true</code> if device should be set into programming mode,
 	 *        <code>false</code> if programming mode should be switched off (if currently set)
 	 */
-	public final void setProgrammingMode(final boolean inProgrammingMode)
+	public void setProgrammingMode(final boolean inProgrammingMode)
 	{
 		try {
 			final byte state = (byte) (inProgrammingMode ? 1 : 0);
