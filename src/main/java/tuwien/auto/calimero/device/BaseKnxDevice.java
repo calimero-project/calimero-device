@@ -209,62 +209,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	/**
-	 * Creates a new KNX device, requiring any subtype to initialize the service logic during construction.
-	 * <p>
-	 * The device address is either a configured subnetwork unique device address, or the default individual address if
-	 * no address was assigned to the device yet. The default individual device address consists of a medium dependent
-	 * default subnetwork address and the device address for unregistered devices. Unregistered devices are identified
-	 * by using the device address 0xff, a value reserved for this purpose. The subnetwork address part describes the
-	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is as follows, listed
-	 * as <i>Medium</i>: <i>Subnetwork address</i>:
-	 * <ul>
-	 * <li>TP 1: 0x02</li>
-	 * <li>PL 110: 0x04</li>
-	 * <li>RF: 0x05</li>
-	 * </ul>
-	 *
-	 * @param name KNX device name, used for human readable naming or device identification
-	 * @param dd device descriptor
-	 * @param device the device address, or the default individual address; if a device address is assigned, this
-	 *        address shall be unique in the subnetwork the device resides
-	 * @param link the KNX network link this device is attached to
-	 * @throws KNXLinkClosedException if the network link is closed
-	 * @throws KnxPropertyException on error setting KNX properties during device initialization
+	 * @deprecated Use {@link #BaseKnxDevice(String, DeviceDescriptor, ProcessCommunicationService, ManagementService, URI, char[])}
+	 * and {@link #setDeviceLink(KNXNetworkLink)}.
 	 */
-	BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
-		final KNXNetworkLink link) throws KNXLinkClosedException, KnxPropertyException
-	{
-		this(name, dd, (ProcessCommunicationService) null, null, null, NoPwd);
-		setDeviceLink(link);
-		setAddress(device);
-	}
-
-	/**
-	 * Creates a new KNX device.
-	 * <p>
-	 * The device address is either a configured subnetwork unique device address, or the default
-	 * individual address if no address was assigned to the device yet. The default individual
-	 * device address consists of a medium dependent default subnetwork address and the device
-	 * address for unregistered devices. Unregistered devices are identified by using the device
-	 * address 0xff, a value reserved for this purpose. The subnetwork address part describes the
-	 * individual address' <i>area</i> and <i>line</i>. The default subnetwork address by medium is
-	 * as follows, listed as <i>Medium</i>: <i>Subnetwork address</i>:
-	 * <ul>
-	 * <li>TP 1: 0x02</li>
-	 * <li>PL 110: 0x04</li>
-	 * <li>RF: 0x05</li>
-	 * </ul>
-	 *
-	 * @param name KNX device name, used for human readable naming or device identification
-	 * @param dd device descriptor
-	 * @param device the device address, or the default individual address; if a device address is
-	 *        assigned, this address shall be unique in the subnetwork the device resides
-	 * @param link the KNX network link this device is attached to
-	 * @param process the device process communication service handler
-	 * @param mgmt the device management service handler
-	 * @throws KNXLinkClosedException if the network link is closed
-	 * @throws KnxPropertyException on error setting KNX properties during device initialization
-	 */
+	@Deprecated
 	public BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
 		final KNXNetworkLink link, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
@@ -272,6 +220,13 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		this(name, dd, process, mgmt, null, NoPwd);
 		setDeviceLink(link);
 		setAddress(device);
+	}
+
+	BaseKnxDevice(final String name, final DeviceDescriptor dd, final KNXNetworkLink link,
+			final ProcessCommunicationService process, final ManagementService mgmt)
+			throws KNXLinkClosedException, KnxPropertyException {
+		this(name, dd, process, mgmt, null, NoPwd);
+		setDeviceLink(link);
 	}
 
 	/**
@@ -318,7 +273,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic, final KNXNetworkLink link)
 		throws KNXLinkClosedException, KnxPropertyException
 	{
-		this(name, DeviceDescriptor.DD0.TYPE_5705, link.getKNXMedium().getDeviceAddress(), link, logic, logic);
+		this(name, DeviceDescriptor.DD0.TYPE_5705, link, logic, logic);
 	}
 
 	/**

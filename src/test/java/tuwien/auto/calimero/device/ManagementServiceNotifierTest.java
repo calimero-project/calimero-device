@@ -74,7 +74,8 @@ class ManagementServiceNotifierTest {
 	private ManagementServiceNotifier notifier;
 
 	// link stub, does nothing
-	private final KNXNetworkLink linkStub = new AbstractLink<AutoCloseable>("test link", new TPSettings()) {
+	private final KNXNetworkLink linkStub = new AbstractLink<AutoCloseable>("test link",
+			new TPSettings(new IndividualAddress(0, 0x02, 0xff))) {
 		@Override
 		protected void onSend(final CEMILData msg, final boolean waitForCon) {}
 
@@ -106,7 +107,7 @@ class ManagementServiceNotifierTest {
 	@BeforeEach
 	void init() throws KNXLinkClosedException {
 		final BaseKnxDevice device = new BaseKnxDevice("test", DeviceDescriptor.DD0.TYPE_5705,
-				new IndividualAddress(0, 0x02, 0xff), linkStub, null, mgmtServices);
+				linkStub, null, mgmtServices);
 		mgmtServices.setDevice(device);
 		final var ios = device.getInterfaceObjectServer();
 		for (final var io : ios.getInterfaceObjects()) {

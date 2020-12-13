@@ -82,7 +82,8 @@ class ManagementServiceTest
 	@BeforeEach
 	void init() throws Exception
 	{
-		final KNXNetworkLink link = new AbstractLink<AutoCloseable>("test link", new TPSettings()) {
+		final KNXNetworkLink link = new AbstractLink<AutoCloseable>("test link",
+				new TPSettings(new IndividualAddress(0, 0x02, 0xff))) {
 			@Override
 			protected void onSend(final CEMILData msg, final boolean waitForCon) {}
 
@@ -105,7 +106,7 @@ class ManagementServiceTest
 			}
 		};
 
-		device = new BaseKnxDevice("test", DeviceDescriptor.DD0.TYPE_5705, new IndividualAddress(0, 0x02, 0xff), link, null, mgmt);
+		device = new BaseKnxDevice("test", DeviceDescriptor.DD0.TYPE_5705, link, null, mgmt);
 		mgmt.setDevice(device);
 		mgmt.authKeys[0] = highestAuthKey;
 		mgmt.authKeys[3] = authKey;

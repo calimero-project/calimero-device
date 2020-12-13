@@ -126,7 +126,7 @@ public class BaseKnxDeviceTest extends TestCase
 		@Override
 		public KNXMediumSettings getKNXMedium()
 		{
-			return new TPSettings();
+			return new TPSettings(addr);
 		}
 
 		@Override
@@ -288,7 +288,7 @@ public class BaseKnxDeviceTest extends TestCase
 	protected void setUp() throws Exception
 	{
 		super.setUp();
-		dev = new BaseKnxDevice("test", dd0, addr, link, processLogic, mgmtLogic);
+		dev = new BaseKnxDevice("test", dd0, link, processLogic, mgmtLogic);
 	}
 
 	@Override
@@ -306,23 +306,17 @@ public class BaseKnxDeviceTest extends TestCase
 	 */
 	public final void testKnxDevice() throws KNXLinkClosedException
 	{
-		try (var dev = new BaseKnxDevice("test", dd0, addr, link, null, mgmtLogic)) {}
+		try (var dev = new BaseKnxDevice("test", dd0, link, null, mgmtLogic)) {}
 
-		try (var dev = new BaseKnxDevice("test", dd0, null, link, processLogic, mgmtLogic)) {
-			fail("device address null");
-		}
-		catch (final NullPointerException expected) {}
-
-		try (var dev = new BaseKnxDevice("test", dd0, addr, link, processLogic, mgmtLogic)) {}
+		try (var dev = new BaseKnxDevice("test", dd0, link, processLogic, mgmtLogic)) {}
 	}
 
 	private static final class MyKnxDevice extends BaseKnxDevice
 	{
-		MyKnxDevice(final String name, final IndividualAddress device, final KNXNetworkLink link,
-			final ProcessCommunicationService processService, final ManagementService mgmtHandler)
-				throws KNXLinkClosedException, KnxPropertyException
+		MyKnxDevice(final String name, final KNXNetworkLink link, final ProcessCommunicationService processService,
+				final ManagementService mgmtHandler) throws KNXLinkClosedException, KnxPropertyException
 		{
-			super(name, dd0, device, link, processService, mgmtHandler);
+			super(name, dd0, link, processService, mgmtHandler);
 		}
 
 		void mySetAddress(final IndividualAddress address)
@@ -339,7 +333,7 @@ public class BaseKnxDeviceTest extends TestCase
 	 */
 	public final void testSetAddress() throws KNXLinkClosedException
 	{
-		try (var dev2 = new MyKnxDevice("test", addr, link, processLogic, mgmtLogic)) {
+		try (var dev2 = new MyKnxDevice("test", link, processLogic, mgmtLogic)) {
 			final IndividualAddress address = new IndividualAddress(4, 4, 4);
 			dev2.mySetAddress(address);
 			assertEquals(address, dev2.getAddress());

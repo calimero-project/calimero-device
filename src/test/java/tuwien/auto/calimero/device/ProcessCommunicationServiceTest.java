@@ -177,14 +177,14 @@ public class ProcessCommunicationServiceTest extends TestCase
 		final IndividualAddress ia2 = new IndividualAddress("1.1.2");
 		final KNXNetworkLink deviceLink1 = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, null,
 				new KnxIPSettings(ia1));
-		device1 = new BaseKnxDevice(ia1.toString(), DeviceDescriptor.DD0.TYPE_5705, ia1, deviceLink1, processLogicRunnable, null) {
+		device1 = new BaseKnxDevice(ia1.toString(), DeviceDescriptor.DD0.TYPE_5705, deviceLink1, processLogicRunnable, null) {
 			{
 				threadingPolicy = INCOMING_EVENTS_THREADED;
 			}
 		};
 		final KNXNetworkLink deviceLink2 = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, null,
 				new KnxIPSettings(ia2));
-		device2 = new BaseKnxDevice(ia2.toString(), DeviceDescriptor.DD0.TYPE_5705, ia2, deviceLink2, processLogic, null);
+		device2 = new BaseKnxDevice(ia2.toString(), DeviceDescriptor.DD0.TYPE_5705, deviceLink2, processLogic, null);
 
 		// client link
 		if (useRouting) {
