@@ -43,7 +43,7 @@ import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
-public final class SecurityInterface extends InterfaceObject {
+public final class SecurityObject extends InterfaceObject {
 
 	public interface Pid {
 		// Load Control (PDT CONTROL)
@@ -93,15 +93,15 @@ public final class SecurityInterface extends InterfaceObject {
 	}
 
 	// > 1 security interfaces are not supported by a device
-	public static SecurityInterface lookup(final InterfaceObjectServer ios) {
+	public static SecurityObject lookup(final InterfaceObjectServer ios) {
 		for (final var interfaceObject : ios.getInterfaceObjects()) {
 			if (interfaceObject.getType() == SECURITY_OBJECT)
-				return (SecurityInterface) interfaceObject;
+				return (SecurityObject) interfaceObject;
 		}
 		throw new KnxPropertyException("no security interface object found");
 	}
 
-	SecurityInterface(final int objectType, final int index) {
+	SecurityObject(final int objectType, final int index) {
 		super(objectType, index);
 	}
 

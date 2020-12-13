@@ -312,15 +312,15 @@ public class InterfaceObjectServer implements PropertyAccess
 		initIoProperties(io, true);
 		if (objectType == InterfaceObject.DEVICE_OBJECT)
 			adapter.createNewDescription(0, PID.IO_LIST, false);
-		if (io instanceof SecurityInterface)
-			((SecurityInterface) io).populateWithDefaults(this);
+		if (io instanceof SecurityObject)
+			((SecurityObject) io).populateWithDefaults(this);
 
 		return io;
 	}
 
 	private static InterfaceObject newInterfaceObject(final int objectType, final int index) {
 		if (objectType == InterfaceObject.SECURITY_OBJECT)
-			return new SecurityInterface(objectType, index);
+			return new SecurityObject(objectType, index);
 		return new InterfaceObject(objectType, index);
 	}
 

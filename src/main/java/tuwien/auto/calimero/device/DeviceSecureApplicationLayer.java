@@ -63,8 +63,8 @@ import tuwien.auto.calimero.SecurityControl;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
-import tuwien.auto.calimero.device.ios.SecurityInterface;
-import tuwien.auto.calimero.device.ios.SecurityInterface.Pid;
+import tuwien.auto.calimero.device.ios.SecurityObject;
+import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
 import tuwien.auto.calimero.internal.Security;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
@@ -81,7 +81,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	private static final String secureSymbol = new String(Character.toChars(0x1F512));
 
 	private final InterfaceObjectServer ios;
-	private final SecurityInterface securityInterface;
+	private final SecurityObject securityObject;
 
 	private final Logger logger;
 
@@ -96,16 +96,16 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios) {
-		this(tl, ios, SecurityInterface.lookup(ios));
+		this(tl, ios, SecurityObject.lookup(ios));
 	}
 
 	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios,
-			final SecurityInterface securityInterface) {
+			final SecurityObject securityObject) {
 		super((TransportLayerImpl) tl, ios.getProperty(0, PropertyAccess.PID.SERIAL_NUMBER, 1, 1),
-				unsigned(securityInterface.get(Pid.SequenceNumberSending)), Map.of());
+				unsigned(securityObject.get(Pid.SequenceNumberSending)), Map.of());
 
 		this.ios = ios;
-		this.securityInterface = securityInterface;
+		this.securityObject = securityObject;
 
 		final var bytes = ios.getProperty(DEVICE_OBJECT, 1, PID.DESCRIPTION, 1, Integer.MAX_VALUE);
 		final var name = new String(bytes, StandardCharsets.ISO_8859_1);
@@ -113,7 +113,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 		long toolSeqNo = 0;
 		try {
-			toolSeqNo = unsigned(securityInterface.get(Pid.ToolSequenceNumberSending));
+			toolSeqNo = unsigned(securityObject.get(Pid.ToolSequenceNumberSending));
 		}
 		catch (final KnxPropertyException ignore) {}
 		if (toolSeqNo <= 1)
@@ -122,7 +122,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 			updateSequenceNumber(true, toolSeqNo);
 
 		// load failure log: property value = { 4 * counters (2 bytes each), last failures (12 bytes each) }
-		final var failureLog = ByteBuffer.wrap(securityInterface.get(Pid.SecurityFailuresLog));
+		final var failureLog = ByteBuffer.wrap(securityObject.get(Pid.SecurityFailuresLog));
 		initFailureCounter(InvalidScf, failureLog.getShort() & 0xffff);
 		initFailureCounter(SeqNoError, failureLog.getShort() & 0xffff);
 		initFailureCounter(CryptoError, failureLog.getShort() & 0xffff);
@@ -142,21 +142,21 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		final var baos = new ByteArrayOutputStream();
 		baos.writeBytes(failureCountersArray());
 		lastFailures.forEach(baos::writeBytes);
-		securityInterface.set(Pid.SecurityFailuresLog, baos.toByteArray());
+		securityObject.set(Pid.SecurityFailuresLog, baos.toByteArray());
 	}
 
 	@Override
 	protected byte[] toolKey(final IndividualAddress addr) {
-		return securityInterface.get(Pid.ToolKey);
+		return securityObject.get(Pid.ToolKey);
 	}
 
 	@Override
 	protected void updateSequenceNumber(final boolean toolAccess, final long seqNo) {
 		super.updateSequenceNumber(toolAccess, seqNo);
 		if (toolAccess)
-			securityInterface.set(Pid.ToolSequenceNumberSending, sixBytes(seqNo).array());
+			securityObject.set(Pid.ToolSequenceNumberSending, sixBytes(seqNo).array());
 		else
-			securityInterface.set(Pid.SequenceNumberSending, sixBytes(seqNo).array());
+			securityObject.set(Pid.SequenceNumberSending, sixBytes(seqNo).array());
 	}
 
 	@Override
@@ -181,12 +181,12 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 			super.updateLastValidSequence(toolAccess, remote, seqNo);
 		}
 		else {
-			final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
+			final byte[] addresses = securityObject.get(Pid.SecurityIndividualAddressTable);
 			final int entrySize = 2 + SeqSize;
 			final int idx = binarySearch(addresses, entrySize, 0, 2, remote.getRawAddress());
 			if (idx >= 0) {
 				final var data = ByteBuffer.allocate(8).put(remote.toByteArray()).put(sixBytes(seqNo));
-				securityInterface.set(Pid.SecurityIndividualAddressTable, idx + 1, 1, data.array());
+				securityObject.set(Pid.SecurityIndividualAddressTable, idx + 1, 1, data.array());
 			}
 		}
 	}
@@ -196,7 +196,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		if (toolAccess)
 			return super.lastValidSequenceNumber(toolAccess, remote);
 
-		final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
+		final byte[] addresses = securityObject.get(Pid.SecurityIndividualAddressTable);
 		final int entrySize = 2 + SeqSize;
 		final int idx = binarySearch(addresses, entrySize, 0, 2, remote.getRawAddress());
 		if (idx < 0)
@@ -252,11 +252,11 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	boolean isSecurityModeEnabled() {
-		return securityInterface.get(Pid.SecurityMode, 1, 1)[0] == 1;
+		return securityObject.get(Pid.SecurityMode, 1, 1)[0] == 1;
 	}
 
 	void setSecurityMode(final boolean secure) {
-		securityInterface.set(Pid.SecurityMode, (byte) (secure ? 1 : 0));
+		securityObject.set(Pid.SecurityMode, (byte) (secure ? 1 : 0));
 	}
 
 	byte[] decrypt(final ProcessEvent pe) throws GeneralSecurityException {
@@ -355,14 +355,14 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private void addSecureLink(final IndividualAddress address, final long lastValidSeqNo) {
-		final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
+		final byte[] addresses = securityObject.get(Pid.SecurityIndividualAddressTable);
 		final int raw = address.getRawAddress();
 		final int entrySize = 2 + SeqSize;
 		final int idx = binarySearch(addresses, entrySize, 0, 2, raw);
 
 		final int insert = idx < 0 ? -idx : idx + 1;
 		final var element = ByteBuffer.allocate(entrySize).putShort((short) raw).put(sixBytes(lastValidSeqNo)).array();
-		securityInterface.set(Pid.SecurityIndividualAddressTable, insert, 1, element);
+		securityObject.set(Pid.SecurityIndividualAddressTable, insert, 1, element);
 	}
 
 	private void tryAddSecuredGroupAddress(final GroupAddress address, final byte[] groupKey) {
@@ -379,18 +379,18 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		final int gaIndex = groupAddressIndex(address)
 				.orElseThrow(() -> new KnxSecureException(address + " not in address table"));
 
-		final byte[] addresses = securityInterface.get(Pid.GroupKeyTable);
+		final byte[] addresses = securityObject.get(Pid.GroupKeyTable);
 		final int entrySize = 2 + KeySize;
 		final int idx = binarySearch(addresses, entrySize, 0, 2, gaIndex);
 
 		final int insert = idx < 0 ? -idx : idx + 1;
 		final var element = ByteBuffer.allocate(entrySize).putShort((short) gaIndex).put(groupKey).array();
-		securityInterface.set(Pid.GroupKeyTable, insert, 1, element);
+		securityObject.set(Pid.GroupKeyTable, insert, 1, element);
 	}
 
 	// returns 1-based index of address in security IA table
 	private int indAddressIndex(final IndividualAddress address) {
-		final byte[] addresses = securityInterface.get(Pid.SecurityIndividualAddressTable);
+		final byte[] addresses = securityObject.get(Pid.SecurityIndividualAddressTable);
 		final int entrySize = 2 + SeqSize;
 		return 1 + binarySearch(addresses, entrySize, 0, 2, address.getRawAddress());
 	}
@@ -416,10 +416,10 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private byte[] lookupKey(final int pidTable, final int addressIndex, final int entrySize) {
-		if (!securityInterface.isLoaded())
+		if (!securityObject.isLoaded())
 			return null;
 
-		final byte[] keyArray = securityInterface.get(pidTable);
+		final byte[] keyArray = securityObject.get(pidTable);
 		final int idx = binarySearch(keyArray, entrySize, 0, 2, addressIndex);
 		if (idx < 0)
 			return null;
@@ -428,7 +428,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private int groupObjectSecurity(final int groupObjectIndex) {
-		return securityInterface.get(Pid.GoSecurityFlags, groupObjectIndex, 1)[0] & 0xff;
+		return securityObject.get(Pid.GoSecurityFlags, groupObjectIndex, 1)[0] & 0xff;
 	}
 
 	static int binarySearch(final byte[] a, final int entrySize, final int valueOffset, final int typeSize,

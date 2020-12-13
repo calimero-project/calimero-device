@@ -66,7 +66,7 @@ import tuwien.auto.calimero.device.ManagementService.EraseCode;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
-import tuwien.auto.calimero.device.ios.SecurityInterface;
+import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
@@ -1238,10 +1238,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				sr = ServiceResult.error(ReturnCode.AccessDenied);
 			else if (description.getPDT() == PropertyTypes.PDT_FUNCTION && reserved != 0)
 				sr = ServiceResult.error(ReturnCode.DataVoid);
-			else if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityInterface.Pid.SecurityMode)
+			else if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityObject.Pid.SecurityMode)
 				sr = sal.securityMode(isCommand, functionInput);
 			else if (description.getPDT() == PropertyTypes.PDT_FUNCTION || description.getPDT() == PropertyTypes.PDT_CONTROL) {
-				if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityInterface.Pid.SecurityFailuresLog)
+				if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityObject.Pid.SecurityFailuresLog)
 					sr = sal.securityFailuresLog(isCommand, functionInput);
 				else
 					sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)

@@ -95,8 +95,8 @@ import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.device.ios.PropertyEvent;
-import tuwien.auto.calimero.device.ios.SecurityInterface;
-import tuwien.auto.calimero.device.ios.SecurityInterface.Pid;
+import tuwien.auto.calimero.device.ios.SecurityObject;
+import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.internal.SecureApplicationLayer;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
@@ -365,10 +365,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void ensureInitializedSeqNumber() throws KNXLinkClosedException {
-		final var secif = SecurityInterface.lookup(getInterfaceObjectServer());
+		final var secif = SecurityObject.lookup(getInterfaceObjectServer());
 		if (!secif.isLoaded() || !sal.isSecurityModeEnabled())
 			return;
-		if (unsigned(secif.get(SecurityInterface.Pid.SequenceNumberSending)) > 1)
+		if (unsigned(secif.get(SecurityObject.Pid.SequenceNumberSending)) > 1)
 			return;
 		secif.set(Pid.SequenceNumberSending, sixBytes(1).array());
 
@@ -429,9 +429,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (optGaIdx.isPresent()) {
 			final int idx = optGaIdx.orElseThrow();
 			final long sec = unsigned(ios.getProperty(InterfaceObject.SECURITY_OBJECT, objectInstance,
-					SecurityInterface.Pid.GoSecurityFlags, idx, 1));
+					SecurityObject.Pid.GoSecurityFlags, idx, 1));
 			if (sec < goSecurity)
-				ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityInterface.Pid.GoSecurityFlags,
+				ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityObject.Pid.GoSecurityFlags,
 						idx, 1, (byte) goSecurity);
 		}
 		else {
@@ -440,7 +440,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			final int newGaIdx = lastGaIdx + 1;
 			ios.setProperty(ADDRESSTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, newGaIdx, 1,
 					group.toByteArray());
-			ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityInterface.Pid.GoSecurityFlags,
+			ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityObject.Pid.GoSecurityFlags,
 					newGaIdx, 1, (byte) goSecurity);
 
 			final byte[] table = ios.getProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, 1,
