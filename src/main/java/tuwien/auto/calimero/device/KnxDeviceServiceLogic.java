@@ -279,6 +279,53 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	enum LoadEvent { NoOperation, StartLoading, LoadCompleted, AdditionalLoadControls, Unload }
 	public enum LoadState { Unloaded, Loaded, Loading, Error, Unloading, LoadCompleting }
 
+	// Helper for load state machine of BIM M112
+	// DM_LoadStateMachineVerify_RCo_Mem
+	private static class BimM112 {
+		// address of mgmt control
+		private static final int MgmtControl = 0x0104;
+		// address of run control
+		private static final int RunControl = 0x0103;
+
+		static boolean isMgmtControl(final int startAddress) {
+			return startAddress == MgmtControl;
+		}
+
+		// addresses of load states
+		private static final int LsAddressTable = 0xb6ea;
+		private static final int LsAssociationTable = 0xb6eb;
+		private static final int LsApplicationTable = 0xb6ec;
+		private static final int LsPeiProgram = 0xb6ed;
+
+		private static int loadStateAddress(final int stateMachineIndex) {
+			switch (stateMachineIndex) {
+			case 1: return LsAddressTable;
+			case 2: return LsAssociationTable;
+			case 3: return LsApplicationTable;
+			case 4: return LsPeiProgram;
+			default: return 0;
+			}
+		}
+
+		static void onLoadEvent(final KnxDeviceServiceLogic logic, final byte[] data) {
+			final int stateMachineAndEvent = data[0] & 0xff;
+
+			final int stateMachine = stateMachineAndEvent >> 4;
+			final int addr = loadStateAddress(stateMachine);
+
+			final var event = LoadEvent.values()[stateMachineAndEvent & 0xf];
+			final var state = nextLoadState(event);
+			logic.logger.debug("state machine {} (0x{}) event {} -> load state {}", stateMachine,
+					Integer.toHexString(addr), event, state);
+			logic.writeMemory(addr, new byte[] { (byte) state.ordinal() });
+		}
+
+		// write addresses of run states
+		private static final int RsAppProgram = 0x0101;
+		private static final int RsPeiProgram = 0x0102;
+	}
+
+
 	@Override
 	public ServiceResult writeProperty(final Destination remote, final int objectIndex,
 		final int propertyId, final int startIndex, final int elements, final byte[] data)
@@ -319,29 +366,28 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return new ServiceResult(data);
 	}
 
+	private static LoadState nextLoadState(final LoadEvent event) {
+		switch (event) {
+		case NoOperation: return LoadState.Error; // ??? return current state
+		case StartLoading: return LoadState.Loading;
+		case LoadCompleted: return LoadState.Loaded;
+		case AdditionalLoadControls: return LoadState.Loading;
+		case Unload: return LoadState.Unloaded;
+		default: throw new IllegalStateException();
+		}
+	}
+
 	private ServiceResult changeLoadState(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements, final byte[] data) {
 
 		final var event = LoadEvent.values()[data[0] & 0xff];
 		logger.debug("load state control event for OI {}: {}", objectIndex, event);
-		switch (event) {
-		case NoOperation:
+
+		if (event == LoadEvent.NoOperation)
 			return readProperty(remote, objectIndex, propertyId, startIndex, elements);
-		case StartLoading:
-			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loading.ordinal());
-			return new ServiceResult((byte) LoadState.Loading.ordinal());
-		case LoadCompleted:
-			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loaded.ordinal());
-			return new ServiceResult((byte) LoadState.Loaded.ordinal());
-		case AdditionalLoadControls:
-			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loading.ordinal());
-			return new ServiceResult((byte) LoadState.Loading.ordinal());
-		case Unload:
-			ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) LoadState.Loaded.ordinal());
-			return new ServiceResult((byte) LoadState.Unloaded.ordinal());
-		default:
-			throw new Error();
-		}
+		final var loadState = nextLoadState(event);
+		ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) loadState.ordinal());
+		return new ServiceResult((byte) loadState.ordinal());
 	}
 
 	@Override
@@ -576,6 +622,15 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			return ServiceResult.error(ReturnCode.AddressVoid);
 		if (startAddress + data.length >= mem.length)
 			return ServiceResult.error(ReturnCode.MemoryError);
+
+		if (BimM112.isMgmtControl(startAddress)) {
+			final var dd = DeviceDescriptor.DD0.from(readDescriptor(0).getResult());
+			if (dd == DeviceDescriptor.DD0.TYPE_0700 || dd == DeviceDescriptor.DD0.TYPE_0701) {
+				BimM112.onLoadEvent(this, data);
+				return new ServiceResult();
+			}
+		}
+
 		for (int i = 0; i < data.length; i++) {
 			final byte b = data[i];
 			mem[startAddress + i] = b;
