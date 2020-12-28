@@ -115,6 +115,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private final Instant startTime = Instant.now();
 	private boolean ignoreReadSNByPowerReset;
 
+	private volatile boolean verifyMode;
+
+
 	public void setDevice(final KnxDevice device)
 	{
 		this.device = device;
@@ -360,8 +363,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases
-		if (propertyId == PID.PROGMODE)
+		if (objectIndex == 0 && propertyId == PID.PROGMODE)
 			setProgrammingMode((data[0] & 0x01) == 0x01);
+		// verify mode control is used by mask 0020h, 0021h, 0701h, 0705h System B, System 300, mask 091Ah
+		if (objectIndex == 0 && propertyId == PID.DEVICE_CONTROL)
+			verifyMode = (data[0] & 0x04) != 0;
 
 		return new ServiceResult(data);
 	}
@@ -876,7 +882,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public boolean isVerifyModeEnabled()
 	{
-		return false;
+		return verifyMode;
 	}
 
 	private void syncDatapoints() {
