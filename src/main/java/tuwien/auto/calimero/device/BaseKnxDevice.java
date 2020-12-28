@@ -153,13 +153,17 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	//  *) in-order task processing per producer
 	//  *) sequential task processing per producer
 	private static final ThreadFactory factory = Executors.defaultThreadFactory();
-	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 10, TimeUnit.SECONDS,
+	// specify a generous corePoolSize, because pool size is only increased if queue is full (our queue is unbounded)
+	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 10, 10, TimeUnit.SECONDS,
 			new LinkedBlockingQueue<Runnable>(), (r) -> {
 				final Thread t = factory.newThread(r);
 				t.setName("Calimero Device Task (" + t.getName() + ")");
 				t.setDaemon(true); // on shutdown, we won't execute any remaining tasks
 				return t;
 			});
+	static {
+		executor.allowCoreThreadTimeOut(true);
+	}
 
 	private boolean taskSubmitted;
 	// local queue if a task is currently submitted to our executor service
