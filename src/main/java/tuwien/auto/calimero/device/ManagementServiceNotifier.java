@@ -302,7 +302,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			if (dst instanceof IndividualAddress && !dst.equals(device.getAddress()))
 				return;
 		}
-		// we do everthing in respond
+		// we do everything in respond
 		device.dispatch(e, () -> ServiceResult.Empty, this::respond);
 	}
 

@@ -68,6 +68,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -550,33 +551,36 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		return name + " " + getAddress();
 	}
 
+	private static final AtomicLong taskCounter = new AtomicLong();
+
 	void dispatch(final EventObject e, final Supplier<ServiceResult> dispatch,
 		final BiConsumer<EventObject, ServiceResult> respond)
 	{
 		final long start = System.nanoTime();
+		final long taskId = taskCounter.incrementAndGet();
 		if (threadingPolicy == INCOMING_EVENTS_THREADED) {
-			submitTask(() -> {
+			submitTask(taskId, () -> {
 				try {
 					Optional.ofNullable(dispatch.get()).ifPresent(sr -> respond.accept(e, sr));
 				}
 				catch (final RuntimeException rte) {
-					logger.error("error executing dispatch/respond task", rte);
+					logger.error("error executing dispatch/respond task {}", taskId, rte);
 				}
 				finally {
-					taskDone(start);
+					taskDone(taskId, start);
 				}
 			});
 		}
 		else {
-			Optional.ofNullable(dispatch.get()).ifPresent(sr -> submitTask(() -> {
+			Optional.ofNullable(dispatch.get()).ifPresent(sr -> submitTask(taskId, () -> {
 				try {
 					respond.accept(e, sr);
 				}
 				catch (final RuntimeException rte) {
-					logger.error("error executing respond task", rte);
+					logger.error("error executing respond task {}", taskId, rte);
 				}
 				finally {
-					taskDone(start);
+					taskDone(taskId, start);
 				}
 			}));
 		}
@@ -903,9 +907,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 	}
 
-	private void submitTask(final Runnable task)
+	private void submitTask(final long taskId, final Runnable task)
 	{
 		synchronized (tasks) {
+			logger.trace("queue task " + taskId);
 			if (taskSubmitted)
 				tasks.add(task);
 			else {
@@ -915,11 +920,11 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 	}
 
-	private void taskDone(final long start) {
+	private void taskDone(final long taskId, final long start) {
 		final long total = System.nanoTime() - start;
 		final long ms = total / 1_000_000L;
-		if (ms > 3000)
-			logger.warn("task took suspiciously long ({} ms)", ms);
+		if (ms > 5000)
+			logger.warn("task {} took suspiciously long ({} ms)", taskId, ms);
 
 		synchronized (tasks) {
 			if (tasks.isEmpty())
