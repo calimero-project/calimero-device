@@ -463,11 +463,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int eraseCode = masterReset ? data[1] & 0xff : 0;
 		final int channel = masterReset ? data[2] & 0xff : 0;
 
-		final ServiceResult sr;
-		if (eraseCode < EraseCode.values().length) {
-			final EraseCode code = EraseCode.values()[eraseCode];
+		final int unsupportedEraseCode = 2;
+		ServiceResult sr = new ServiceResult((byte) unsupportedEraseCode, (byte) 0, (byte) 0);
+
+		EraseCode code = EraseCode.None;
+		try {
+			code = EraseCode.of(eraseCode);
+			if (!AccessPolicies.checkRestartAccess(masterReset, code, sal.isSecurityModeEnabled(), securityCtrl))
+				return;
 			logger.trace("{}->{} {}: {}, channel {}", respondTo.getAddress(), device.getAddress(), name,
-					eraseCode == 0 ? "Basic Restart" : code, channel);
+					code == EraseCode.None ? "Basic Restart" : code, channel);
 
 			// a basic restart does not have any response,
 			// a master reset returns an error code and process time
@@ -475,9 +480,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			if (!masterReset || ignoreOrSchedule(sr))
 				return;
 		}
-		else {
-			final int unsupportedEraseCode = 2;
-			sr = new ServiceResult((byte) unsupportedEraseCode, (byte) 0, (byte) 0);
+		catch (final KNXIllegalArgumentException e) {
+			// unsupported erase code
+			logger.warn("{}->{} {}: {}", respondTo.getAddress(), device.getAddress(), name, e.getMessage());
 		}
 
 		final byte[] res = sr.getResult();
@@ -492,6 +497,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination())
 				.collect(Collectors.toList());
 		destinations.forEach(Destination::destroy);
+
+		if (code == EraseCode.FactoryReset || code == EraseCode.FactoryResetWithoutIndividualAddress) {
+			SecurityObject.lookup(device.getInterfaceObjectServer()).populateWithDefaults(device.getInterfaceObjectServer());
+		}
 	}
 
 	// p2p connection-oriented mode

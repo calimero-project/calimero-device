@@ -44,6 +44,7 @@ import java.util.Set;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.SecurityControl;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
+import tuwien.auto.calimero.device.ManagementService.EraseCode;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
@@ -192,18 +193,18 @@ public final class AccessPolicies {
 		}
 	}
 
-	static boolean checkRestartAccess(final boolean securityMode, final int role, final int security,
-		final boolean masterReset, final int eraseCode) {
-		return (restartAccess(securityMode, role, security, masterReset, eraseCode) & Write) == Write;
+	static boolean checkRestartAccess(final boolean masterReset, final EraseCode code, final boolean securityMode,
+			final SecurityControl securityCtrl) {
+		return (restartAccess(masterReset, code, securityMode, securityCtrl) & Write) == Write;
 	}
 
-	private static int restartAccess(final boolean securityMode, final int role, final int security,
-		final boolean masterReset, final int eraseCode) {
-		if (!masterReset || (masterReset && eraseCode == 1))
+	private static int restartAccess(final boolean masterReset, final EraseCode code, final boolean securityMode,
+			final SecurityControl securityCtrl) {
+		if (!masterReset || (masterReset && code == EraseCode.ConfirmedRestart))
 			return accessPolicy("2AA/0AA");
-		if (securityMode && (eraseCode == 3 || eraseCode == 4))
-			throw new KNXIllegalArgumentException("unsupported restart service erase code " + eraseCode);
-		return accessPolicy("2AA/008");
+		if (securityMode && (code == EraseCode.ResetIndividualAddress || code == EraseCode.ResetApplicationProgram))
+			throw new KNXIllegalArgumentException("unsupported restart service erase code " + code);
+		return readWrite(accessPolicy("2AA/008"), securityMode, securityCtrl);
 	}
 
 	// resource allocation in bits for each role

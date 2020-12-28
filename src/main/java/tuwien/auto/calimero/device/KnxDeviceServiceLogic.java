@@ -137,9 +137,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			}
 		}
 
-		for (int i = 0; i < 16; i++)
-			authKeys[i] = defaultAuthKey;
-
+		resetAuthKeys(0);
 		syncDatapoints();
 	}
 
@@ -873,11 +871,21 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				}
 			}
 
+			if (eraseCode == EraseCode.FactoryReset || eraseCode == EraseCode.FactoryResetWithoutIndividualAddress) {
+				final int accessLevel = accessLevel(null);
+				resetAuthKeys(accessLevel);
+			}
+
 			final byte errorCode = 0;
 			final byte processTimeSeconds = 3;
 			return new ServiceResult(errorCode, (byte) 0, processTimeSeconds);
 		}
 		return null;
+	}
+
+	private void resetAuthKeys(final int maxAccessLevel) {
+		for (int i = maxAccessLevel; i < 16; i++)
+			authKeys[i] = defaultAuthKey;
 	}
 
 	@Override

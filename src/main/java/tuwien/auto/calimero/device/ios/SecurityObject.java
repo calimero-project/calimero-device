@@ -128,7 +128,8 @@ public final class SecurityObject extends InterfaceObject {
 		setProperty(pid, start, elements, data, strictMode, definitions);
 	}
 
-	void populateWithDefaults(final InterfaceObjectServer ios) {
+	// TODO make setDescription part of interface object, so we can avoid the ios param
+	public void populateWithDefaults(final InterfaceObjectServer ios) {
 		set(Pid.LoadStateControl, (byte) LoadState.Loaded.ordinal());
 		set(Pid.SecurityMode, (byte) 0);
 		final int objIndex = getIndex();

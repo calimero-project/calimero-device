@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2019 B. Malinowsky
+    Copyright (c) 2011, 2020 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ package tuwien.auto.calimero.device;
 
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
+import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.ManagementClient;
 import tuwien.auto.calimero.mgmt.TransportLayer;
@@ -277,7 +278,13 @@ public interface ManagementService
 		 */
 		ResetLinks,
 		/** Reset the device to its ex-factory state, the device address(es) shall not be reset. */
-		FactoryResetWithoutIndividualAddress
+		FactoryResetWithoutIndividualAddress;
+
+		public static EraseCode of(final int eraseCode) {
+			if (eraseCode >= 0 && eraseCode < values().length)
+				return values()[eraseCode];
+			throw new KNXIllegalArgumentException("unsupported erase code " + eraseCode);
+		}
 	}
 
 	/**
