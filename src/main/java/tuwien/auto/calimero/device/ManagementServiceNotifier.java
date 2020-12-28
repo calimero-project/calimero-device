@@ -70,6 +70,7 @@ import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
+import tuwien.auto.calimero.link.medium.RFSettings;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.Destination.AggregatorProxy;
@@ -667,13 +668,60 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	}
 
 	private void onDoASerialNumberWrite(final String name, final Destination respondTo, final byte[] data) {
-		logger.info("{}->{} {} not implemented", respondTo.getAddress(), device.getAddress(), name);
-		// NYI
-//		device.setAddress(null);
+		final int lengthSN = 6;
+		if (!verifyLength(data.length, lengthSN + lengthDoA, lengthSN + lengthDoA, name))
+			return;
+		final byte[] sno = Arrays.copyOfRange(data, 0, lengthSN);
+		if (!matchesOurSerialNumber(sno))
+			return;
+
+		final byte[] domain = Arrays.copyOfRange(data, lengthSN, lengthSN + lengthDoA);
+		logger.trace("{}->{} {} SN {} DoA 0x{}", respondTo.getAddress(), device.getAddress(), name, toHex(sno, ""), toHex(domain, ""));
+		mgmtSvc.writeDomainAddress(domain);
 	}
 
 	private void onDoASerialNumberRead(final String name, final Destination respondTo, final byte[] data) {
-		logger.info("{}->{} {} not implemented", respondTo.getAddress(), device.getAddress(), name);
+		final int lengthSN = 6;
+		if (!verifyLength(data.length, lengthSN, lengthSN, name))
+			return;
+		final byte[] sno = Arrays.copyOfRange(data, 0, lengthSN);
+		if (!matchesOurSerialNumber(sno))
+			return;
+
+		logger.trace("{}->{} {} SN {}", respondTo.getAddress(), device.getAddress(), name, toHex(sno, ""));
+		final var endDoA = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
+		final var sr = mgmtSvc.readDomainAddress(new byte[lengthDoA], Arrays.copyOfRange(endDoA, 0, lengthDoA));
+		if (ignoreOrSchedule(sr))
+			return;
+
+		final byte[] domain = sr.getResult();
+		if (domain.length != lengthDoA) {
+			logger.warn("length of domain address is {} bytes, should be {} - ignore", domain.length, lengthDoA);
+			return;
+		}
+
+		final byte[] asdu = ByteBuffer.allocate(lengthSN + lengthDoA).put(sno).put(domain).array();
+		final var apdu = DataUnitBuilder.createAPDU(DoASerialNumberResponse, asdu);
+		sendBroadcast(true, apdu, Priority.SYSTEM, decodeAPCI(DoASerialNumberResponse));
+	}
+
+	private boolean matchesOurSerialNumber(final byte[] sno) {
+		final var medium = device.getDeviceLink().getKNXMedium();
+		byte[] serialNumber = new byte[6];
+		if (medium instanceof RFSettings) {
+			final var rfSettings = (RFSettings) medium;
+			serialNumber = rfSettings.getSerialNumber();
+			// serial number might not be set in rf medium settings
+			if (Arrays.equals(serialNumber, new byte[6])) {
+				try {
+					serialNumber = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+				}
+				catch (final KnxPropertyException e) {
+					logger.warn("RF device with no serial number", e);
+				}
+			}
+		}
+		return Arrays.equals(sno, serialNumber);
 	}
 
 	// p2p connection-oriented mode

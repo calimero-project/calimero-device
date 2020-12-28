@@ -724,9 +724,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult readDomainAddress(final byte[] startDoA, final byte[] endDoA)
 	{
-		final long start = ByteBuffer.wrap(startDoA).getLong();
-		final long end = ByteBuffer.wrap(endDoA).getLong();
-		final long our = ByteBuffer.wrap(domainAddress).getLong();
+		final long start = unsigned(startDoA);
+		final long end = unsigned(endDoA);
+		final long our = unsigned(domainAddress);
 		if (our >= start && our <= end) {
 			final int wait = new Random().nextInt(2001);
 			logger.trace("read domain address: wait " + wait + " ms before sending response");
