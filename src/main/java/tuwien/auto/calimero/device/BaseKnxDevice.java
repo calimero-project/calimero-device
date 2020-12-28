@@ -466,6 +466,21 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 	}
 
+	// prepare properties usually required for ETS download
+	public void identification(final DeviceDescriptor dd, final int manufacturerId, final byte[] serialNumber,
+			final byte[] hardwareType, final byte[] programVersion, final byte[] fdsk) {
+		// matching device descriptor to indicate BCU
+		if (dd instanceof DeviceDescriptor.DD0)
+			ios.setProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1, dd.toByteArray());
+		ios.setProperty(0, PID.MANUFACTURER_ID, 1, 1, (byte) (manufacturerId >> 8), (byte) manufacturerId);
+		ios.setProperty(0, PID.SERIAL_NUMBER, 1, 1, serialNumber);
+		ios.setProperty(0, 78, 1, 1, hardwareType);
+		ios.setProperty(4, PID.PROGRAM_VERSION, 1, 1, programVersion);
+
+		// fdsk for secure device download
+		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
+	}
+
 	private static final int SeqSize = 6;
 
 	private static ByteBuffer sixBytes(final long num) {
