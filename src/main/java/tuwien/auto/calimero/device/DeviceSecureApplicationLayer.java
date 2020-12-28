@@ -41,7 +41,6 @@ import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -72,7 +71,6 @@ import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.SecureManagement;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
-import tuwien.auto.calimero.process.ProcessEvent;
 
 final class DeviceSecureApplicationLayer extends SecureManagement {
 	private static final int SeqSize = 6;
@@ -257,11 +255,6 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	void setSecurityMode(final boolean secure) {
 		securityObject.set(Pid.SecurityMode, (byte) (secure ? 1 : 0));
-	}
-
-	byte[] decrypt(final ProcessEvent pe) throws GeneralSecurityException {
-		final int tpci = 0x00 | (SecureService >> 8);
-		return decrypt(pe.getSourceAddr(), pe.getDestination(), tpci, pe.getASDU()).apdu();
 	}
 
 	ServiceResult securityMode(final boolean command, final byte[] functionInput) {
