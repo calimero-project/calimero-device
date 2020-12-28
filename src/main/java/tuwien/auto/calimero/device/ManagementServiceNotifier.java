@@ -236,6 +236,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.info("attached link was closed");
 	}
 
+	private volatile Priority svcPriority;
+
 	public void respond(final EventObject e, final ServiceResult sr)
 	{
 		// since our service code is not split up in request/response, just do everything here
@@ -263,6 +265,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				d = impl.createDestination(sender, false);
 
 			dst = ldata.getDestination();
+			svcPriority = ldata.getPriority();
 		}
 
 		final int svc = DataUnitBuilder.getAPDUService(tpdu);
@@ -731,7 +734,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] asdu = sr.getResult();
 		final byte[] apdu = DataUnitBuilder.createAPDU(DEVICE_DESC_RESPONSE, asdu);
 		apdu[1] |= type;
-		send(d, apdu, sr.getPriority(), decodeAPCI(DEVICE_DESC_RESPONSE));
+		send(d, apdu, svcPriority, decodeAPCI(DEVICE_DESC_RESPONSE));
 	}
 
 	private void onPropertyRead(final String name, final KNXAddress dst, final Destination d, final byte[] data)
