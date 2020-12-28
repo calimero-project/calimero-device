@@ -946,7 +946,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				for (int i = 0; i < bytes; ++i)
 					asdu[3 + i] = written[i];
 
-				send(d, MEMORY_RESPONSE, asdu, sr.getPriority());
+				final var apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
+				send(d, apdu, sr.getPriority(), decodeAPCI(MEMORY_RESPONSE));
 			}
 		}
 	}
