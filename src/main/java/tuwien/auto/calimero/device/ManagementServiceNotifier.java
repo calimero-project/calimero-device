@@ -424,7 +424,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		if (broadcast) {
 			// NYI wait random time
 			final var apdu = DataUnitBuilder.createAPDU(service, asdu.array());
-			sendBroadcast(false, apdu, Priority.SYSTEM, decodeAPCI(service));
+			sendBroadcast(systemRead, apdu, Priority.SYSTEM, decodeAPCI(service));
 		}
 		else
 			send(respondTo, service, asdu.array(), Priority.SYSTEM);
