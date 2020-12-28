@@ -749,8 +749,18 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		if (inProgrammingMode()) {
 			domainAddress = domain;
-			final int pidRFDomainAddress = 82;
-			final int pid = domain.length == 2 ? PID.DOMAIN_ADDRESS : pidRFDomainAddress;
+
+			final int pid;
+			final var settings = device.getDeviceLink().getKNXMedium();
+			if (domain.length == 2) {
+				pid = PID.DOMAIN_ADDRESS;
+				((PLSettings) settings).setDomainAddress(domain);
+			}
+			else {
+				final int pidRFDomainAddress = 82;
+				pid = pidRFDomainAddress;
+				((RFSettings) settings).setDomainAddress(domain);
+			}
 			try {
 				ios.setProperty(0, pid, 1, 1, domain);
 			}
