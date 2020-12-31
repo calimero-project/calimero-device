@@ -349,6 +349,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, (byte) 0, (byte) medium);
 		if (medium == KNXMediumSettings.MEDIUM_KNXIP)
 			initKnxipProperties();
+		else if (medium == KNXMediumSettings.MEDIUM_RF)
+			initRfProperties();
 
 		final IndividualAddress address = settings.getDeviceAddress();
 		if (address.getDevice() != 0)
@@ -819,10 +821,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void initKnxipProperties() {
-		boolean found = false;
-		for (final InterfaceObject io : ios.getInterfaceObjects())
-			found |= io.getType() == KNXNETIP_PARAMETER_OBJECT;
-		if (!found)
+		if (!lookup(KNXNETIP_PARAMETER_OBJECT))
 			ios.addInterfaceObject(KNXNETIP_PARAMETER_OBJECT);
 
 		setIpProperty(PID.PROJECT_INSTALLATION_ID, fromWord(0));
@@ -902,6 +901,18 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		// 100 ms is the default busy wait time
 		setIpProperty(PID.ROUTING_BUSY_WAIT_TIME, fromWord(100));
+	}
+
+	private void initRfProperties() {
+		if (!lookup(InterfaceObject.RF_MEDIUM_OBJECT))
+			ios.addInterfaceObject(InterfaceObject.RF_MEDIUM_OBJECT);
+	}
+
+	private boolean lookup(final int ioType) {
+		boolean found = false;
+		for (final InterfaceObject io : ios.getInterfaceObjects())
+			found |= io.getType() == ioType;
+		return found;
 	}
 
 	private void propertyChanged(final PropertyEvent pe) {
