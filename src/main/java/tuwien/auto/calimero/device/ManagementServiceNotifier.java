@@ -283,7 +283,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 		catch (final RuntimeException rte) {
 			logger.error("failed to execute service {}->{} {}: {}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
-					DataUnitBuilder.toHex(asdu, " "), rte);
+					toHex(asdu, " "), rte);
 		}
 	}
 
@@ -988,7 +988,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			logger.warn("ill-formed {}: number field = {} but memory length = {}", name, bytes, memory);
 		else {
 			logger.trace("{}->{} {}: start address 0x{}, {} bytes: {}", d.getAddress(), device.getAddress(), name,
-					Integer.toHexString(address), bytes, DataUnitBuilder.toHex(memory, " "));
+					Integer.toHexString(address), bytes, toHex(memory, " "));
 			final ServiceResult sr = mgmtSvc.writeMemory(address, memory);
 			if (ignoreOrSchedule(sr))
 				return;
@@ -1369,7 +1369,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private void sendBroadcast(final boolean system, final byte[] apdu, final Priority p, final String service)
 	{
 		final String type = system ? "system" : "domain";
-		logger.trace("{}->[{} broadcast] {} {}", device.getAddress(), type, service, DataUnitBuilder.toHex(apdu, " "));
+		logger.trace("{}->[{} broadcast] {} {}", device.getAddress(), type, service, toHex(apdu, " "));
 		final var dst = new GroupAddress(0);
 		try {
 			final var tsdu = sal.secureData(device.getAddress(), dst, apdu, securityCtrl).orElse(apdu);
@@ -1379,7 +1379,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			Thread.currentThread().interrupt();
 		}
 		catch (KNXLinkClosedException | KNXTimeoutException e) {
-			logger.error("{}->[{} broadcast] {} {}: {}", device.getAddress(), type, service, DataUnitBuilder.toHex(apdu, " "),
+			logger.error("{}->[{} broadcast] {} {}: {}", device.getAddress(), type, service, toHex(apdu, " "),
 					e.getMessage());
 		}
 	}
@@ -1398,7 +1398,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			return;
 		}
 		final IndividualAddress dst = respondTo.getAddress();
-		logger.trace("{}->{} {} {}", device.getAddress(), dst, service, DataUnitBuilder.toHex(apdu, " "));
+		logger.trace("{}->{} {} {}", device.getAddress(), dst, service, toHex(apdu, " "));
 		try {
 			final byte[] tsdu = sal.secureData(device.getAddress(), respondTo.getAddress(), apdu, securityCtrl).orElse(apdu);
 			if (respondTo.isConnectionOriented())
@@ -1410,7 +1410,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			Thread.currentThread().interrupt();
 		}
 		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException e) {
-			logger.error("{}->{} {} {}: {}, {}", device.getAddress(), dst, service, DataUnitBuilder.toHex(apdu, " "), e.getMessage(),
+			logger.error("{}->{} {} {}: {}, {}", device.getAddress(), dst, service, toHex(apdu, " "), e.getMessage(),
 					respondTo);
 		}
 	}

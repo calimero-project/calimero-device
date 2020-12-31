@@ -36,6 +36,7 @@
 
 package tuwien.auto.calimero.device;
 
+import static tuwien.auto.calimero.DataUnitBuilder.toHex;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.GROUP_OBJECT_TABLE_OBJECT;
 
@@ -228,7 +229,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					return new ServiceResult(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (KNXException | RuntimeException ex) {
-				logger.warn("on group read request {}->{}: {}", e.getSourceAddr(), dst, DataUnitBuilder.toHex(e.getASDU(), " "), ex);
+				logger.warn("on group read request {}->{}: {}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "), ex);
 			}
 		}
 		return null;
@@ -247,8 +248,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
-			logger.warn("on group write {}->{}: {}, {}", e.getSourceAddr(), dst,
-					DataUnitBuilder.toHex(e.getASDU(), " "), ex.getMessage());
+			logger.warn("on group write {}->{}: {}, {}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "),
+					ex.getMessage());
 		}
 	}
 
@@ -763,7 +764,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				ios.setProperty(0, pid, 1, 1, domain);
 			}
 			catch (final KnxPropertyException e) {
-				logger.error("setting DoA {} in interface object server", DataUnitBuilder.toHex(domain, " "), e);
+				logger.error("setting DoA {} in interface object server", toHex(domain, " "), e);
 			}
 		}
 	}
@@ -892,8 +893,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult management(final int svcType, final byte[] asdu, final KNXAddress dst,
 		final Destination respondTo, final TransportLayer tl)
 	{
-		logger.info("{}->{} {} {}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
-				DataUnitBuilder.toHex(asdu, " "));
+		logger.info("{}->{} {} {}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType), toHex(asdu, " "));
 		return null;
 	}
 
