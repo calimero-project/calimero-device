@@ -605,10 +605,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			return ServiceResult.error(ReturnCode.AccessDenied);
 
 		final Collection<Datapoint> c = ((DatapointMap<Datapoint>) datapoints).getDatapoints();
-		final int groupAddrTableSize = 3 + c.size() * 2;
+		final int groupAddrTableSize = 4 + c.size() * 2;
 		if (startAddress >= addrGroupAddrTable && startAddress < addrGroupAddrTable + groupAddrTableSize) {
 			final ByteBuffer bb = ByteBuffer.allocate(groupAddrTableSize);
-			bb.put((byte) c.size());
+			bb.putShort((byte) c.size());
 			bb.put(device.getAddress().toByteArray());
 			c.forEach(dp -> bb.put(dp.getMainAddress().toByteArray()));
 			final int from = startAddress - addrGroupAddrTable;
