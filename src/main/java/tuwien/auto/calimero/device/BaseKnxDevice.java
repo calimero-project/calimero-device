@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2020 B. Malinowsky
+    Copyright (c) 2011, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -224,6 +224,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		this.mgmt = mgmt;
 
 		initIos();
+		loadDeviceMemory();
 	}
 
 	/**
@@ -506,6 +507,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			sal.close();
 
 		saveIos();
+		saveDeviceMemory();
 	}
 
 	private void saveIos() {
@@ -661,6 +663,39 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		catch (final GeneralSecurityException | IOException | KNXException e) {
 			throw new KnxRuntimeException("loading interface object server", e);
 		}
+	}
+
+	private void loadDeviceMemory() {
+		memResource().filter(Files::isRegularFile).ifPresent(path -> {
+			try {
+				logger.debug("loading device memory from {}", path);
+				final byte[] bytes = Files.readAllBytes(path);
+				System.arraycopy(bytes, 0, memory, 0, Math.min(bytes.length, memory.length));
+			}
+			catch (final IOException | RuntimeException e) {
+				logger.warn("loading device memory from {}", path, e);
+			}
+		});
+	}
+
+	private void saveDeviceMemory() {
+		memResource().ifPresent(path -> {
+			try {
+				logger.debug("saving device memory to {}", path);
+				Files.write(path, memory);
+			}
+			catch (IOException | RuntimeException e) {
+				logger.warn("saving device memory to {}", path, e);
+			}
+		});
+	}
+
+	private Optional<Path> memResource() {
+		if (iosResource == null || "".equals(iosResource.toString()))
+			return Optional.empty();
+
+		final Path memResource = Path.of(URI.create(iosResource.toString().replace(".xml", ".mem")));
+		return Optional.of(memResource);
 	}
 
 	private void initTableProperties(final InterfaceObject io, final int memAddress) {
