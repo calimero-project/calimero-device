@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2020 B. Malinowsky
+    Copyright (c) 2019, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -101,8 +101,8 @@ public final class SecurityObject extends InterfaceObject {
 		throw new KnxPropertyException("no security interface object found");
 	}
 
-	SecurityObject(final int objectType, final int index) {
-		super(objectType, index);
+	SecurityObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions) {
+		super(objectType, index, definitions);
 	}
 
 	public boolean isLoaded() {
@@ -124,21 +124,17 @@ public final class SecurityObject extends InterfaceObject {
 
 	public void set(final int pid, final int start, final int elements, final byte... data) {
 		final boolean strictMode = false;
-		final Map<PropertyKey, Property> definitions = Map.of();
-		setProperty(pid, start, elements, data, strictMode, definitions);
+		setProperty(pid, start, elements, data, strictMode);
 	}
 
-	// TODO make setDescription part of interface object, so we can avoid the ios param
-	public void populateWithDefaults(final InterfaceObjectServer ios) {
+	public void populateWithDefaults() {
 		set(Pid.LoadStateControl, (byte) LoadState.Loaded.ordinal());
 		set(Pid.SecurityMode, (byte) 0);
 		final int objIndex = getIndex();
-		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.P2PKeyTable, 0, 0, true, 0, 50, 3, 3),
-				true);
-		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GroupKeyTable, 0, 0, true, 0, 50, 3, 3),
-				true);
-		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.SecurityIndividualAddressTable, 0, 0, true,
-				0, 500, 3, 3), true);
+		setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.P2PKeyTable, 0, 0, true, 0, 50, 3, 3), true);
+		setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GroupKeyTable, 0, 0, true, 0, 50, 3, 3), true);
+		setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.SecurityIndividualAddressTable, 0, 0, true, 0,
+				500, 3, 3), true);
 		set(Pid.SecurityFailuresLog, 1, 1, new byte[8]);
 
 		final byte[] toolkey = new byte[16];
@@ -150,7 +146,7 @@ public final class SecurityObject extends InterfaceObject {
 
 		final int goFlags = 4000;
 		set(Pid.GoSecurityFlags, 1, 4000, new byte[goFlags]);
-		ios.setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GoSecurityFlags, 0, 0, true, 0, goFlags, 3, 3),
+		setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GoSecurityFlags, 0, 0, true, 0, goFlags, 3, 3),
 				true);
 
 		set(Pid.RoleTable, 1, 0, new byte[0]);

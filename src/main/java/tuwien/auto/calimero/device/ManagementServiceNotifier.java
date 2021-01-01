@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2020 B. Malinowsky
+    Copyright (c) 2012, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -500,7 +500,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		destinations.forEach(Destination::destroy);
 
 		if (code == EraseCode.FactoryReset || code == EraseCode.FactoryResetWithoutIndividualAddress) {
-			SecurityObject.lookup(device.getInterfaceObjectServer()).populateWithDefaults(device.getInterfaceObjectServer());
+			SecurityObject.lookup(device.getInterfaceObjectServer()).populateWithDefaults();
 		}
 	}
 

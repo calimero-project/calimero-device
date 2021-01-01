@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2020 B. Malinowsky
+    Copyright (c) 2010, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,11 +45,13 @@ import java.util.Map;
 import java.util.Optional;
 
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer.IosResourceHandler;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.mgmt.Description;
+import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
@@ -146,7 +148,9 @@ public class InterfaceObject
 	final Map<PropertyKey, byte[]> values = new HashMap<>();
 
 	private final int type;
+	private final Map<PropertyKey, Property> definitions;
 	private volatile int idx;
+
 
 	/**
 	 * Creates a new interface object of the specified object type.
@@ -156,13 +160,18 @@ public class InterfaceObject
 	 */
 	public InterfaceObject(final int objectType)
 	{
-		type = objectType;
+		this(objectType, Map.of());
 	}
 
-	InterfaceObject(final int objectType, final int index)
+	InterfaceObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions)
 	{
-		this(objectType);
+		this(objectType, definitions);
 		setIndex(index);
+	}
+
+	private InterfaceObject(final int objectType, final Map<PropertyKey, Property> definitions) {
+		type = objectType;
+		this.definitions = definitions;
 	}
 
 	/**
@@ -287,8 +296,8 @@ public class InterfaceObject
 		return data;
 	}
 
-	boolean setProperty(final int pid, final int start, final int elements, final byte[] data, final boolean strictMode,
-			final Map<PropertyKey, Property> definitions) throws KnxPropertyException {
+	boolean setProperty(final int pid, final int start, final int elements, final byte[] data, final boolean strictMode)
+			throws KnxPropertyException {
 		final PropertyKey key = new PropertyKey(getType(), pid);
 		byte[] bytes = values.get(key);
 
@@ -321,7 +330,7 @@ public class InterfaceObject
 				throw new KnxPropertyException(
 						"strict mode: no description found for " + getTypeName() + " PID " + pid);
 			createDescription = true;
-			final Property p = getDefinition(getType(), pid, definitions);
+			final Property p = getDefinition(pid);
 			if (p != null) {
 				pdt = p.getPDT();
 				dptId = p.dpt();
@@ -366,7 +375,7 @@ public class InterfaceObject
 
 		// make sure we provide a minimum description
 		if (createDescription)
-			createNewDescription(pid, true, definitions);
+			createNewDescription(pid, true);
 
 		return changed;
 	}
@@ -403,6 +412,82 @@ public class InterfaceObject
 		return i;
 	}
 
+	void setDescription(final Description d, final boolean allowCorrections) {
+		// do some validity checks before setting the description
+		// tells us whether we have to create a corrected description before inserting
+		boolean adjust = false;
+
+		if (d.getObjectType() != type) {
+			if (!allowCorrections)
+				throw new KNXIllegalArgumentException("interface object type differs");
+			adjust = true;
+		}
+
+		int idx;
+		int existingIdx = 0;
+		int pdt = 0;
+		// check if a description already exists
+		final Description chk = findByPid(d.getPID());
+		if (chk != null) {
+			existingIdx = chk.getPropIndex();
+			idx = existingIdx;
+			pdt = chk.getPDT();
+		}
+		else {
+			// no existing description, find an empty position index
+			idx = findFreeSlot();
+		}
+		// ensure object type property is on first position
+		if (d.getPID() == PID.OBJECT_TYPE) {
+			if (d.getPropIndex() != 0) {
+				if (!allowCorrections)
+					throw new KNXIllegalArgumentException("property 'object type' (PID 1) only allowed at index 0");
+				adjust = true;
+				idx = 0;
+			}
+		}
+		else if (d.getPropIndex() == 0) {
+			if (!allowCorrections)
+				throw new KNXIllegalArgumentException("only property 'object type' (PID 1) allowed at index 0");
+			adjust = true;
+		}
+		else
+			idx = d.getPropIndex();
+
+		if (d.getMaxElements() < d.getCurrentElements()) {
+			if (!allowCorrections)
+				throw new KNXIllegalArgumentException("maximum elements less than current elements");
+		}
+
+		if (d.getPDT() == 0 && allowCorrections) {
+			// if no existing description or no pdt was set
+			if (pdt == 0) {
+				final Property p = getDefinition(d.getPID());
+				if (p != null)
+					pdt = p.getPDT();
+			}
+			if (pdt != 0)
+				adjust = true;
+		}
+		else
+			pdt = d.getPDT();
+
+		// check if we have to remove an existing description (which might be located at
+		// a different index)
+		// Note: existingIdx = 0 refers to a non existing description and an existing
+		// description at index 0
+		// But index 0 is a special case because the object-type property description is
+		// fixed to that position; therefore, we never have to remove it, it is always
+		// replaced correctly
+		if (existingIdx != 0)
+			removeDescription(existingIdx);
+
+		// NB: the current elements field used here is meaningless
+		final var set = adjust ? new Description(d.getObjectIndex(), type, d.getPID(), idx, pdt, d.isWriteEnabled(),
+				d.getCurrentElements(), d.getMaxElements(), d.getReadLevel(), d.getWriteLevel()) : d;
+		setDescription(set);
+	}
+
 	// this method also ensures the value array is truncated accordingly
 	void setDescription(final Description d)
 	{
@@ -416,13 +501,13 @@ public class InterfaceObject
 		pidToDescription.put(d.getPID(), d);
 	}
 
-	void createNewDescription(final int pid, final boolean writeEnabled, final Map<PropertyKey, Property> definitions) {
+	void createNewDescription(final int pid, final boolean writeEnabled) {
 		final byte[] data = values.get(new PropertyKey(getType(), pid));
 		final int elems = (data[0] & 0xff) << 8 | (data[1] & 0xff);
 		final int maxElems = Math.max(elems, 1);
 
 		int pdt = -1;
-		final Property p = getDefinition(getType(), pid, definitions);
+		final Property p = getDefinition(pid);
 		if (p != null)
 			pdt = p.getPDT();
 		if (pdt == -1 && elems > 0) {
@@ -471,8 +556,8 @@ public class InterfaceObject
 		}
 	}
 
-	private Property getDefinition(final int objectType, final int pid, final Map<PropertyKey, Property> definitions) {
-		Property p = definitions.get(new PropertyKey(objectType, pid));
+	private Property getDefinition(final int pid) {
+		Property p = definitions.get(new PropertyKey(type, pid));
 		if (p == null && pid < 50)
 			p = definitions.get(new PropertyKey(pid));
 		return p;

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2020 B. Malinowsky
+    Copyright (c) 2010, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -215,7 +215,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		final IosResourceHandler h;
 		synchronized (this) {
 			if (rh == null)
-				setResourceHandler(new XmlSerializer(logger));
+				setResourceHandler(new XmlSerializer(logger, client.getDefinitions()));
 			h = rh;
 		}
 		final var list = o instanceof String ? h.loadInterfaceObjects((String) o)
@@ -249,7 +249,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		final IosResourceHandler h;
 		synchronized (this) {
 			if (rh == null)
-				setResourceHandler(new XmlSerializer(logger));
+				setResourceHandler(new XmlSerializer(logger, client.getDefinitions()));
 			h = rh;
 		}
 		final InterfaceObject[] objects = getInterfaceObjects();
@@ -260,7 +260,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		final IosResourceHandler h;
 		synchronized (this) {
 			if (rh == null)
-				setResourceHandler(new XmlSerializer(logger));
+				setResourceHandler(new XmlSerializer(logger, client.getDefinitions()));
 			h = rh;
 		}
 		final InterfaceObject[] objects = getInterfaceObjects();
@@ -305,7 +305,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		final int index;
 		synchronized (objects) {
 			index = objects.size();
-			io = newInterfaceObject(objectType, index);
+			io = newInterfaceObject(objectType, index, client.getDefinitions());
 			objects.add(io);
 			updateIoList();
 		}
@@ -313,15 +313,16 @@ public class InterfaceObjectServer implements PropertyAccess
 		if (objectType == InterfaceObject.DEVICE_OBJECT)
 			adapter.createNewDescription(0, PID.IO_LIST, false);
 		if (io instanceof SecurityObject)
-			((SecurityObject) io).populateWithDefaults(this);
+			((SecurityObject) io).populateWithDefaults();
 
 		return io;
 	}
 
-	private static InterfaceObject newInterfaceObject(final int objectType, final int index) {
+	private static InterfaceObject newInterfaceObject(final int objectType, final int index,
+			final Map<PropertyKey, Property> definitions) {
 		if (objectType == InterfaceObject.SECURITY_OBJECT)
-			return new SecurityObject(objectType, index);
-		return new InterfaceObject(objectType, index);
+			return new SecurityObject(objectType, index, definitions);
+		return new InterfaceObject(objectType, index, definitions);
 	}
 
 	/**
@@ -481,83 +482,8 @@ public class InterfaceObjectServer implements PropertyAccess
 	 */
 	public void setDescription(final Description d, final boolean allowCorrections)
 	{
-		// do some validity checks before setting the description
-		// tells us whether we have to create a corrected description before inserting
-		boolean adjust = false;
-
 		final InterfaceObject io = getIfObject(d.getObjectIndex());
-
-		final int type = io.getType();
-		if (d.getObjectType() != type) {
-			if (!allowCorrections)
-				throw new KNXIllegalArgumentException("interface object type differs");
-			adjust = true;
-		}
-
-		int idx;
-		int existingIdx = 0;
-		int pdt = 0;
-		// check if a description already exists
-		try {
-			final Description chk = getDescription(d.getObjectIndex(), d.getPID());
-			existingIdx = chk.getPropIndex();
-			idx = existingIdx;
-			pdt = chk.getPDT();
-		}
-		catch (final KnxPropertyException e) {
-			// no existing description, find an empty position index
-			idx = io.findFreeSlot();
-		}
-		// ensure object type property is on first position
-		if (d.getPID() == PID.OBJECT_TYPE) {
-			if (d.getPropIndex() != 0) {
-				if (!allowCorrections)
-					throw new KNXIllegalArgumentException("property 'object type' (PID 1) only allowed at index 0");
-				adjust = true;
-				idx = 0;
-			}
-		}
-		else if (d.getPropIndex() == 0) {
-			if (!allowCorrections)
-				throw new KNXIllegalArgumentException("only property 'object type' (PID 1) allowed at index 0");
-			adjust = true;
-		}
-		else
-			idx = d.getPropIndex();
-
-		if (d.getMaxElements() < d.getCurrentElements()) {
-			if (!allowCorrections)
-				throw new KNXIllegalArgumentException("maximum elements less than current elements");
-		}
-
-		if (d.getPDT() == 0 && allowCorrections) {
-			// if no existing description or no pdt was set
-			if (pdt == 0) {
-				final Property p = getDefinition(type, d.getPID());
-				if (p != null)
-					pdt = p.getPDT();
-			}
-			if (pdt != 0)
-				adjust = true;
-		}
-		else
-			pdt = d.getPDT();
-
-		// check if we have to remove an existing description (which might be located at
-		// a different index)
-		// Note: existingIdx = 0 refers to a non existing description and an existing
-		// description at index 0
-		// But index 0 is a special case because the object-type property description is
-		// fixed to that position; therefore, we never have to remove it, it is always
-		// replaced correctly
-		if (existingIdx != 0)
-			io.removeDescription(existingIdx);
-
-		// NB: the current elements field used here is meaningless
-		final Description set = adjust ? new Description(d.getObjectIndex(), type, d.getPID(), idx,
-				pdt, d.isWriteEnabled(), d.getCurrentElements(), d.getMaxElements(),
-				d.getReadLevel(), d.getWriteLevel()) : d;
-		io.setDescription(set);
+		io.setDescription(d, allowCorrections);
 	}
 
 	@Override
@@ -636,15 +562,6 @@ public class InterfaceObjectServer implements PropertyAccess
 	{
 		final PropertyEvent pe = new PropertyEvent(this, io, propertyId, start, elements, data);
 		listeners.fire(l -> l.onPropertyValueChanged(pe));
-	}
-
-	private Property getDefinition(final int objectType, final int pid)
-	{
-		final Map<PropertyKey, Property> defs = client.getDefinitions();
-		Property p = defs.get(new PropertyKey(objectType, pid));
-		if (p == null && pid < 50)
-			p = defs.get(new PropertyKey(pid));
-		return p;
 	}
 
 	private InterfaceObject getIfObject(final int objIndex)
@@ -729,7 +646,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		private void setProperty(final InterfaceObject io, final int pid, final int start,
 			final int elements, final byte[] data) throws KnxPropertyException
 		{
-			final boolean changed = io.setProperty(pid, start, elements, data, strictMode, client.getDefinitions());
+			final boolean changed = io.setProperty(pid, start, elements, data, strictMode);
 			if (changed)
 				firePropertyChanged(io, pid, start, elements, data);
 		}
@@ -741,7 +658,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 		private void createNewDescription(final int objIndex, final int pid, final boolean writeEnabled) {
 			final InterfaceObject io = getIfObject(objIndex);
-			io.createNewDescription(pid, writeEnabled, client.getDefinitions());
+			io.createNewDescription(pid, writeEnabled);
 		}
 	}
 
@@ -864,10 +781,12 @@ public class InterfaceObjectServer implements PropertyAccess
 		private XmlWriter w;
 
 		private final Logger logger;
+		private final Map<PropertyKey, Property> definitions;
 
-		XmlSerializer(final Logger l)
+		XmlSerializer(final Logger l, final Map<PropertyKey, Property> definitions)
 		{
 			logger = l;
+			this.definitions = definitions;
 		}
 
 		@Override
@@ -901,7 +820,7 @@ public class InterfaceObjectServer implements PropertyAccess
 						// on no type attribute, toInt() throws, that's ok
 						final int type = toInt(r.getAttributeValue(null, ATTR_OBJECTTYPE));
 						final int index = toInt(r.getAttributeValue(null, ATTR_INDEX));
-						final InterfaceObject io = newInterfaceObject(type, index);
+						final InterfaceObject io = newInterfaceObject(type, index, definitions);
 						list.add(io);
 						io.load(this);
 					}
