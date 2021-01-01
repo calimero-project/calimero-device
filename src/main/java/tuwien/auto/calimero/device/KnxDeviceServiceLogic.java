@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2020 B. Malinowsky
+    Copyright (c) 2012, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -104,9 +104,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	private final DatapointModel<Datapoint> datapoints = new DatapointMap<>();
 
-	// domain can be 2 or 6 bytes, set in setDevice()
-	private byte[] domainAddress;
-
 	// authentication
 	private static byte[] defaultAuthKey = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
 	final byte[][] authKeys = new byte[16][4];
@@ -126,15 +123,18 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		logger = (device instanceof BaseKnxDevice) ? ((BaseKnxDevice) device).logger()
 				: LoggerFactory.getLogger(KnxDeviceServiceLogic.class);
 
-		domainAddress = new byte[0];
 		final KNXNetworkLink link = device.getDeviceLink();
 		if (link != null) {
 			final KNXMediumSettings settings = link.getKNXMedium();
 			if (settings.getMedium() == KNXMediumSettings.MEDIUM_PL110) {
-				domainAddress = ((PLSettings) settings).getDomainAddress();
+				final byte[] domainAddress = ((PLSettings) settings).getDomainAddress();
+				if (!Arrays.equals(domainAddress, new byte[2]) || domainAddress().length == 0)
+					setDomainAddress(domainAddress);
 			}
 			else if (settings.getMedium() == KNXMediumSettings.MEDIUM_RF) {
-				domainAddress = ((RFSettings) settings).getDomainAddress();
+				final byte[] domainAddress = ((RFSettings) settings).getDomainAddress();
+				if (!Arrays.equals(domainAddress, new byte[6]) || domainAddress().length == 0)
+					setDomainAddress(domainAddress);
 			}
 		}
 
@@ -693,7 +693,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readDomainAddress()
 	{
 		if (inProgrammingMode())
-			return new ServiceResult(domainAddress);
+			return new ServiceResult(domainAddress());
 		return null;
 	}
 
@@ -701,6 +701,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readDomainAddress(final byte[] domain,
 		final IndividualAddress startAddress, final int range)
 	{
+		final byte[] domainAddress = domainAddress();
 		if (Arrays.equals(domain, domainAddress)) {
 			final int raw = device.getAddress().getRawAddress();
 			final int start = startAddress.getRawAddress();
@@ -727,6 +728,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		final long start = unsigned(startDoA);
 		final long end = unsigned(endDoA);
+		final byte[] domainAddress = domainAddress();
 		final long our = unsigned(domainAddress);
 		if (our >= start && our <= end) {
 			final int wait = new Random().nextInt(2001);
@@ -747,26 +749,49 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public void writeDomainAddress(final byte[] domain)
 	{
 		if (inProgrammingMode()) {
-			domainAddress = domain;
-
-			final int pid;
 			final var settings = device.getDeviceLink().getKNXMedium();
 			if (domain.length == 2) {
-				pid = PID.DOMAIN_ADDRESS;
 				((PLSettings) settings).setDomainAddress(domain);
 			}
 			else {
-				final int pidRFDomainAddress = 82;
-				pid = pidRFDomainAddress;
 				((RFSettings) settings).setDomainAddress(domain);
 			}
-			try {
-				ios.setProperty(0, pid, 1, 1, domain);
-			}
-			catch (final KnxPropertyException e) {
-				logger.error("setting DoA {} in interface object server", toHex(domain, " "), e);
-			}
+			setDomainAddress(domain);
 		}
+	}
+
+	private void setDomainAddress(final byte[] domain) {
+		final int pid = domainAddressPid();
+		try {
+			ios.setProperty(0, pid, 1, 1, domain);
+		}
+		catch (final KnxPropertyException e) {
+			logger.warn("setting 0|{} DoA {} in interface object server", pid, toHex(domain, " "), e);
+		}
+	}
+
+	private byte[] domainAddress() {
+		final int pid = domainAddressPid();
+		try {
+			if (pid > 0)
+				return ios.getProperty(0, pid, 1, 1);
+		}
+		catch (final KnxPropertyException e) {
+			logger.warn("reading 0|{} DoA", pid, e);
+		}
+		return new byte[0];
+	}
+
+	private int domainAddressPid() {
+		final var settings = device.getDeviceLink().getKNXMedium();
+		final int pidRFDomainAddress = 82;
+
+		int pid = 0;
+		if (settings instanceof PLSettings)
+			pid = PID.DOMAIN_ADDRESS;
+		else if (settings instanceof RFSettings)
+			pid = pidRFDomainAddress;
+		return pid;
 	}
 
 	@Override
@@ -774,6 +799,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (objectType == 0 && pid == PID.SERIAL_NUMBER) {
 			final var operand = info[0] & 0xff;
 			int maxWaitSeconds = 0;
+			final byte[] domainAddress = domainAddress();
 			if (operand == 1 && inProgrammingMode())
 				maxWaitSeconds = 1;
 			else if (operand == 2 && device.getAddress().getDevice() == 0xff
