@@ -94,11 +94,7 @@ public final class SecurityObject extends InterfaceObject {
 
 	// > 1 security interfaces are not supported by a device
 	public static SecurityObject lookup(final InterfaceObjectServer ios) {
-		for (final var interfaceObject : ios.getInterfaceObjects()) {
-			if (interfaceObject.getType() == SECURITY_OBJECT)
-				return (SecurityObject) interfaceObject;
-		}
-		throw new KnxPropertyException("no security interface object found");
+		return ios.lookup(SECURITY_OBJECT, 1);
 	}
 
 	SecurityObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions) {

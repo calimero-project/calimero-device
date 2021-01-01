@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2020 B. Malinowsky
+    Copyright (c) 2019, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -60,6 +60,7 @@ import tuwien.auto.calimero.KnxSecureException;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SecurityControl;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
+import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.device.ios.SecurityObject;
@@ -94,7 +95,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios) {
-		this(tl, ios, SecurityObject.lookup(ios));
+		this(tl, ios, ios.lookup(InterfaceObject.SECURITY_OBJECT, 1));
 	}
 
 	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios,

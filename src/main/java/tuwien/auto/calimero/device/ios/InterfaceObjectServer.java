@@ -267,6 +267,23 @@ public class InterfaceObjectServer implements PropertyAccess
 		h.saveInterfaceObjects(os, Arrays.asList(objects));
 	}
 
+	@SuppressWarnings("unchecked")
+	public <T extends InterfaceObject> T lookup(final int objectType, final int objectInstance)
+			throws KnxPropertyException {
+		synchronized (objects) {
+			int inst = 0;
+			for (final Iterator<InterfaceObject> i = objects.iterator(); i.hasNext();) {
+				final InterfaceObject io = i.next();
+				if (io.getType() == objectType && ++inst == objectInstance)
+					return (T) io;
+			}
+			String ot = PropertyClient.getObjectTypeName(objectType);
+			if (ot.isEmpty())
+				ot = "object type " + objectType;
+			throw new KnxPropertyException("no object instance " + objectInstance + " of " + ot + " in IOS");
+		}
+	}
+
 	/**
 	 * Returns an array with interface objects currently managed by the interface object server.
 	 * <p>
@@ -576,22 +593,6 @@ public class InterfaceObjectServer implements PropertyAccess
 		throw new KNXIllegalArgumentException("interface object index " + objIndex + " past last interface object");
 	}
 
-	private InterfaceObject findByObjectType(final int objectType, final int objectInstance) throws KnxPropertyException
-	{
-		synchronized (objects) {
-			int inst = 0;
-			for (final Iterator<InterfaceObject> i = objects.iterator(); i.hasNext();) {
-				final InterfaceObject io = i.next();
-				if (io.getType() == objectType && ++inst == objectInstance)
-					return io;
-			}
-			String ot = PropertyClient.getObjectTypeName(objectType);
-			if (ot.isEmpty())
-				ot = "object type " + objectType;
-			throw new KnxPropertyException("no object instance " + objectInstance + " of " + ot + " in IOS");
-		}
-	}
-
 	// Adapter only throws KnxPropertyException on get/set property/desc
 	private final class IosAdapter implements PropertyAdapter
 	{
@@ -605,7 +606,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		public void setProperty(final int objectType, final int objectInstance, final int propertyId, final int start,
 			final int elements, final byte... data) throws KnxPropertyException
 		{
-			setProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements, data);
+			setProperty(lookup(objectType, objectInstance), propertyId, start, elements, data);
 		}
 
 		@Override
@@ -618,7 +619,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		public byte[] getProperty(final int objectType, final int objectInstance, final int propertyId, final int start,
 			final int elements) throws KnxPropertyException
 		{
-			return getProperty(findByObjectType(objectType, objectInstance), propertyId, start, elements);
+			return getProperty(lookup(objectType, objectInstance), propertyId, start, elements);
 		}
 
 		@Override
