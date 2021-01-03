@@ -539,6 +539,11 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 	}
 
+	@Override
+	public String toString() {
+		return objects.toString();
+	}
+
 	private void updateIoList()
 	{
 		final InterfaceObject io = objects.get(0);
