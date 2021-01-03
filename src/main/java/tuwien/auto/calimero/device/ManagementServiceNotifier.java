@@ -396,7 +396,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		var info = new byte[buffer.remaining()];
 		buffer.get(info);
 
-		logger.trace("{}->{} {} {}(1)|{}{} info {}", respondTo.getAddress(), new GroupAddress(0), name,
+		logger.trace("{}->{} {} {}(1)|{}{} info {}", respondTo.getAddress(), GroupAddress.Broadcast, name,
 				objectType, pid, propertyName(objectIndex(objectType, 1), pid), toHex(info, " "));
 
 		final ServiceResult sr = mgmtSvc.readParameter(objectType, pid, info);
@@ -1370,9 +1370,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	{
 		final String type = system ? "system" : "domain";
 		logger.trace("{}->[{} broadcast] {} {}", device.getAddress(), type, service, toHex(apdu, " "));
-		final var dst = new GroupAddress(0);
 		try {
-			final var tsdu = sal.secureData(device.getAddress(), dst, apdu, securityCtrl).orElse(apdu);
+			final var tsdu = sal.secureData(device.getAddress(), GroupAddress.Broadcast, apdu, securityCtrl).orElse(apdu);
 			tl.broadcast(system, p, tsdu);
 		}
 		catch (final InterruptedException e) {
