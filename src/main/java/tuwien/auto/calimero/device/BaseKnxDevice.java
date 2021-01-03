@@ -37,6 +37,7 @@
 package tuwien.auto.calimero.device;
 
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
+import static tuwien.auto.calimero.device.ios.InterfaceObject.APPLICATIONPROGRAM_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ASSOCIATIONTABLE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.KNXNETIP_PARAMETER_OBJECT;
@@ -261,8 +262,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	/**
-	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument, the device's communication link (and
-	 * address) has to be subsequently assigned.
+	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument, and a URI locating an interface object
+	 * server resource.
 	 *
 	 * @param name KNX device name, used for human readable naming or device identification
 	 * @param logic KNX device service logic
@@ -478,7 +479,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(0, PID.MANUFACTURER_ID, 1, 1, (byte) (manufacturerId >> 8), (byte) manufacturerId);
 		ios.setProperty(0, PID.SERIAL_NUMBER, 1, 1, serialNumber);
 		ios.setProperty(0, 78, 1, 1, hardwareType);
-		ios.setProperty(4, PID.PROGRAM_VERSION, 1, 1, programVersion);
+		ios.setProperty(APPLICATIONPROGRAM_OBJECT, 1, PID.PROGRAM_VERSION, 1, 1, programVersion);
 
 		// fdsk for secure device download
 		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
@@ -631,7 +632,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setDescription(new Description(groupObjectTable.getIndex(), 0, pidGODiagnostics,
 				PropertyTypes.PDT_FUNCTION, 0, true, 0, 1, 3, 3), true);
 
-		final var appObject = ios.addInterfaceObject(InterfaceObject.APPLICATIONPROGRAM_OBJECT);
+		final var appObject = ios.addInterfaceObject(APPLICATIONPROGRAM_OBJECT);
 		initTableProperties(appObject, 0x4000);
 
 		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
@@ -790,11 +791,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		// Application Program Object settings
 
-		final int appProgamObject = InterfaceObject.APPLICATIONPROGRAM_OBJECT;
-
 		// Required PEI Type
 		final int requiredPeiType = 0; // unsigned char
-		ios.setProperty(appProgamObject, objectInstance, PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
+		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
 
 		final int[] runStateEnum = {
 			0, // Halted or not loaded
@@ -807,11 +806,11 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// TODO format is usage dependent: 1 byte read / 10 bytes write
 		final int runState = runStateEnum[1];
 		// Run State
-		ios.setProperty(appProgamObject, objectInstance, PID.RUN_STATE_CONTROL, 1, 1, (byte) runState);
+		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.RUN_STATE_CONTROL, 1, 1, (byte) runState);
 
 		// Application ID
 		final byte[] applicationVersion = new byte[5]; // PDT Generic 5 bytes
-		ios.setProperty(appProgamObject, objectInstance, PID.PROGRAM_VERSION, 1, 1, applicationVersion);
+		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.PROGRAM_VERSION, 1, 1, applicationVersion);
 	}
 
 	private void setDeviceProperty(final int propertyId, final byte... data) throws KnxPropertyException
