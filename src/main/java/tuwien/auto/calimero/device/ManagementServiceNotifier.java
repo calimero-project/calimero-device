@@ -182,7 +182,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	{
 		this.device = device;
 		tl = device.transportLayer();
-		sal = device.sal;
+		sal = (DeviceSecureApplicationLayer) device.secureApplicationLayer();
 		mgmtSvc = mgmt;
 		logger = device.logger();
 

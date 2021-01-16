@@ -256,6 +256,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	void setSecurityMode(final boolean secure) {
 		securityObject.set(Pid.SecurityMode, (byte) (secure ? 1 : 0));
+		logger.info("security mode {}", secure ? "enabled" : "disabled");
 	}
 
 	ServiceResult securityMode(final boolean command, final byte[] functionInput) {

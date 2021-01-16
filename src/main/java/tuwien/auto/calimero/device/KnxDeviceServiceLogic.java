@@ -46,7 +46,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.Random;
 import java.util.WeakHashMap;
 
 import org.slf4j.Logger;
@@ -731,16 +730,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final byte[] domainAddress = domainAddress();
 		final long our = unsigned(domainAddress);
 		if (our >= start && our <= end) {
-			final int wait = new Random().nextInt(2001);
-			logger.trace("read domain address: wait " + wait + " ms before sending response");
-			try {
-				Thread.sleep(wait);
+			if (randomWait("read domain address", 2001))
 				return new ServiceResult(domainAddress);
-			}
-			catch (final InterruptedException e) {
-				logger.warn("read domain address got interrupted, response is canceled");
-				Thread.currentThread().interrupt();
-			}
 		}
 		return null;
 	}
@@ -818,7 +809,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 			if (maxWaitSeconds > 0) {
 				// TODO don't block, schedule it
-				randomWait(maxWaitSeconds * 1000);
+				randomWait("read parameter - serial number", maxWaitSeconds * 1000);
 				final var sn = ios.getProperty(0, PID.SERIAL_NUMBER, 1, 1);
 				return new ServiceResult(sn);
 			}
@@ -826,15 +817,17 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return ServiceResult.Empty;
 	}
 
-	private void randomWait(final int maxWaitMillis) {
+	private boolean randomWait(final String svc, final int maxWaitMillis) {
 		final int wait = (int) (Math.random() * maxWaitMillis);
-		logger.debug("add random wait time of " + wait + " ms before response");
+		logger.trace("{}: add random wait of {} ms before response", svc, wait);
 		try {
 			Thread.sleep(wait);
+			return true;
 		}
 		catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
+		return false;
 	}
 
 	@Override

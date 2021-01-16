@@ -710,7 +710,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		final int elems = 4;
 		ios.setProperty(idx, PID.MCB_TABLE, 1, elems, new byte[elems * 8]);
-		ios.setProperty(idx, PID.MCB_TABLE, 0, 1, new byte[2]);
 	}
 
 	private void initDeviceInfo() throws KnxPropertyException

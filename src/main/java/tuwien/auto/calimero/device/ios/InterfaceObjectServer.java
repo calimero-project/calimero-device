@@ -331,7 +331,6 @@ public class InterfaceObjectServer implements PropertyAccess
 			adapter.createNewDescription(0, PID.IO_LIST, false);
 		if (io instanceof SecurityObject)
 			((SecurityObject) io).populateWithDefaults();
-
 		return io;
 	}
 
