@@ -969,7 +969,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final var data = new byte[buffer.remaining()];
 		buffer.get(data);
 		if (size > 0) {
-			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, 0, true, 0, size, 3, 3), true);
+			final int max = size;
+			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, 0, true, 0, max, 3, 3), true);
 			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, size, data);
 		}
 	}

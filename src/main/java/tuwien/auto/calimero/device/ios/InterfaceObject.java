@@ -285,7 +285,7 @@ public class InterfaceObject
 		final int actualElements = elements == Integer.MAX_VALUE ? (currElems - start + 1) : elements;
 		final int size = start + actualElements - 1;
 		if (currElems < size)
-			throw new KnxPropertyException("requested elements exceed past last property value",
+			throw new KnxPropertyException(err(pid, "requested elements [" + start + ".." + size + "] exceed past last property value"),
 					ErrorCodes.PROP_INDEX_RANGE_ERROR);
 		final int typeSize = PropertyTypes.bitSize(desc.getPDT()).map(bits -> Math.max(bits, 8) / 8)
 				.orElseGet(() -> (bytes.length - 2) / currElems);
@@ -294,6 +294,12 @@ public class InterfaceObject
 		for (int i = 2 + (start - 1) * typeSize; i < 2 + size * typeSize; ++i)
 			data[d++] = bytes[i];
 		return data;
+	}
+
+	private String err(final int propertyId, final String msg) {
+		final var p = getDefinition(propertyId);
+		final String s = p != null ? " (" + p.getName() + ")" : "";
+		return String.format("%d|%d%s %s", getIndex(), propertyId, s, msg);
 	}
 
 	boolean setProperty(final int pid, final int start, final int elements, final byte[] data, final boolean strictMode)
