@@ -892,6 +892,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				boolean valueExpected = false;
 
 				int index = 0;
+				Description currentDesc = null;
 				while (r.next() != XmlReader.END_DOCUMENT) {
 					if (r.getEventType() == XmlReader.START_ELEMENT) {
 						if (r.getLocalName().equals(TAG_PROPERTY)) {
@@ -904,26 +905,20 @@ public class InterfaceObjectServer implements PropertyAccess
 									maxElems, rw[0], rw[1]);
 							descriptions.add(d);
 							index++;
-							if (valueExpected)
+							if (valueExpected) {
 								values.add(new byte[2]);
+								logger.trace("{}: 0000", currentDesc);
+							}
 							valueExpected = true;
-							if (logger.isTraceEnabled())
-								logger.trace(d.toString());
+							currentDesc = d;
 						}
 						else if (r.getLocalName().equals(TAG_DATA)) {
-							final String s = r.getElementText();
-							if (logger.isTraceEnabled())
-								logger.trace(s);
-							final int odd = s.length() % 2;
-							final byte[] data = new byte[s.length() / 2 + odd];
-							if (odd == 1)
-								data[0] = Byte.parseByte(s.substring(0, 1), 16);
-							for (int i = 1; i < data.length; ++i)
-								data[i] = (byte) Short.parseShort(s.substring(i * 2 - odd, i * 2 + 2 - odd), 16);
-							if (data.length == 0)
-								values.add(new byte[2]);
-							else
-								values.add(data);
+							String s = r.getElementText();
+							if (s.length() % 2 == 1)
+								s = "0" + s;
+							logger.trace("{}: {}", currentDesc, s);
+							final byte[] data = DataUnitBuilder.fromHex(s);
+							values.add(data.length == 0 ? new byte[2] : data);
 							valueExpected = false;
 						}
 					}
