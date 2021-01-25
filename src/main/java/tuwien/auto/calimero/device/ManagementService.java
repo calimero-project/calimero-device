@@ -38,10 +38,10 @@ package tuwien.auto.calimero.device;
 
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
-import tuwien.auto.calimero.KNXIllegalArgumentException;
 import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.ManagementClient;
+import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 
 /**
@@ -265,36 +265,6 @@ public interface ManagementService
 	 *         access rights) or 0 (maximum access rights) and 15 (minimum access rights)
 	 */
 	ServiceResult authorize(Destination remote, byte[] key);
-
-	/**
-	 * Erase codes used with a master reset restart service.
-	 */
-	enum EraseCode {
-		None,
-		/** Confirmed alternative to the unconfirmed basic restart. */
-		ConfirmedRestart,
-		/** Reset the device to its ex-factory state. */
-		FactoryReset,
-		/** Reset the device address to the medium-specific default address. */
-		ResetIndividualAddress,
-		/** Reset the application program memory to the default application. */
-		ResetApplicationProgram,
-		/** Reset the application parameter memory to its default value. */
-		ResetApplicationParameters,
-		/**
-		 * Reset link information for group objects (Group Address Table, Group Object Association Table) to its
-		 * default state.
-		 */
-		ResetLinks,
-		/** Reset the device to its ex-factory state, the device address(es) shall not be reset. */
-		FactoryResetWithoutIndividualAddress;
-
-		public static EraseCode of(final int eraseCode) {
-			if (eraseCode >= 0 && eraseCode < values().length)
-				return values()[eraseCode];
-			throw new KNXIllegalArgumentException("unsupported erase code " + eraseCode);
-		}
-	}
 
 	/**
 	 * Restarts this device.

@@ -63,7 +63,6 @@ import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.cemi.CEMI;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.cemi.CemiTData;
-import tuwien.auto.calimero.device.ManagementService.EraseCode;
 import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
@@ -78,6 +77,7 @@ import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.Destination.AggregatorProxy;
 import tuwien.auto.calimero.mgmt.Destination.State;
 import tuwien.auto.calimero.mgmt.KNXDisconnectException;
+import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.TransportLayer;
@@ -469,13 +469,14 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int unsupportedEraseCode = 2;
 		ServiceResult sr = new ServiceResult((byte) unsupportedEraseCode, (byte) 0, (byte) 0);
 
-		EraseCode code = EraseCode.None;
+		EraseCode code = null;
 		try {
-			code = EraseCode.of(eraseCode);
+			if (eraseCode > 0)
+				code = EraseCode.of(eraseCode);
 			if (!AccessPolicies.checkRestartAccess(masterReset, code, sal.isSecurityModeEnabled(), securityCtrl))
 				return;
 			logger.trace("{}->{} {}: {}, channel {}", respondTo.getAddress(), device.getAddress(), name,
-					code == EraseCode.None ? "Basic Restart" : code, channel);
+					code == null ? "Basic Restart" : code, channel);
 
 			// a basic restart does not have any response,
 			// a master reset returns an error code and process time
