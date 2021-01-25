@@ -916,7 +916,7 @@ public class InterfaceObjectServer implements PropertyAccess
 						}
 						else if (r.getLocalName().equals(TAG_DATA)) {
 							String s = r.getElementText();
-							if (s.length() % 2 == 1)
+							if (s.length() % 2 != 0)
 								s = "0" + s;
 							logger.trace("{}: {}", currentDesc, s);
 							final byte[] data = DataUnitBuilder.fromHex(s);

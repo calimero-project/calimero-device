@@ -43,6 +43,7 @@ import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
+/** Interface object of type 'security' ({@link InterfaceObject#SECURITY_OBJECT}). */
 public final class SecurityObject extends InterfaceObject {
 
 	public interface Pid {
