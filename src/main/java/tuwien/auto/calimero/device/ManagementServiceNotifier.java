@@ -59,10 +59,12 @@ import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SecurityControl;
+import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.cemi.CEMI;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.cemi.CemiTData;
 import tuwien.auto.calimero.device.ManagementService.EraseCode;
+import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
@@ -668,27 +670,25 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	}
 
 	private void onDoASerialNumberWrite(final String name, final Destination respondTo, final byte[] data) {
-		final int lengthSN = 6;
-		if (!verifyLength(data.length, lengthSN + lengthDoA, lengthSN + lengthDoA, name))
+		if (!verifyLength(data.length, SerialNumber.Size + lengthDoA, SerialNumber.Size + lengthDoA, name))
 			return;
-		final byte[] sno = Arrays.copyOfRange(data, 0, lengthSN);
+		final var sno = SerialNumber.from(Arrays.copyOfRange(data, 0, SerialNumber.Size));
 		if (!matchesOurSerialNumber(sno))
 			return;
 
-		final byte[] domain = Arrays.copyOfRange(data, lengthSN, lengthSN + lengthDoA);
-		logger.trace("{}->{} {} SN {} DoA 0x{}", respondTo.getAddress(), device.getAddress(), name, toHex(sno, ""), toHex(domain, ""));
+		final byte[] domain = Arrays.copyOfRange(data, SerialNumber.Size, SerialNumber.Size + lengthDoA);
+		logger.trace("{}->{} {} SN {} DoA 0x{}", respondTo.getAddress(), device.getAddress(), name, sno, toHex(domain, ""));
 		mgmtSvc.writeDomainAddress(domain);
 	}
 
 	private void onDoASerialNumberRead(final String name, final Destination respondTo, final byte[] data) {
-		final int lengthSN = 6;
-		if (!verifyLength(data.length, lengthSN, lengthSN, name))
+		if (!verifyLength(data.length, SerialNumber.Size, SerialNumber.Size, name))
 			return;
-		final byte[] sno = Arrays.copyOfRange(data, 0, lengthSN);
+		final var sno = SerialNumber.from(data);
 		if (!matchesOurSerialNumber(sno))
 			return;
 
-		logger.trace("{}->{} {} SN {}", respondTo.getAddress(), device.getAddress(), name, toHex(sno, ""));
+		logger.trace("{}->{} {} SN {}", respondTo.getAddress(), device.getAddress(), name, sno);
 		final var endDoA = new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
 		final var sr = mgmtSvc.readDomainAddress(new byte[lengthDoA], Arrays.copyOfRange(endDoA, 0, lengthDoA));
 		if (ignoreOrSchedule(sr))
@@ -700,28 +700,28 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			return;
 		}
 
-		final byte[] asdu = ByteBuffer.allocate(lengthSN + lengthDoA).put(sno).put(domain).array();
+		final byte[] asdu = ByteBuffer.allocate(SerialNumber.Size + lengthDoA).put(sno.array()).put(domain).array();
 		final var apdu = DataUnitBuilder.createAPDU(DoASerialNumberResponse, asdu);
 		sendBroadcast(true, apdu, Priority.SYSTEM, decodeAPCI(DoASerialNumberResponse));
 	}
 
-	private boolean matchesOurSerialNumber(final byte[] sno) {
+	private boolean matchesOurSerialNumber(final SerialNumber sno) {
 		final var medium = device.getDeviceLink().getKNXMedium();
-		byte[] serialNumber = new byte[6];
+		var serialNumber = SerialNumber.Zero;
 		if (medium instanceof RFSettings) {
 			final var rfSettings = (RFSettings) medium;
-			serialNumber = rfSettings.getSerialNumber();
+			serialNumber = rfSettings.serialNumber();
 			// serial number might not be set in rf medium settings
-			if (Arrays.equals(serialNumber, new byte[6])) {
+			if (serialNumber.equals(SerialNumber.Zero)) {
 				try {
-					serialNumber = device.getInterfaceObjectServer().getProperty(0, PID.SERIAL_NUMBER, 1, 1);
+					serialNumber = DeviceObject.lookup(device.getInterfaceObjectServer()).serialNumber();
 				}
 				catch (final KnxPropertyException e) {
 					logger.warn("RF device with no serial number", e);
 				}
 			}
 		}
-		return Arrays.equals(sno, serialNumber);
+		return sno.equals(serialNumber);
 	}
 
 	// p2p connection-oriented mode

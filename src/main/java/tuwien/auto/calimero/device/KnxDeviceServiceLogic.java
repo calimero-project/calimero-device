@@ -653,13 +653,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult readAddressSerial(final byte[] serialNo)
-	{
-		final byte[] myserial = ios.getProperty(0, PID.SERIAL_NUMBER, 1, 1);
-		if (Arrays.equals(myserial, serialNo)) {
-			return ServiceResult.Empty;
-		}
-		return null;
+	public ServiceResult readAddressSerial(final SerialNumber serialNo) {
+		final var myserial = DeviceObject.lookup(ios).serialNumber();
+		return myserial.equals(serialNo) ? ServiceResult.Empty : null;
 	}
 
 	@Override
@@ -670,11 +666,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public void writeAddressSerial(final byte[] serialNo,
-		final IndividualAddress newAddress)
-	{
-		final byte[] myserial = ios.getProperty(0, PID.SERIAL_NUMBER, 1, 1);
-		if (Arrays.equals(myserial, serialNo))
+	public void writeAddressSerial(final SerialNumber serialNo, final IndividualAddress newAddress) {
+		final var myserial = DeviceObject.lookup(ios).serialNumber();
+		if (myserial.equals(serialNo))
 			setDeviceAddress(newAddress);
 	}
 

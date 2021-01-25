@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2020 B. Malinowsky
+    Copyright (c) 2011, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@ package tuwien.auto.calimero.device;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
+import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.ManagementClient;
 import tuwien.auto.calimero.mgmt.TransportLayer;
@@ -151,19 +152,27 @@ public interface ManagementService
 	 * Reads the individual address from a device having the requested serial number; a device shall only return a
 	 * service result on matching serial number.
 	 *
-	 * @param serialNo serial number, length = 6 bytes
+	 * @param serialNo serial number
 	 * @return empty service result on matching serial number, or <code>null</code>
 	 */
-	ServiceResult readAddressSerial(byte[] serialNo);
+	ServiceResult readAddressSerial(SerialNumber serialNo);
+
+	default ServiceResult readAddressSerial(final byte[] serialNo) {
+		return readAddressSerial(SerialNumber.from(serialNo));
+	}
 
 	/**
 	 * Assigns a new individual address to a device with matching serial number; this device shall only set its address
 	 * on matching serial number.
 	 *
-	 * @param serialNo serial number, length = 6 bytes
+	 * @param serialNo serial number
 	 * @param newAddress new device address
 	 */
-	void writeAddressSerial(byte[] serialNo, IndividualAddress newAddress);
+	void writeAddressSerial(SerialNumber serialNo, IndividualAddress newAddress);
+
+	default void writeAddressSerial(final byte[] serialNo, final IndividualAddress newAddress) {
+		writeAddressSerial(SerialNumber.from(serialNo), newAddress);
+	}
 
 	/**
 	 * Returns the domain address of this device; only a device in programming mode shall respond to this service.

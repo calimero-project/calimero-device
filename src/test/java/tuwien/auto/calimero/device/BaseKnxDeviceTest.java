@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2020 B. Malinowsky
+    Copyright (c) 2011, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.Priority;
+import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
@@ -179,7 +180,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public void writeAddressSerial(final byte[] serialNo, final IndividualAddress newAddress) {}
+		public void writeAddressSerial(final SerialNumber serialNo, final IndividualAddress newAddress) {}
 
 		@Override
 		public void writeAddress(final IndividualAddress newAddress) {}
@@ -239,7 +240,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult readAddressSerial(final byte[] serialNo)
+		public ServiceResult readAddressSerial(final SerialNumber serialNo)
 		{
 			return null;
 		}
