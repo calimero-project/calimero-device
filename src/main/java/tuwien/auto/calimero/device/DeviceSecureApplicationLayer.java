@@ -36,11 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
-import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
-
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -60,6 +57,7 @@ import tuwien.auto.calimero.KnxSecureException;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SecurityControl;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
+import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
@@ -67,8 +65,6 @@ import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
 import tuwien.auto.calimero.internal.Security;
 import tuwien.auto.calimero.log.LogService;
-import tuwien.auto.calimero.mgmt.PropertyAccess;
-import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.SecureManagement;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
@@ -100,14 +96,13 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	private DeviceSecureApplicationLayer(final TransportLayer tl, final InterfaceObjectServer ios,
 			final SecurityObject securityObject) {
-		super((TransportLayerImpl) tl, ios.getProperty(0, PropertyAccess.PID.SERIAL_NUMBER, 1, 1),
+		super((TransportLayerImpl) tl, DeviceObject.lookup(ios).serialNumber(),
 				unsigned(securityObject.get(Pid.SequenceNumberSending)), Map.of());
 
 		this.ios = ios;
 		this.securityObject = securityObject;
 
-		final var bytes = ios.getProperty(DEVICE_OBJECT, 1, PID.DESCRIPTION, 1, Integer.MAX_VALUE);
-		final var name = new String(bytes, StandardCharsets.ISO_8859_1);
+		final var name = DeviceObject.lookup(ios).description();
 		logger = LogService.getLogger("calimero.device." + secureSymbol + "-AL " + name);
 
 		long toolSeqNo = 0;
@@ -338,10 +333,9 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private void resetToolAccessSequence() {
-		final int pidDownloadCounter = 30;
 		long counter = 0;
 		try {
-			counter = unsigned(ios.getProperty(0, pidDownloadCounter, 1, 1));
+			counter = DeviceObject.lookup(ios).downloadCounter();
 		}
 		catch (final KnxPropertyException ignore) {}
 		// always reset seq to > 1, to avoid triggering sync.req during securing data

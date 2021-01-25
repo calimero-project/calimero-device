@@ -1452,9 +1452,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private int getMaxApduLength()
 	{
 		try {
-			final byte[] length = device.getInterfaceObjectServer().getProperty(InterfaceObject.DEVICE_OBJECT,
-					PID.MAX_APDULENGTH, 1, 1);
-			return toUnsigned(length);
+			return DeviceObject.lookup(device.getInterfaceObjectServer()).maxApduLength();
 		}
 		catch (final KnxPropertyException e) {
 			if (!missingApduLength) {

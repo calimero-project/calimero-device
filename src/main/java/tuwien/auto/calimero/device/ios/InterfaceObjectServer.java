@@ -336,6 +336,8 @@ public class InterfaceObjectServer implements PropertyAccess
 
 	private static InterfaceObject newInterfaceObject(final int objectType, final int index,
 			final Map<PropertyKey, Property> definitions) {
+		if (objectType == InterfaceObject.DEVICE_OBJECT)
+			return new DeviceObject(objectType, index, definitions);
 		if (objectType == InterfaceObject.SECURITY_OBJECT)
 			return new SecurityObject(objectType, index, definitions);
 		return new InterfaceObject(objectType, index, definitions);

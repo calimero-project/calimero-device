@@ -61,6 +61,7 @@ import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SecurityControl;
+import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
@@ -68,6 +69,7 @@ import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
 import tuwien.auto.calimero.datapoint.StateDP;
+import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
@@ -206,14 +208,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	 */
 	public final boolean inProgrammingMode()
 	{
-		byte value;
 		try {
-			value = ios.getProperty(0, PID.PROGMODE, 1, 1)[0];
+			return DeviceObject.lookup(ios).programmingMode();
 		}
 		catch (final KnxPropertyException e) {
-			value = getDeviceMemory()[0x60];
+			return (getDeviceMemory()[0x60] & 0x01) == 0x01;
 		}
-		return (value & 0x01) == 0x01;
 	}
 
 	@Override
@@ -752,37 +752,31 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private void setDomainAddress(final byte[] domain) {
-		final int pid = domainAddressPid();
 		try {
-			ios.setProperty(0, pid, 1, 1, domain);
+			DeviceObject.lookup(ios).setDomainAddress(domain);
 		}
 		catch (final KnxPropertyException e) {
-			logger.warn("setting 0|{} DoA {} in interface object server", pid, toHex(domain, " "), e);
+			logger.warn("setting DoA {} in interface object server", toHex(domain, " "), e);
 		}
 	}
 
 	private byte[] domainAddress() {
-		final int pid = domainAddressPid();
 		try {
-			if (pid > 0)
-				return ios.getProperty(0, pid, 1, 1);
+			return DeviceObject.lookup(ios).domainAddress(domainType());
 		}
 		catch (final KnxPropertyException e) {
-			logger.warn("reading 0|{} DoA", pid, e);
+			logger.warn("reading DoA", e);
 		}
 		return new byte[0];
 	}
 
-	private int domainAddressPid() {
+	private boolean domainType() {
 		final var settings = device.getDeviceLink().getKNXMedium();
-		final int pidRFDomainAddress = 82;
-
-		int pid = 0;
 		if (settings instanceof PLSettings)
-			pid = PID.DOMAIN_ADDRESS;
+			return false;
 		else if (settings instanceof RFSettings)
-			pid = pidRFDomainAddress;
-		return pid;
+			return true;
+		throw new KnxPropertyException(settings + " does not have domain");
 	}
 
 	@Override
@@ -810,8 +804,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (maxWaitSeconds > 0) {
 				// TODO don't block, schedule it
 				randomWait("read parameter - serial number", maxWaitSeconds * 1000);
-				final var sn = ios.getProperty(0, PID.SERIAL_NUMBER, 1, 1);
-				return new ServiceResult(sn);
+				final var sn = DeviceObject.lookup(ios).serialNumber();
+				return new ServiceResult(sn.array());
 			}
 		}
 		return ServiceResult.Empty;
@@ -834,7 +828,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult readDescriptor(final int type)
 	{
 		if (type == 0)
-			return new ServiceResult(ios.getProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1));
+			return new ServiceResult(DeviceObject.lookup(ios).deviceDescriptor().toByteArray());
 		if (device instanceof BaseKnxDevice) {
 			final DeviceDescriptor dd = ((BaseKnxDevice) device).deviceDescriptor();
 			if (dd instanceof DeviceDescriptor.DD2)

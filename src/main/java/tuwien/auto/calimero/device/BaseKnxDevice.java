@@ -90,9 +90,11 @@ import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.SecurityControl.DataSecurity;
+import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.Settings;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.device.KnxDeviceServiceLogic.LoadState;
+import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
@@ -318,12 +320,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			settings.setDeviceAddress(address);
 		}
 
-		final byte[] addr = address.toByteArray();
-		setDeviceProperty(PID.SUBNET_ADDRESS, addr[0]);
-		setDeviceProperty(PID.DEVICE_ADDRESS, addr[1]);
+		DeviceObject.lookup(ios).setDeviceAddress(address);
 
 		try {
-			setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, addr);
+			setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, address.toByteArray());
 		}
 		catch (final KnxPropertyException ignore) {
 			// fails if we don't have a KNX IP object
@@ -332,9 +332,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	@Override
 	public final synchronized IndividualAddress getAddress() {
-		final var subnet = ios.getProperty(DEVICE_OBJECT, objectInstance, PID.SUBNET_ADDRESS, 1, 1);
-		final var device = ios.getProperty(DEVICE_OBJECT, objectInstance, PID.DEVICE_ADDRESS, 1, 1);
-		return new IndividualAddress(new byte[] { subnet[0], device[0] });
+		return DeviceObject.lookup(ios).deviceAddress();
 	}
 
 	@Override
@@ -346,7 +344,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			return;
 
 		final var settings = link.getKNXMedium();
-		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(settings.maxApduLength()));
+		final var deviceObject = DeviceObject.lookup(ios);
+		deviceObject.set(PID.MAX_APDULENGTH, fromWord(settings.maxApduLength()));
 		final int medium = settings.getMedium();
 		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, (byte) 0, (byte) medium);
 		if (medium == KNXMediumSettings.MEDIUM_KNXIP)
@@ -471,18 +470,29 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	// prepare properties usually required for ETS download
-	public void identification(final DeviceDescriptor dd, final int manufacturerId, final byte[] serialNumber,
+	public void identification(final DeviceDescriptor dd, final int manufacturerId, final SerialNumber serialNumber,
 			final byte[] hardwareType, final byte[] programVersion, final byte[] fdsk) {
+		final var deviceObject = DeviceObject.lookup(ios);
 		// matching device descriptor to indicate BCU
 		if (dd instanceof DeviceDescriptor.DD0)
-			ios.setProperty(0, PID.DEVICE_DESCRIPTOR, 1, 1, dd.toByteArray());
-		ios.setProperty(0, PID.MANUFACTURER_ID, 1, 1, (byte) (manufacturerId >> 8), (byte) manufacturerId);
-		ios.setProperty(0, PID.SERIAL_NUMBER, 1, 1, serialNumber);
-		ios.setProperty(0, 78, 1, 1, hardwareType);
+			deviceObject.set(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
+		deviceObject.set(PID.MANUFACTURER_ID, (byte) (manufacturerId >> 8), (byte) manufacturerId);
+		deviceObject.set(PID.SERIAL_NUMBER, serialNumber.array());
+		deviceObject.set(78, hardwareType);
+
 		ios.setProperty(APPLICATIONPROGRAM_OBJECT, 1, PID.PROGRAM_VERSION, 1, 1, programVersion);
 
 		// fdsk for secure device download
 		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
+	}
+
+	/**
+	 * @deprecated Use {@link #identification(DeviceDescriptor, int, SerialNumber, byte[], byte[], byte[])}
+	 */
+	@Deprecated(forRemoval = true)
+	public void identification(final DeviceDescriptor dd, final int manufacturerId, final byte[] serialNumber,
+			final byte[] hardwareType, final byte[] programVersion, final byte[] fdsk) {
+		identification(dd, manufacturerId, SerialNumber.from(serialNumber), hardwareType, programVersion, fdsk);
 	}
 
 	private static final int SeqSize = 6;
@@ -716,36 +726,38 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	{
 		// Device Object settings
 
+		final var deviceObject = DeviceObject.lookup(ios);
+
 		final byte[] desc = name.getBytes(StandardCharsets.ISO_8859_1);
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, desc.length, desc);
 
 		final String[] sver = Settings.getLibraryVersion().split("\\.| |-", 0);
 		final int ver = Integer.parseInt(sver[0]) << 6 | Integer.parseInt(sver[1]);
-		setDeviceProperty(PID.VERSION, fromWord(ver));
+		deviceObject.set(PID.VERSION, fromWord(ver));
 
 		// Firmware Revision
 		final int firmwareRev = 1;
-		setDeviceProperty(PID.FIRMWARE_REVISION, (byte) firmwareRev);
+		deviceObject.set(PID.FIRMWARE_REVISION, (byte) firmwareRev);
 
 		// Serial Number
 		final byte[] sno = new byte[6];
-		setDeviceProperty(PID.SERIAL_NUMBER, sno);
+		deviceObject.set(PID.SERIAL_NUMBER, sno);
 
 		// device status is not in programming mode
-		setDeviceProperty(PID.PROGMODE, (byte) 0);
+		deviceObject.set(PID.PROGMODE, (byte) 0);
 		// Programming Mode (memory address 0x60) set off
 		setMemory(0x60, (byte) 0);
 
-		setDeviceProperty(PID.MANUFACTURER_ID, fromWord(defMfrId));
+		deviceObject.set(PID.MANUFACTURER_ID, fromWord(defMfrId));
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.MANUFACTURER_DATA, 1, defMfrData.length / 4, defMfrData);
 
 		// Hardware Type
 		final byte[] hwType = new byte[6];
-		setDeviceProperty(pidHardwareType, hwType);
+		deviceObject.set(pidHardwareType, hwType);
 
 		// device descriptor
 		if (dd instanceof DeviceDescriptor.DD0) {
-			setDeviceProperty(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
+			deviceObject.set(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
 
 			// validity check on mask and hardware type octets (AN059v3, AN089v3)
 			final DeviceDescriptor.DD0 dd0 = (DeviceDescriptor.DD0) dd;
@@ -758,15 +770,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)
 		ios.setDescription(new Description(0, 0, PID.MAX_APDULENGTH, 0, 0, false, 0, 1, 3, 0), true);
 		// can be between 15 and 254 bytes (255 is Escape code for extended L_Data frames)
-		setDeviceProperty(PID.MAX_APDULENGTH, fromWord(254));
+		deviceObject.set(PID.MAX_APDULENGTH, fromWord(254));
 
 		// default TP1 address
-		setDeviceProperty(PID.SUBNET_ADDRESS, (byte) 0x02);
-		setDeviceProperty(PID.DEVICE_ADDRESS, (byte) 0xff);
+		deviceObject.setDeviceAddress(new IndividualAddress(0x02ff));
 
 		// Order Info
 		final byte[] orderInfo = new byte[10]; // PDT Generic 10 bytes
-		setDeviceProperty(PID.ORDER_INFO, orderInfo);
+		deviceObject.set(PID.ORDER_INFO, orderInfo);
 
 		// PEI Types
 		// in devices without PEI, value is 0
@@ -777,10 +788,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final int peiType = 0; // unsigned char
 
 		// Physical PEI
-		setDeviceProperty(PID.PEI_TYPE, (byte) peiType);
+		deviceObject.set(PID.PEI_TYPE, (byte) peiType);
 
 		final int pidDownloadCounter = 30;
-		setDeviceProperty(pidDownloadCounter, (byte) 0, (byte) 0);
+		deviceObject.set(pidDownloadCounter, (byte) 0, (byte) 0);
 
 		// cEMI server object setttings
 
@@ -810,11 +821,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// Application ID
 		final byte[] applicationVersion = new byte[5]; // PDT Generic 5 bytes
 		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.PROGRAM_VERSION, 1, 1, applicationVersion);
-	}
-
-	private void setDeviceProperty(final int propertyId, final byte... data) throws KnxPropertyException
-	{
-		ios.setProperty(DEVICE_OBJECT, objectInstance, propertyId, 1, 1, data);
 	}
 
 	private void setIpProperty(final int propertyId, final byte... data)
