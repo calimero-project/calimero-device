@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2020 B. Malinowsky
+    Copyright (c) 2011, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -200,7 +200,7 @@ class ManagementServiceTest
 		ServiceResult r = mgmt.writeMemory(start, data);
 		assertNotNull(r);
 		assertNotNull(r.getResult());
-		assertEquals(4, r.getResult().length);
+		assertEquals(0, r.getResult().length);
 
 		r = mgmt.readMemory(start, 4);
 		assertNotNull(r);

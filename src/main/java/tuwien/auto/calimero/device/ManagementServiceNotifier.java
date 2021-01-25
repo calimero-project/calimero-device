@@ -999,7 +999,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			// only respond if verify mode is active
 			final boolean verifyByServer = mgmtSvc.isVerifyModeEnabled();
 			if (verifyByServer) {
-				final byte[] written = sr.getResult();
+				final byte[] written = memory;
 				final byte[] asdu = new byte[3 + bytes];
 				asdu[0] = (byte) bytes;
 				asdu[1] = (byte) (address >>> 8);

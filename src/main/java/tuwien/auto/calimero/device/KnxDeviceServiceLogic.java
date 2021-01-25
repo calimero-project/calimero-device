@@ -619,7 +619,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	// TODO revise this method to always use return codes, and not written memory for standard writes
 	public ServiceResult writeMemory(final int startAddress, final byte[] data)
 	{
 		final byte[] mem = getDeviceMemory();
@@ -642,7 +641,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 		if (startAddress == 0x60 && data.length == 1)
 			setProgrammingMode(data[0] == 1);
-		return new ServiceResult(data);
+		return ServiceResult.Empty;
 	}
 
 	@Override
