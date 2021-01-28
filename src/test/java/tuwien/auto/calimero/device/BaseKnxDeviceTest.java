@@ -36,6 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
+import java.time.Duration;
+
 import junit.framework.TestCase;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
@@ -49,6 +51,7 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.NetworkLinkListener;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.link.medium.TPSettings;
+import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.TransportLayer;
@@ -151,7 +154,7 @@ public class BaseKnxDeviceTest extends TestCase
 
 	private final ProcessCommunicationService processLogic = new ProcessCommunicationService() {
 		@Override
-		public ServiceResult groupReadRequest(final ProcessEvent e)
+		public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e)
 		{
 			return null;
 		}
@@ -168,14 +171,14 @@ public class BaseKnxDeviceTest extends TestCase
 	private static class DefaultMgmtLogic implements ManagementService
 	{
 		@Override
-		public ServiceResult writeProperty(final Destination remote, final int objectIndex, final int propertyId,
+		public ServiceResult<Void> writeProperty(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements, final byte[] data)
 		{
 			return ServiceResult.Empty;
 		}
 
 		@Override
-		public ServiceResult writeMemory(final int startAddress, final byte[] data)
+		public ServiceResult<Void> writeMemory(final int startAddress, final byte[] data)
 		{
 			return null;
 		}
@@ -187,46 +190,46 @@ public class BaseKnxDeviceTest extends TestCase
 		public void writeAddress(final IndividualAddress newAddress) {}
 
 		@Override
-		public ServiceResult restart(final boolean masterReset, final EraseCode eraseCode, final int channel)
+		public ServiceResult<Duration> restart(final boolean masterReset, final EraseCode eraseCode, final int channel)
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId,
+		public ServiceResult<Description> readPropertyDescription(final int objectIndex, final int propertyId,
 			final int propertyIndex)
 		{
-			return ServiceResult.Empty;
+			return ServiceResult.empty();
 		}
 
 		@Override
-		public ServiceResult readProperty(final Destination remote, final int objectIndex, final int propertyId,
+		public ServiceResult<byte[]> readProperty(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements)
 		{
-			return ServiceResult.Empty;
+			return ServiceResult.empty();
 		}
 
 		@Override
-		public ServiceResult readMemory(final int startAddress, final int bytes)
+		public ServiceResult<byte[]> readMemory(final int startAddress, final int bytes)
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult readDomainAddress()
+		public ServiceResult<Boolean> readDomainAddress()
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult readDomainAddress(final byte[] domain, final IndividualAddress startAddress,
+		public ServiceResult<Boolean> readDomainAddress(final byte[] domain, final IndividualAddress startAddress,
 			final int range)
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult readDomainAddress(final byte[] startDoA, final byte[] endDoA)
+		public ServiceResult<Boolean> readDomainAddress(final byte[] startDoA, final byte[] endDoA)
 		{
 			return null;
 		}
@@ -235,38 +238,38 @@ public class BaseKnxDeviceTest extends TestCase
 		public void writeDomainAddress(final byte[] domain) {}
 
 		@Override
-		public ServiceResult readDescriptor(final int type)
+		public ServiceResult<DeviceDescriptor> readDescriptor(final int type)
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult readAddressSerial(final SerialNumber serialNo)
+		public ServiceResult<Boolean> readAddressSerial(final SerialNumber serialNo)
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult readAddress()
+		public ServiceResult<Boolean> readAddress()
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult readADC(final int channel, final int consecutiveReads)
+		public ServiceResult<Integer> readADC(final int channel, final int consecutiveReads)
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult management(final int svcType, final byte[] asdu, final KNXAddress dst,
+		public ServiceResult<byte[]> management(final int svcType, final byte[] asdu, final KNXAddress dst,
 			final Destination respondTo, final TransportLayer tl)
 		{
 			return null;
 		}
 
 		@Override
-		public ServiceResult writeAuthKey(final Destination remote, final int accessLevel, final byte[] key)
+		public ServiceResult<Integer> writeAuthKey(final Destination remote, final int accessLevel, final byte[] key)
 		{
 			return null;
 		}
@@ -278,7 +281,7 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 
 		@Override
-		public ServiceResult authorize(final Destination remote, final byte[] key)
+		public ServiceResult<Integer> authorize(final Destination remote, final byte[] key)
 		{
 			return null;
 		}

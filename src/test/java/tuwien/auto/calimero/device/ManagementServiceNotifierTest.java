@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2019, 2020 B. Malinowsky
+    Copyright (c) 2019, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -210,7 +210,7 @@ class ManagementServiceNotifierTest {
 		final byte[] tpdu = DataUnitBuilder.createAPDU(svc, asdu);
 		final CEMI frame = new CEMILDataEx(CEMILData.MC_LDATA_IND, src, dst, tpdu, Priority.LOW);
 		final FrameEvent e = new FrameEvent(this, frame);
-		final ServiceResult sr = ServiceResult.Empty;
+		final ServiceResult<Void> sr = ServiceResult.Empty;
 
 		notifier.respond(e, sr);
 		assertTrue(testFinished, "test for asserting response did no finish");

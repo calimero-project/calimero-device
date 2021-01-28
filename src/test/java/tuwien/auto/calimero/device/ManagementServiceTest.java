@@ -126,10 +126,10 @@ class ManagementServiceTest
 	void readProperty()
 	{
 		mgmt.authorize(dst, authKey);
-		final ServiceResult r = mgmt.readProperty(dst, objectIndex, propertyId, 1, 1);
+		final ServiceResult<byte[]> r = mgmt.readProperty(dst, objectIndex, propertyId, 1, 1);
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertEquals(2, r.getResult().length);
+		assertNotNull(r.result());
+		assertEquals(2, r.result().length);
 	}
 
 	@Test
@@ -138,29 +138,28 @@ class ManagementServiceTest
 		mgmt.authorize(dst, authKey);
 		final byte[] data = { 1 };
 		final int pidPL110Param = 73;
-		ServiceResult r = mgmt.writeProperty(dst, objectIndex, pidPL110Param, 1, 1, data);
+		final ServiceResult<Void> r = mgmt.writeProperty(dst, objectIndex, pidPL110Param, 1, 1, data);
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertArrayEquals(data, r.getResult());
+		assertNotNull(r.result());
 
 		mgmt.authorize(dst, highestAuthKey);
-		r = mgmt.readProperty(dst, objectIndex, pidPL110Param, 1, 1);
-		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertArrayEquals(data, r.getResult());
+		final ServiceResult<byte[]> read = mgmt.readProperty(dst, objectIndex, pidPL110Param, 1, 1);
+		assertNotNull(read);
+		assertNotNull(read.result());
+		assertArrayEquals(data, read.result());
 	}
 
 	@Test
 	void tryWriteReadOnlyProperty()
 	{
 		mgmt.authorize(dst, authKey);
-		ServiceResult r = mgmt.readProperty(dst, objectIndex, propertyId, 1, 1);
-		byte[] data = r.getResult();
+		ServiceResult<byte[]> r = mgmt.readProperty(dst, objectIndex, propertyId, 1, 1);
+		byte[] data = r.result();
 		final var sr = mgmt.writeProperty(null, objectIndex, propertyId, 1, 1, data);
 		assertEquals(ReturnCode.AccessReadOnly, sr.returnCode());
 
 		r = mgmt.readProperty(dst, 1, propertyId, 1, 1);
-		data = r.getResult();
+		data = r.result();
 		final var sr2 = mgmt.writeProperty(dst, 1, propertyId, 1, 1, data);
 		assertEquals(ReturnCode.AccessReadOnly, sr2.returnCode());
 	}
@@ -168,27 +167,23 @@ class ManagementServiceTest
 	@Test
 	void readPropertyDescription()
 	{
-		ServiceResult r = mgmt.readPropertyDescription(objectIndex, propertyId, 0);
+		ServiceResult<Description> r = mgmt.readPropertyDescription(objectIndex, propertyId, 0);
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertEquals(7, r.getResult().length);
-		new Description(0, r.getResult());
+		assertNotNull(r.result());
 
 		r = mgmt.readPropertyDescription(objectIndex, 0, 0);
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertEquals(7, r.getResult().length);
-		new Description(0, r.getResult());
+		assertNotNull(r.result());
 	}
 
 	@Test
 	void readMemory()
 	{
-		final ServiceResult r = mgmt.readMemory(0x60, 1);
+		final ServiceResult<byte[]> r = mgmt.readMemory(0x60, 1);
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertEquals(1, r.getResult().length);
-		assertEquals(0, r.getResult()[0]);
+		assertNotNull(r.result());
+		assertEquals(1, r.result().length);
+		assertEquals(0, r.result()[0]);
 	}
 
 	@Test
@@ -197,24 +192,22 @@ class ManagementServiceTest
 		final int start = 0x22;
 		final byte[] data = { 1, 2, 3, 4 };
 
-		ServiceResult r = mgmt.writeMemory(start, data);
+		final ServiceResult<Void> r = mgmt.writeMemory(start, data);
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertEquals(0, r.getResult().length);
+		assertNotNull(r.result());
 
-		r = mgmt.readMemory(start, 4);
-		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertArrayEquals(data, r.getResult());
+		final ServiceResult<byte[]> read = mgmt.readMemory(start, 4);
+		assertNotNull(read);
+		assertNotNull(read.result());
+		assertArrayEquals(data, read.result());
 	}
 
 	@Test
 	void readDescriptor()
 	{
-		ServiceResult r = mgmt.readDescriptor(0);
+		ServiceResult<DeviceDescriptor> r = mgmt.readDescriptor(0);
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertEquals(2, r.getResult().length);
+		assertNotNull(r.result());
 		r = mgmt.readDescriptor(2);
 		assertNull(r);
 	}
@@ -275,11 +268,10 @@ class ManagementServiceTest
 		assertAuthResult(mgmt.authorize(dst, new byte[] { 5, 5, 5, 5 }), 1);
 	}
 
-	private void assertAuthResult(final ServiceResult r, final int level)
+	private void assertAuthResult(final ServiceResult<Integer> r, final int level)
 	{
 		assertNotNull(r);
-		assertNotNull(r.getResult());
-		assertEquals(1, r.getResult().length);
-		assertEquals(level, r.getResult()[0] & 0xff);
+		assertNotNull(r.result());
+		assertEquals(level, r.result());
 	}
 }

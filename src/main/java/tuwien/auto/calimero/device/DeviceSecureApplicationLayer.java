@@ -254,7 +254,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		logger.info("security mode {}", secure ? "enabled" : "disabled");
 	}
 
-	ServiceResult securityMode(final boolean command, final byte[] functionInput) {
+	ServiceResult<byte[]> securityMode(final boolean command, final byte[] functionInput) {
 		final int serviceId = functionInput[1] & 0xff;
 		if (serviceId != 0)
 			return ServiceResult.error(ReturnCode.InvalidCommand);
@@ -264,15 +264,15 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 			if (mode > 1)
 				return ServiceResult.error(ReturnCode.DataVoid);
 			setSecurityMode(mode == 1);
-			return new ServiceResult((byte) serviceId);
+			return new ServiceResult<byte[]>((byte) serviceId);
 		}
 		else if (!command && functionInput.length == 2) {
-			return new ServiceResult(new byte[] { (byte) serviceId, (byte) (isSecurityModeEnabled() ? 1 : 0) });
+			return new ServiceResult<>((byte) serviceId, (byte) (isSecurityModeEnabled() ? 1 : 0));
 		}
 		return ServiceResult.error(ReturnCode.Error);
 	}
 
-	ServiceResult securityFailuresLog(final boolean command, final byte[] functionInput) {
+	ServiceResult<byte[]> securityFailuresLog(final boolean command, final byte[] functionInput) {
 		if (functionInput.length != 3)
 			return ServiceResult.error(ReturnCode.DataVoid);
 
@@ -281,14 +281,14 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		if (command) {
 			if (id == 0 && info == 0) {
 				clearFailureLog();
-				return new ServiceResult((byte) id);
+				return new ServiceResult<byte[]>((byte) id);
 			}
 		}
 		else {
 			// failure counters
 			if (id == 0 && info == 0) {
 				final var counters = ByteBuffer.allocate(10).put((byte) id).put((byte) info).put(failureCountersArray());
-				return new ServiceResult(counters.array());
+				return ServiceResult.of(counters.array());
 			}
 			// query latest failure by index
 			else if (id == 1) {
@@ -296,11 +296,11 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 				int i = 0;
 				for (final var msgInfo : lastFailures) {
 					if (i++ == index)
-						return new ServiceResult(ByteBuffer.allocate(2 + msgInfo.length).put((byte) id)
+						return ServiceResult.of(ByteBuffer.allocate(2 + msgInfo.length).put((byte) id)
 								.put((byte) index).put(msgInfo).array());
 				}
 
-				return new ServiceResult(ReturnCode.DataVoid, (byte) id);
+				return ServiceResult.of(ReturnCode.DataVoid, (byte) id);
 			}
 		}
 		return ServiceResult.error(ReturnCode.InvalidCommand);

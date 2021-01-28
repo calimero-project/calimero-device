@@ -36,9 +36,14 @@
 
 package tuwien.auto.calimero.device;
 
+import java.time.Duration;
+
+import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
+import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SerialNumber;
+import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.ManagementClient;
 import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
@@ -75,7 +80,7 @@ public interface ManagementService
 	 *
 	 * @return the service result with the requested property values
 	 */
-	ServiceResult readProperty(Destination remote, int objectIndex, int propertyId, int startIndex, int elements);
+	ServiceResult<byte[]> readProperty(Destination remote, int objectIndex, int propertyId, int startIndex, int elements);
 
 	/**
 	 * Invoked for an application layer property write service.
@@ -86,60 +91,60 @@ public interface ManagementService
 	 * @param elements number of elements to write
 	 * @param data byte array containing property value data to write
 	 *
-	 * @return the service result of writing the property values
+	 * @return service result containing the appropriate {@link ReturnCode}
 	 */
-	ServiceResult writeProperty(Destination remote, int objectIndex, int propertyId, int startIndex, int elements, byte[] data);
+	ServiceResult<Void> writeProperty(Destination remote, int objectIndex, int propertyId, int startIndex, int elements,
+			byte[] data);
 
 	/**
 	 * Invoked for an application layer property description read service.
 	 * <p>
 	 * The property of the object is addressed either with a the <code>propertyId</code> or with the
 	 * <code>propertyIndex</code>. The property index is only used if the property identifier is 0, otherwise the index
-	 * is ignored.<br>
+	 * is ignored.
 	 *
 	 * @param objectIndex interface object index
 	 * @param propertyId property identifier
 	 * @param propertyIndex property index, starts with index 0 for the first property
-	 * @return the service result containing the property description, starting with the property object index
+	 * @return the service result containing the property description
 	 */
-	ServiceResult readPropertyDescription(int objectIndex, int propertyId, int propertyIndex);
+	ServiceResult<Description> readPropertyDescription(int objectIndex, int propertyId, int propertyIndex);
 
-	default ServiceResult functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
+	default ServiceResult<byte[]> functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
 		final byte[] command) {
-		return ServiceResult.Empty;
+		return ServiceResult.empty();
 	}
 
-	default ServiceResult readFunctionPropertyState(final Destination remote, final int objectIndex, final int propertyId,
+	default ServiceResult<byte[]> readFunctionPropertyState(final Destination remote, final int objectIndex, final int propertyId,
 		final byte[] functionInput) {
-		return ServiceResult.Empty;
+		return ServiceResult.empty();
 	}
 
 	/**
-	 * Invoked for an application layer memory read service.
-	 * <p>
-	 * The read memory bytes returned from this method is sent back to the client using a memory read response.
+	 * Invoked for an application layer memory read service, the bytes returned from this method are sent back to the
+	 * client using a memory read response.
 	 *
 	 * @param startAddress the 16 bit start address to read memory
 	 * @param bytes number of data bytes to read (with increasing addresses), <code>bytes &gt; 0</code>
 	 * @return the service result with the requested memory data
 	 */
-	ServiceResult readMemory(int startAddress, int bytes);
+	ServiceResult<byte[]> readMemory(int startAddress, int bytes);
 
 	/**
 	 * Invoked for an application layer memory write service.
 	 *
 	 * @param startAddress 16 bit start address to write memory
 	 * @param data byte array containing the memory data to write
-	 * @return service result with the written memory data
+	 * @return service result containing the appropriate {@link ReturnCode}
 	 */
-	ServiceResult writeMemory(int startAddress, byte[] data);
+	ServiceResult<Void> writeMemory(int startAddress, byte[] data);
 
 	/**
-	 * Returns the individual address of this device; only a device in programming mode shall respond to this service.
+	 * Reads the individual address of this device; only a device in programming mode shall send a response to this service.
 	 *
-	 * @return service result with device address, or <code>null</code>
+	 * @return service result containing <code>true</code> if in programming mode, <code>false</code> otherwise
 	 */
-	ServiceResult readAddress();
+	ServiceResult<Boolean> readAddress();
 
 	/**
 	 * Assigns a new individual address to this device; a device shall only set its address if in programming mode.
@@ -153,11 +158,11 @@ public interface ManagementService
 	 * service result on matching serial number.
 	 *
 	 * @param serialNo serial number
-	 * @return empty service result on matching serial number, or <code>null</code>
+	 * @return service result containing <code>true</code> on matching serial number, <code>false</code> otherwise
 	 */
-	ServiceResult readAddressSerial(SerialNumber serialNo);
+	ServiceResult<Boolean> readAddressSerial(SerialNumber serialNo);
 
-	default ServiceResult readAddressSerial(final byte[] serialNo) {
+	default ServiceResult<Boolean> readAddressSerial(final byte[] serialNo) {
 		return readAddressSerial(SerialNumber.from(serialNo));
 	}
 
@@ -175,32 +180,32 @@ public interface ManagementService
 	}
 
 	/**
-	 * Returns the domain address of this device; only a device in programming mode shall respond to this service.
+	 * Reads the domain address of this device, if this device is in programming mode.
 	 *
-	 * @return service result with domain address, or <code>null</code>
+	 * @return service result containing <code>true</code> if in programming mode, <code>false</code> otherwise
 	 */
-	ServiceResult readDomainAddress();
+	ServiceResult<Boolean> readDomainAddress();
 
 	/**
-	 * Returns the domain address of a device; only a device with the requested domain and within the address range
+	 * Reads the domain address of this device; only a device with the requested domain and within the address range
 	 * shall respond to this service.
 	 *
 	 * @param domain domain address, address length is 2 bytes (KNX PL110)
 	 * @param startAddress start address, lower bound of checked address range (inclusive)
 	 * @param range address range, <code>(startAddress + range)</code> specifies the upper bound address (inclusive)
-	 * @return service result with domain address, or <code>null</code>
+	 * @return service result containing <code>true</code> if the conditions apply, <code>false</code> otherwise
 	 */
-	ServiceResult readDomainAddress(byte[] domain, IndividualAddress startAddress, int range);
+	ServiceResult<Boolean> readDomainAddress(byte[] domain, IndividualAddress startAddress, int range);
 
 	/**
-	 * Returns the domain address of a device; only a device having a domain address within the requested domain address
+	 * Reads the domain address of this device; only a device having a domain address within the requested domain address
 	 * range shall respond to this service.
 	 *
 	 * @param startDoA start domain address (inclusive), address length is 6 bytes (KNX RF)
 	 * @param endDoA end domain address (inclusive), address length is 6 bytes (KNX RF)
-	 * @return service result with domain address, or <code>null</code>
+	 * @return service result containing <code>true</code> if the conditions apply, <code>false</code> otherwise
 	 */
-	ServiceResult readDomainAddress(byte[] startDoA, byte[] endDoA);
+	ServiceResult<Boolean> readDomainAddress(byte[] startDoA, byte[] endDoA);
 
 	/**
 	 * Assigns a new domain address to a device; only a device in programming mode shall set its domain.
@@ -209,29 +214,19 @@ public interface ManagementService
 	 */
 	void writeDomainAddress(byte[] domain);
 
-	default ServiceResult readParameter(final int objectType, final int pid, final byte[] testInfo) {
-		return ServiceResult.Empty;
+	default ServiceResult<byte[]> readParameter(final int objectType, final int pid, final byte[] testInfo) {
+		return ServiceResult.empty();
 	}
 
 	default void writeParameter(final int objectType, final int pid, final byte[] value) {}
 
 	/**
 	 * Invoked for an application layer device descriptor read service.
-	 * <p>
-	 * Currently, two descriptor types are defined in KNX:<br>
-	 * Structure of descriptor type 0:<br>
-	 * | mask type (8 bit): Medium Type (4 bit), Firmware Type (4 bit) | firmware version (8 bit):
-	 * version (4 bit), sub code (4 bit) |
-	 * <p>
-	 * Structure of descriptor type 1:<br>
-	 * | application manufacturer (16 bit) | device type (16 bit) | version (8 bit) | link mgmt
-	 * service support (2 bit) | logical tag (LT) base value (6 bit) | CI 1 (16 bit) | CI 2 (16 bit)
-	 * | CI 3 (16 bit) | CI 4 (16 bit) |<br>
-	 *
+
 	 * @param type descriptor type, currently defined are types 0 and 2
-	 * @return service result with the byte array containing device descriptor information
+	 * @return service result containing the device descriptor information
 	 */
-	ServiceResult readDescriptor(int type);
+	ServiceResult<DeviceDescriptor> readDescriptor(int type);
 
 	/**
 	 * Reads the value of the A/D converter of this device.
@@ -240,7 +235,7 @@ public interface ManagementService
 	 * @param consecutiveReads number of consecutive converter read operations
 	 * @return service result with the calculated A/D conversion value
 	 */
-	ServiceResult readADC(int channel, int consecutiveReads);
+	ServiceResult<Integer> readADC(int channel, int consecutiveReads);
 
 	/**
 	 * Modifies or deletes an authorization key associated to an access level of this device.
@@ -254,7 +249,7 @@ public interface ManagementService
 	 * @return service result with the specified access level
 	 * @see #authorize(Destination, byte[])
 	 */
-	ServiceResult writeAuthKey(Destination remote, int accessLevel, byte[] key);
+	ServiceResult<Integer> writeAuthKey(Destination remote, int accessLevel, byte[] key);
 
 	/**
 	 * Authorizes a communication partner providing its authorization key to obtain a certain access level.
@@ -264,7 +259,7 @@ public interface ManagementService
 	 * @return service result with granted access level, level is between 0 (maximum access rights) and 3 (i.e., minimum
 	 *         access rights) or 0 (maximum access rights) and 15 (minimum access rights)
 	 */
-	ServiceResult authorize(Destination remote, byte[] key);
+	ServiceResult<Integer> authorize(Destination remote, byte[] key);
 
 	/**
 	 * Restarts this device.
@@ -276,12 +271,11 @@ public interface ManagementService
 	 *        table and group object association table and reset all application parameters. With erase codes
 	 *        {@link EraseCode#ConfirmedRestart}, {@link EraseCode#ResetIndividualAddress}, and
 	 *        {@link EraseCode#ResetApplicationProgram}, the channel number is fixed to {@code 0}.
-	 * @return <code>null</code> for basic restart, a master reset returns service result with error code and process
-	 *         time
+	 * @return process time required for restarting the device, can be 0 if time is &le; 5 seconds
 	 * @see ManagementClient#restart(Destination)
 	 * @see ManagementClient#restart(Destination, int, int)
 	 */
-	ServiceResult restart(boolean masterReset, EraseCode eraseCode, int channel);
+	ServiceResult<Duration> restart(boolean masterReset, EraseCode eraseCode, int channel);
 
 	/**
 	 * A catch-all method for not specifically dispatched management services.
@@ -291,9 +285,9 @@ public interface ManagementService
 	 * @param dst destination address of the management service
 	 * @param respondTo destination to respond to
 	 * @param tl transport layer processing the management service
-	 * @return service result with service response, or <code>null</code>
+	 * @return service result with service response
 	 */
-	ServiceResult management(int svcType, byte[] asdu, KNXAddress dst, Destination respondTo, TransportLayer tl);
+	ServiceResult<byte[]> management(int svcType, byte[] asdu, KNXAddress dst, Destination respondTo, TransportLayer tl);
 
 	/**
 	 * Returns whether verify mode is enabled on this endpoint for certain management services

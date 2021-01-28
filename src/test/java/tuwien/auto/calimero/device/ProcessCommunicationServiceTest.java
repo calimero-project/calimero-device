@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2020 B. Malinowsky
+    Copyright (c) 2011, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -83,10 +83,10 @@ public class ProcessCommunicationServiceTest extends TestCase
 	// test Runnable return in ServiceResult
 	private final ProcessCommunicationService processLogicRunnable = new ProcessCommunicationService() {
 		@Override
-		public ServiceResult groupReadRequest(final ProcessEvent e)
+		public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp.getMainAddress()))
-				return new ServiceResult() {
+				return new ServiceResult<>() {
 					@Override
 					public void run()
 					{
@@ -101,7 +101,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 						}
 					}
 				};
-			return new ServiceResult();
+			return new ServiceResult<>();
 		}
 
 		@Override
@@ -127,19 +127,19 @@ public class ProcessCommunicationServiceTest extends TestCase
 	// test return data byte[] in ServiceResult
 	private final ProcessCommunicationService processLogic = new ProcessCommunicationService() {
 		@Override
-		public ServiceResult groupReadRequest(final ProcessEvent e)
+		public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e)
 		{
 			if (e.getDestination().equals(dp2.getMainAddress())) {
 				try {
 					final DPTXlator8BitUnsigned x = new DPTXlator8BitUnsigned(dp2.getDPT());
 					x.setValue(dp2State);
-					return new ServiceResult(x.getData());
+					return ServiceResult.of(x.getData());
 				}
 				catch (final KNXFormatException e1) {
 					e1.printStackTrace();
 				}
 			}
-			return new ServiceResult();
+			return new ServiceResult<>();
 		}
 
 		@Override
@@ -158,8 +158,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 
 		@Override
-		public void groupResponse(final ProcessEvent e)
-		{}
+		public void groupResponse(final ProcessEvent e) {}
 	};
 
 	private BaseKnxDevice device1;

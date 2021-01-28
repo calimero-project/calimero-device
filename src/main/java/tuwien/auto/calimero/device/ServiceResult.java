@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2020 B. Malinowsky
+    Copyright (c) 2011, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -51,15 +51,26 @@ import tuwien.auto.calimero.ReturnCode;
  *
  * @author B. Malinowsky
  */
-public class ServiceResult implements Runnable
+public class ServiceResult<T> implements Runnable
 {
-	static final ServiceResult Empty = new ServiceResult(new byte[0]);
+	static final ServiceResult<Void> Empty = new ServiceResult<>(new byte[0]);
 
 	private final ReturnCode ret;
-	private final byte[] data;
+	private final T data;
 	final boolean compact;
 
-	static ServiceResult error(final ReturnCode error) { return new ServiceResult(error); }
+	@SuppressWarnings("unchecked")
+	static <U> ServiceResult<U> empty() { return (ServiceResult<U>) Empty; }
+
+	static <U> ServiceResult<U> error(final ReturnCode error) { return new ServiceResult<>(error); }
+
+	public static <U> ServiceResult<U> of(final U t) { return new ServiceResult<>(t); }
+
+	public static ServiceResult<byte[]> of(final byte... data) { return new ServiceResult<>(data); }
+
+	static ServiceResult<byte[]> of(final ReturnCode returnCode, final byte... result) {
+		return new ServiceResult<byte[]>(returnCode, result);
+	}
 
 	/**
 	 * Creates a service result with no result data.
@@ -80,21 +91,32 @@ public class ServiceResult implements Runnable
 	 */
 	public ServiceResult(final byte... result)
 	{
-		this(result, false);
+		this((T) result);
 	}
 
-	ServiceResult(final ReturnCode returnCode, final byte... result) {
+	private ServiceResult(final ReturnCode returnCode) {
+		this(returnCode, (T) new byte[0]);
+	}
+
+	private ServiceResult(final T t) {
+		ret = ReturnCode.Success;
+		data = t;
+		compact = false;
+	}
+
+	private ServiceResult(final ReturnCode returnCode, final T result) {
 		ret = returnCode;
 		data = result;
 		compact = false;
 	}
 
+	@SuppressWarnings("unchecked")
 	public ServiceResult(final byte[] result, final boolean compact)
 	{
 		if (result == null)
 			throw new KNXIllegalArgumentException("no service result");
 		ret = ReturnCode.Success;
-		data = result;
+		data = (T) result;
 		this.compact = compact;
 	}
 
@@ -105,8 +127,12 @@ public class ServiceResult implements Runnable
 	 */
 	public byte[] getResult()
 	{
-		return data;
+		if (data instanceof byte[])
+			return (byte[]) data;
+		return null;
 	}
+
+	public T result() { return data; }
 
 	@Override
 	public void run() {}

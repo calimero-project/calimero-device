@@ -583,8 +583,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	private static final AtomicLong taskCounter = new AtomicLong();
 
-	void dispatch(final EventObject e, final Supplier<ServiceResult> dispatch,
-		final BiConsumer<EventObject, ServiceResult> respond)
+	 <T> void dispatch(final EventObject e, final Supplier<ServiceResult<T>> dispatch,
+		final BiConsumer<EventObject, ServiceResult<T>> respond)
 	{
 		final long start = System.nanoTime();
 		final long taskId = taskCounter.incrementAndGet();

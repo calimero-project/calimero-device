@@ -58,6 +58,7 @@ import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXTimeoutException;
+import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SecurityControl;
@@ -218,7 +219,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult groupReadRequest(final ProcessEvent e)
+	public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e)
 	{
 		final GroupAddress dst = e.getDestination();
 		final Datapoint dp = getDatapointModel().get(dst);
@@ -226,7 +227,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			try {
 				final DPTXlator t = requestDatapointValue(dp);
 				if (t != null)
-					return new ServiceResult(t.getData(), t.getTypeSize() == 0);
+					return new ServiceResult<>(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (KNXException | RuntimeException ex) {
 				logger.warn("on group read request {}->{}: {}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "), ex);
@@ -257,7 +258,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public void groupResponse(final ProcessEvent e) {}
 
 	@Override
-	public ServiceResult readProperty(final Destination remote, final int objectIndex,
+	public ServiceResult<byte[]> readProperty(final Destination remote, final int objectIndex,
 		final int propertyId, final int startIndex, final int elements)
 	{
 		try {
@@ -275,7 +276,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			// getProperty will fail and provide a more accurate error
 		}
 		final byte[] res = ios.getProperty(objectIndex, propertyId, startIndex, elements);
-		return new ServiceResult(res);
+		return ServiceResult.of(res);
 	}
 
 	enum LoadEvent { NoOperation, StartLoading, LoadCompleted, AdditionalLoadControls, Unload }
@@ -329,7 +330,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 
 	@Override
-	public ServiceResult writeProperty(final Destination remote, final int objectIndex,
+	public ServiceResult<Void> writeProperty(final Destination remote, final int objectIndex,
 		final int propertyId, final int startIndex, final int elements, final byte[] data)
 	{
 		Description d = null;
@@ -351,14 +352,14 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			}
 			final int level = accessLevel(remote);
 			if (level > d.getWriteLevel()) {
-				logger.warn("deny {} write access to property {}|{} (access level {}, requires {})", remote.getAddress(), objectIndex,
-						propertyId, level, d.getWriteLevel());
+				logger.warn("deny {} write access to property {}|{} (access level {}, requires {})", remote.getAddress(),
+						objectIndex, propertyId, level, d.getWriteLevel());
 				return ServiceResult.error(ReturnCode.AccessDenied);
 			}
 		}
 
 		if (propertyId == PID.LOAD_STATE_CONTROL)
-			return changeLoadState(remote, objectIndex, propertyId, startIndex, elements, data);
+			return (ServiceResult) changeLoadState(remote, objectIndex, propertyId, startIndex, elements, data);
 
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases
@@ -368,7 +369,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (objectIndex == 0 && propertyId == PID.DEVICE_CONTROL)
 			verifyMode = (data[0] & 0x04) != 0;
 
-		return new ServiceResult(data);
+		return ServiceResult.empty();
 	}
 
 	private static LoadState nextLoadState(final LoadEvent event) {
@@ -382,34 +383,31 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 	}
 
-	private ServiceResult changeLoadState(final Destination remote, final int objectIndex, final int propertyId,
+	private ServiceResult<byte[]> changeLoadState(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements, final byte[] data) {
 
 		final var event = LoadEvent.values()[data[0] & 0xff];
 		logger.debug("load state control event for OI {}: {}", objectIndex, event);
 
 		if (event == LoadEvent.NoOperation)
-			return readProperty(remote, objectIndex, propertyId, startIndex, elements);
+			return ServiceResult.of(readProperty(remote, objectIndex, propertyId, startIndex, elements).result());
 		final var loadState = nextLoadState(event);
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) loadState.ordinal());
-		return new ServiceResult((byte) loadState.ordinal());
+		return new ServiceResult<byte[]>((byte) loadState.ordinal());
 	}
 
 	@Override
-	public ServiceResult readPropertyDescription(final int objectIndex, final int propertyId, final int propertyIndex)
-	{
-		final Description d;
+	public ServiceResult<Description> readPropertyDescription(final int objectIndex, final int propertyId,
+			final int propertyIndex) {
 		if (propertyId > 0)
-			d = ios.getDescription(objectIndex, propertyId);
-		else
-			d = ios.getDescriptionByIndex(objectIndex, propertyIndex);
-		return new ServiceResult(d.toByteArray());
+			return ServiceResult.of(ios.getDescription(objectIndex, propertyId));
+		return ServiceResult.of(ios.getDescriptionByIndex(objectIndex, propertyIndex));
 	}
 
 	private static final int PID_ROUTETABLE_CONTROL = 56;
 
 	@Override
-	public ServiceResult functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
+	public ServiceResult<byte[]> functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
 		final byte[] command) {
 		final int serviceId = command[1] & 0xff;
 		final int objectType = ios.getInterfaceObjects()[objectIndex].getType();
@@ -425,20 +423,20 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				final int setGroupAddresses = 4;
 
 				if (serviceId == clearRoutingTable)
-					return new ServiceResult((byte) 0, (byte) clearRoutingTable);
+					return new ServiceResult<byte[]>((byte) 0, (byte) clearRoutingTable);
 				if (serviceId == setRoutingTable)
-					return new ServiceResult((byte) 0, (byte) setRoutingTable);
+					return new ServiceResult<byte[]>((byte) 0, (byte) setRoutingTable);
 				if (serviceId == clearGroupAddresses) {
 					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
 					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
-					return new ServiceResult((byte) 0, (byte) clearGroupAddresses, command[2], command[3], command[4],
-							command[5]);
+					return new ServiceResult<byte[]>((byte) 0, (byte) clearGroupAddresses, command[2], command[3],
+							command[4], command[5]);
 				}
 				if (serviceId == setGroupAddresses) {
 					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
 					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
-					return new ServiceResult((byte) 0, (byte) setGroupAddresses, command[2], command[3], command[4],
-							command[5]);
+					return new ServiceResult<byte[]>((byte) 0, (byte) setGroupAddresses, command[2], command[3],
+							command[4], command[5]);
 				}
 			}
 		}
@@ -450,7 +448,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return ServiceResult.error(ReturnCode.Error);
 	}
 
-	private ServiceResult writeGroupObjectDiagnostics(final byte[] command, final int serviceId) {
+	private ServiceResult<byte[]> writeGroupObjectDiagnostics(final byte[] command, final int serviceId) {
 		logger.debug("GO diagnostics write service 0x{}", Integer.toHexString(serviceId));
 
 		// write service IDs
@@ -463,8 +461,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (serviceId == limitGroupServiceSenders) // only available in diagnostic operation mode
 			return ServiceResult.error(ReturnCode.ImpossibleCommand);
 
-		final var dataVoidResult = new ServiceResult(ReturnCode.DataVoid, (byte) serviceId);
-		final var invalidCommandResult = new ServiceResult(ReturnCode.InvalidCommand, (byte) serviceId);
+		final var dataVoidResult = ServiceResult.of(ReturnCode.DataVoid, (byte) serviceId);
+		final var invalidCommandResult = ServiceResult.of(ReturnCode.InvalidCommand, (byte) serviceId);
 
 		if (serviceId == setLocalGOValue) {
 			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
@@ -504,7 +502,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				Thread.currentThread().interrupt();
 			}
 
-			return new ServiceResult((byte) serviceId);
+			return new ServiceResult<byte[]>((byte) serviceId);
 		}
 		else if (serviceId == sendLocalGOValueOnBus) {
 			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
@@ -542,7 +540,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			catch (final InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
-			return new ServiceResult((byte) serviceId);
+			return new ServiceResult<byte[]>((byte) serviceId);
 		}
 		return invalidCommandResult;
 	}
@@ -559,7 +557,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult readFunctionPropertyState(final Destination remote, final int objectIndex,
+	public ServiceResult<byte[]> readFunctionPropertyState(final Destination remote, final int objectIndex,
 		final int propertyId, final byte[] functionInput) {
 
 		final int serviceId = functionInput[1] & 0xff;
@@ -573,14 +571,14 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return ServiceResult.error(ReturnCode.InvalidCommand);
 	}
 
-	private ServiceResult readGroupObjectDiagnostics(final byte[] functionInput, final int serviceId) {
+	private ServiceResult<byte[]> readGroupObjectDiagnostics(final byte[] functionInput, final int serviceId) {
 		logger.debug("GO diagnostics read service 0x{}", Integer.toHexString(serviceId));
 
 		// read service IDs
 		final int getGOConfig = 0;
 		final int getLocalGOValue = 1;
 
-		final var invalidCommandResult = new ServiceResult(ReturnCode.InvalidCommand, (byte) serviceId);
+		final var invalidCommandResult = ServiceResult.of(ReturnCode.InvalidCommand, (byte) serviceId);
 		if (serviceId == getGOConfig) {
 			final int groupObjectNumber = (functionInput[2] & 0xff) << 8 | (functionInput[3] & 0xff);
 			// NYI return E_GD_CONFIG
@@ -597,7 +595,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private static final int addrGroupAddrTable = 0x0116; // max. length 233
 
 	@Override
-	public ServiceResult readMemory(final int startAddress, final int bytes)
+	public ServiceResult<byte[]> readMemory(final int startAddress, final int bytes)
 	{
 		final byte[] mem = getDeviceMemory();
 		if (startAddress >= mem.length)
@@ -613,13 +611,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			bb.put(device.getAddress().toByteArray());
 			c.forEach(dp -> bb.put(dp.getMainAddress().toByteArray()));
 			final int from = startAddress - addrGroupAddrTable;
-			return new ServiceResult(Arrays.copyOfRange(bb.array(), from, from + bytes));
+			return ServiceResult.of(Arrays.copyOfRange(bb.array(), from, from + bytes));
 		}
-		return new ServiceResult(Arrays.copyOfRange(getDeviceMemory(), startAddress, startAddress + bytes));
+		return ServiceResult.of(Arrays.copyOfRange(getDeviceMemory(), startAddress, startAddress + bytes));
 	}
 
 	@Override
-	public ServiceResult writeMemory(final int startAddress, final byte[] data)
+	public ServiceResult<Void> writeMemory(final int startAddress, final byte[] data)
 	{
 		final byte[] mem = getDeviceMemory();
 		if (startAddress >= mem.length)
@@ -628,10 +626,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			return ServiceResult.error(ReturnCode.MemoryError);
 
 		if (BimM112.isMgmtControl(startAddress)) {
-			final var dd = DeviceDescriptor.DD0.from(readDescriptor(0).getResult());
+			final var dd = readDescriptor(0).result();
 			if (dd == DeviceDescriptor.DD0.TYPE_0700 || dd == DeviceDescriptor.DD0.TYPE_0701) {
 				BimM112.onLoadEvent(this, data);
-				return new ServiceResult();
+				return new ServiceResult<>();
 			}
 		}
 
@@ -645,17 +643,14 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult readAddress()
-	{
-		if (inProgrammingMode())
-			return ServiceResult.Empty;
-		return null;
+	public ServiceResult<Boolean> readAddress() {
+		return ServiceResult.of(inProgrammingMode());
 	}
 
 	@Override
-	public ServiceResult readAddressSerial(final SerialNumber serialNo) {
+	public ServiceResult<Boolean> readAddressSerial(final SerialNumber serialNo) {
 		final var myserial = DeviceObject.lookup(ios).serialNumber();
-		return myserial.equals(serialNo) ? ServiceResult.Empty : null;
+		return ServiceResult.of(myserial.equals(serialNo));
 	}
 
 	@Override
@@ -683,17 +678,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult readDomainAddress()
-	{
-		if (inProgrammingMode())
-			return new ServiceResult(domainAddress());
-		return null;
+	public ServiceResult<Boolean> readDomainAddress() {
+		return ServiceResult.of(inProgrammingMode());
 	}
 
 	@Override
-	public ServiceResult readDomainAddress(final byte[] domain,
-		final IndividualAddress startAddress, final int range)
-	{
+	public ServiceResult<Boolean> readDomainAddress(final byte[] domain, final IndividualAddress startAddress,
+			final int range) {
 		final byte[] domainAddress = domainAddress();
 		if (Arrays.equals(domain, domainAddress)) {
 			final int raw = device.getAddress().getRawAddress();
@@ -705,7 +696,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					// NYI iff range < 0xff and we receive a response from another device while waiting, we should
 					// cancel our own response
 					Thread.sleep(wait);
-					return new ServiceResult(domainAddress);
+					return ServiceResult.of(true);
 				}
 				catch (final InterruptedException e) {
 					logger.warn("read domain address got interrupted, response is canceled");
@@ -713,11 +704,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				}
 			}
 		}
-		return null;
+		return ServiceResult.of(false);
 	}
 
 	@Override
-	public ServiceResult readDomainAddress(final byte[] startDoA, final byte[] endDoA)
+	public ServiceResult<Boolean> readDomainAddress(final byte[] startDoA, final byte[] endDoA)
 	{
 		final long start = unsigned(startDoA);
 		final long end = unsigned(endDoA);
@@ -725,9 +716,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final long our = unsigned(domainAddress);
 		if (our >= start && our <= end) {
 			if (randomWait("read domain address", 2001))
-				return new ServiceResult(domainAddress);
+				return ServiceResult.of(true);
 		}
-		return null;
+		return ServiceResult.of(false);
 	}
 
 	@Override
@@ -774,35 +765,34 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult readParameter(final int objectType, final int pid, final byte[] info) {
+	public ServiceResult<byte[]> readParameter(final int objectType, final int pid, final byte[] info) {
 		if (objectType == 0 && pid == PID.SERIAL_NUMBER) {
 			final var operand = info[0] & 0xff;
 			int maxWaitSeconds = 0;
-			final byte[] domainAddress = domainAddress();
 			if (operand == 1 && inProgrammingMode())
 				maxWaitSeconds = 1;
 			else if (operand == 2 && device.getAddress().getDevice() == 0xff
-					&& (Arrays.equals(new byte[] { 0, (byte) 0xff }, domainAddress)
-							|| Arrays.equals(new byte[6], domainAddress)))
+					&& (Arrays.equals(new byte[] { 0, (byte) 0xff }, domainAddress())
+							|| Arrays.equals(new byte[6], domainAddress())))
 				maxWaitSeconds = info[1] & 0xff;
 			else if (operand == 3) {
 				if (ignoreReadSNByPowerReset || startTime.plus(Duration.ofMinutes(4)).isBefore(Instant.now()))
-					return null;
+					return new ServiceResult<>();
 				maxWaitSeconds = info[1] & 0xff;
 				ignoreReadSNByPowerReset = maxWaitSeconds < 255;
 			}
 
 			if (maxWaitSeconds == 255) // mgmt procedure cancel indicator
-				return null;
+				return new ServiceResult<>();
 
 			if (maxWaitSeconds > 0) {
 				// TODO don't block, schedule it
 				randomWait("read parameter - serial number", maxWaitSeconds * 1000);
 				final var sn = DeviceObject.lookup(ios).serialNumber();
-				return new ServiceResult(sn.array());
+				return ServiceResult.of(sn.array());
 			}
 		}
-		return ServiceResult.Empty;
+		return ServiceResult.empty();
 	}
 
 	private boolean randomWait(final String svc, final int maxWaitMillis) {
@@ -819,45 +809,45 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult readDescriptor(final int type)
+	public ServiceResult<DeviceDescriptor> readDescriptor(final int type)
 	{
 		if (type == 0)
-			return new ServiceResult(DeviceObject.lookup(ios).deviceDescriptor().toByteArray());
+			return ServiceResult.of(DeviceObject.lookup(ios).deviceDescriptor());
 		if (device instanceof BaseKnxDevice) {
 			final DeviceDescriptor dd = ((BaseKnxDevice) device).deviceDescriptor();
 			if (dd instanceof DeviceDescriptor.DD2)
-				return new ServiceResult(dd.toByteArray());
+				return ServiceResult.of(dd);
 		}
-		return null;
+		throw new KnxRuntimeException("cannot provide DD2");
 	}
 
 	@Override
-	public ServiceResult readADC(final int channel, final int consecutiveReads)
+	public ServiceResult<Integer> readADC(final int channel, final int consecutiveReads)
 	{
-		return new ServiceResult(new byte[] { (byte) channel, (byte) consecutiveReads, 0x1, 0x0 });
+		return ServiceResult.of(0x100);
 	}
 
 	@Override
-	public ServiceResult writeAuthKey(final Destination remote, final int accessLevel, final byte[] key)
+	public ServiceResult<Integer> writeAuthKey(final Destination remote, final int accessLevel, final byte[] key)
 	{
 		if (accessLevel >= minAccessLevel)
-			return new ServiceResult((byte) minAccessLevel);
+			return ServiceResult.of(minAccessLevel);
 		if (accessLevel(remote) > accessLevel)
-			return new ServiceResult((byte) 0xff);
+			return ServiceResult.of(0xff);
 		authKeys[accessLevel] = key;
-		return new ServiceResult((byte) accessLevel);
+		return ServiceResult.of(accessLevel);
 	}
 
 	@Override
-	public ServiceResult authorize(final Destination remote, final byte[] key)
+	public ServiceResult<Integer> authorize(final Destination remote, final byte[] key)
 	{
 		final int currentLevel = maximumAccessLevel(key);
 		setAccessLevel(remote, currentLevel);
-		return new ServiceResult((byte) currentLevel);
+		return ServiceResult.of(currentLevel);
 	}
 
 	@Override
-	public ServiceResult restart(final boolean masterReset, final EraseCode eraseCode, final int channel)
+	public ServiceResult<Duration> restart(final boolean masterReset, final EraseCode eraseCode, final int channel)
 	{
 		final String type = masterReset ? "master reset (" + eraseCode + ")" : "basic restart";
 		logger.info("received request for {}", type);
@@ -884,9 +874,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				resetAuthKeys(accessLevel);
 			}
 
-			final byte errorCode = 0;
-			final byte processTimeSeconds = 3;
-			return new ServiceResult(errorCode, (byte) 0, processTimeSeconds);
+			final var processTime = Duration.ofSeconds(3);
+			return ServiceResult.of(processTime);
 		}
 		return null;
 	}
@@ -897,7 +886,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public ServiceResult management(final int svcType, final byte[] asdu, final KNXAddress dst,
+	public ServiceResult<byte[]> management(final int svcType, final byte[] asdu, final KNXAddress dst,
 		final Destination respondTo, final TransportLayer tl)
 	{
 		logger.info("{}->{} {} {}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType), toHex(asdu, " "));
