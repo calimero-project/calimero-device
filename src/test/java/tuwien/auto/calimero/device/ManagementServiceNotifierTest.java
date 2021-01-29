@@ -210,7 +210,7 @@ class ManagementServiceNotifierTest {
 		final byte[] tpdu = DataUnitBuilder.createAPDU(svc, asdu);
 		final CEMI frame = new CEMILDataEx(CEMILData.MC_LDATA_IND, src, dst, tpdu, Priority.LOW);
 		final FrameEvent e = new FrameEvent(this, frame);
-		final ServiceResult<Void> sr = ServiceResult.Empty;
+		final ServiceResult<Void> sr = ServiceResult.empty();
 
 		notifier.respond(e, sr);
 		assertTrue(testFinished, "test for asserting response did no finish");

@@ -174,7 +174,7 @@ public class BaseKnxDeviceTest extends TestCase
 		public ServiceResult<Void> writeProperty(final Destination remote, final int objectIndex, final int propertyId,
 			final int startIndex, final int elements, final byte[] data)
 		{
-			return ServiceResult.Empty;
+			return ServiceResult.empty();
 		}
 
 		@Override

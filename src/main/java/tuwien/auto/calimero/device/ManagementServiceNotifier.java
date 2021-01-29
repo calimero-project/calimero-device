@@ -310,7 +310,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				return;
 		}
 		// we do everything in respond
-		device.dispatch(e, () -> ServiceResult.Empty, this::respond);
+		device.dispatch(e, () -> ServiceResult.empty(), this::respond);
 	}
 
 	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo,
@@ -869,7 +869,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}|{}{} {}..{}: {}", d.getAddress(), dst, name,
 				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, ""));
 
-		ServiceResult<Void> sr = ServiceResult.Empty;
+		ServiceResult<Void> sr = ServiceResult.empty();
 		if (checkPropertyAccess(objIndex, pid, true)) {
 			try {
 				sr = mgmtSvc.writeProperty(d, objIndex, pid, start, elements, propertyData);

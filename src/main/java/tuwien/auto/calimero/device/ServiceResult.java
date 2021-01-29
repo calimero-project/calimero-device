@@ -53,7 +53,7 @@ import tuwien.auto.calimero.ReturnCode;
  */
 public class ServiceResult<T> implements Runnable
 {
-	static final ServiceResult<Void> Empty = new ServiceResult<>(new byte[0]);
+	private static final ServiceResult<Void> Empty = new ServiceResult<>(new byte[0]);
 
 	private final ReturnCode ret;
 	private final T data;
@@ -89,11 +89,13 @@ public class ServiceResult<T> implements Runnable
 	 *        <code>result.length</code> equal to the length as expected by the
 	 *        application layer service
 	 */
+	@SuppressWarnings("unchecked")
 	public ServiceResult(final byte... result)
 	{
 		this((T) result);
 	}
 
+	@SuppressWarnings("unchecked")
 	private ServiceResult(final ReturnCode returnCode) {
 		this(returnCode, (T) new byte[0]);
 	}

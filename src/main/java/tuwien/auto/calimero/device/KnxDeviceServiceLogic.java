@@ -358,8 +358,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			}
 		}
 
-		if (propertyId == PID.LOAD_STATE_CONTROL)
-			return (ServiceResult) changeLoadState(remote, objectIndex, propertyId, startIndex, elements, data);
+		if (propertyId == PID.LOAD_STATE_CONTROL) {
+			final var state = changeLoadState(remote, objectIndex, propertyId, startIndex, elements, data);
+			return castResult(state);
+		}
 
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, data);
 		// handle some special cases
@@ -371,6 +373,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		return ServiceResult.empty();
 	}
+
+	@SuppressWarnings("unchecked")
+	private static <T> ServiceResult<T> castResult(final ServiceResult<byte[]> ls) { return (ServiceResult<T>) ls; }
 
 	private static LoadState nextLoadState(final LoadEvent event) {
 		switch (event) {
@@ -639,7 +644,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 		if (startAddress == 0x60 && data.length == 1)
 			setProgrammingMode(data[0] == 1);
-		return ServiceResult.Empty;
+		return ServiceResult.empty();
 	}
 
 	@Override
