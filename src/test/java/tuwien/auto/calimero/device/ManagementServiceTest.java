@@ -39,7 +39,7 @@ package tuwien.auto.calimero.device;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.junit.jupiter.api.AfterEach;
@@ -51,6 +51,7 @@ import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXTimeoutException;
+import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.cemi.CEMILData;
 import tuwien.auto.calimero.datapoint.Datapoint;
@@ -205,11 +206,10 @@ class ManagementServiceTest
 	@Test
 	void readDescriptor()
 	{
-		ServiceResult<DeviceDescriptor> r = mgmt.readDescriptor(0);
+		final ServiceResult<DeviceDescriptor> r = mgmt.readDescriptor(0);
 		assertNotNull(r);
 		assertNotNull(r.result());
-		r = mgmt.readDescriptor(2);
-		assertNull(r);
+		assertThrows(KnxRuntimeException.class, () -> mgmt.readDescriptor(2));
 	}
 
 	@Test
