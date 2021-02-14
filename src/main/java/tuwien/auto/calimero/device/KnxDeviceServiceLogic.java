@@ -177,17 +177,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public abstract DPTXlator requestDatapointValue(Datapoint ofDp) throws KNXException;
 
 	/**
-	 * Returns the device memory this KNX device should use for any memory-related operations, e.g.,
-	 * memory read/write management service.
-	 *
-	 * @return the device memory
-	 */
-	byte[] getDeviceMemory()
-	{
-		return ((BaseKnxDevice) device).deviceMemory();
-	}
-
-	/**
 	 * @param inProgrammingMode <code>true</code> if device should be set into programming mode,
 	 *        <code>false</code> if programming mode should be switched off (if currently set)
 	 */
@@ -199,10 +188,9 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 		catch (final KnxPropertyException ignore) {}
 
-		final byte[] mem = getDeviceMemory();
-		int b = mem[0x60];
+		int b = device.deviceMemory().get(0x60);
 		b = inProgrammingMode ? b | 0x01 : b & (~0x01);
-		mem[0x60] = (byte) b;
+		device.deviceMemory().set(0x60, b);
 	}
 
 	/**
@@ -214,7 +202,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			return DeviceObject.lookup(ios).programmingMode();
 		}
 		catch (final KnxPropertyException e) {
-			return (getDeviceMemory()[0x60] & 0x01) == 0x01;
+			return (device.deviceMemory().get(0x60) & 0x01) == 0x01;
 		}
 	}
 
@@ -602,12 +590,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult<byte[]> readMemory(final int startAddress, final int bytes)
 	{
-		final byte[] mem = getDeviceMemory();
-		if (startAddress >= mem.length)
+		final int size = device.deviceMemory().size();
+		if (startAddress >= size)
 			return ServiceResult.error(ReturnCode.AddressVoid);
-		if (startAddress + bytes >= mem.length)
+		if (startAddress + bytes >= size)
 			return ServiceResult.error(ReturnCode.AccessDenied);
 
+		final byte[] mem = device.deviceMemory().get(0, size);
 		final Collection<Datapoint> c = ((DatapointMap<Datapoint>) datapoints).getDatapoints();
 		final int groupAddrTableSize = 4 + c.size() * 2;
 		if (startAddress >= addrGroupAddrTable && startAddress < addrGroupAddrTable + groupAddrTableSize) {
@@ -618,16 +607,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final int from = startAddress - addrGroupAddrTable;
 			return ServiceResult.of(Arrays.copyOfRange(bb.array(), from, from + bytes));
 		}
-		return ServiceResult.of(Arrays.copyOfRange(getDeviceMemory(), startAddress, startAddress + bytes));
+		return ServiceResult.of(Arrays.copyOfRange(mem, startAddress, startAddress + bytes));
 	}
 
 	@Override
 	public ServiceResult<Void> writeMemory(final int startAddress, final byte[] data)
 	{
-		final byte[] mem = getDeviceMemory();
-		if (startAddress >= mem.length)
+		final int size = device.deviceMemory().size();
+		if (startAddress >= size)
 			return ServiceResult.error(ReturnCode.AddressVoid);
-		if (startAddress + data.length >= mem.length)
+		if (startAddress + data.length >= size)
 			return ServiceResult.error(ReturnCode.MemoryError);
 
 		if (BimM112.isMgmtControl(startAddress)) {
@@ -638,12 +627,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			}
 		}
 
-		for (int i = 0; i < data.length; i++) {
-			final byte b = data[i];
-			mem[startAddress + i] = b;
-		}
 		if (startAddress == 0x60 && data.length == 1)
 			setProgrammingMode(data[0] == 1);
+		else
+			device.deviceMemory().set(startAddress, data);
 		return ServiceResult.empty();
 	}
 
@@ -945,14 +932,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final var description = ios.getDescription(idx, PID.TABLE);
 		final int typeSize = PropertyTypes.bitSize(description.getPDT()).orElse(16) / 8;
 
-		final var mem = getDeviceMemory();
-		final int size = (mem[ref] & 0xff) << 8 | mem[ref + 1] & 0xff;
-		final var buffer = ByteBuffer.wrap(mem, ref + 2, size * typeSize);
-		final var data = new byte[buffer.remaining()];
-		buffer.get(data);
+		final byte[] tableSize = device.deviceMemory().get(ref, 2);
+		final int size = (tableSize[0] & 0xff) << 8 | tableSize[1] & 0xff;
 		if (size > 0) {
 			final int max = size;
 			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, 0, true, 0, max, 3, 3), true);
+			final byte[] data = device.deviceMemory().get(ref + 2, size * typeSize);
 			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, size, data);
 		}
 	}

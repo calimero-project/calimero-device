@@ -194,7 +194,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private KNXNetworkLink link;
 
 	private static final int deviceMemorySize = 0x10010;
-	private final byte[] memory = new byte[deviceMemorySize];
+	private final Memory memory = new ThreadSafeByteArray(deviceMemorySize);
 
 	/**
 	 * Creates a new KNX device with a specific device descriptor and a URI locating an interface object server
@@ -415,6 +415,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	{
 		return ios;
 	}
+
+	/**
+	 * Thread-safe access to device memory, individual reads/writes are guaranteed to be thread-safe.
+	 *
+	 * @return device memory representation for thread-safe memory access
+	 */
+	@Override
+	public Memory deviceMemory() { return memory; }
 
 	/**
 	 * @return the task executor providing the threads to run the process communication and
@@ -681,7 +689,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			try {
 				logger.debug("loading device memory from {}", path);
 				final byte[] bytes = Files.readAllBytes(path);
-				System.arraycopy(bytes, 0, memory, 0, Math.min(bytes.length, memory.length));
+				if (bytes.length != memory.size())
+					logger.warn("loaded {} bytes from {}, available device memory is {} bytes", bytes.length, path,
+							memory.size());
+				memory.set(0, bytes);
 			}
 			catch (final IOException | RuntimeException e) {
 				logger.warn("loading device memory from {}", path, e);
@@ -693,7 +704,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		memResource().ifPresent(path -> {
 			try {
 				logger.debug("saving device memory to {}", path);
-				Files.write(path, memory);
+				Files.write(path, memory.get(0, memory.size()));
 			}
 			catch (IOException | RuntimeException e) {
 				logger.warn("saving device memory to {}", path, e);
@@ -746,7 +757,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// device status is not in programming mode
 		deviceObject.set(PID.PROGMODE, (byte) 0);
 		// Programming Mode (memory address 0x60) set off
-		setMemory(0x60, (byte) 0);
+		memory.set(0x60, 0);
 
 		deviceObject.set(PID.MANUFACTURER_ID, fromWord(defMfrId));
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.MANUFACTURER_DATA, 1, defMfrData.length / 4, defMfrData);
@@ -997,19 +1008,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			else
 				taskExecutor().submit(tasks.remove(0));
 		}
-	}
-
-	synchronized byte[] deviceMemory() {
-		return memory;
-	}
-
-	byte[] deviceMemory(final int startAddress, final int bytes) {
-		return Arrays.copyOfRange(deviceMemory(), startAddress, startAddress + bytes);
-	}
-
-	private synchronized void setMemory(final int startAddress, final byte... data)
-	{
-		System.arraycopy(data, 0, memory, startAddress, data.length);
 	}
 
 	private static byte[] fromWord(final int word)

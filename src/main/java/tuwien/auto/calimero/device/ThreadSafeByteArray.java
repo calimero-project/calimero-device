@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2021, 2021 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,67 +36,59 @@
 
 package tuwien.auto.calimero.device;
 
-import tuwien.auto.calimero.IndividualAddress;
-import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
-import tuwien.auto.calimero.link.KNXLinkClosedException;
-import tuwien.auto.calimero.link.KNXNetworkLink;
+import java.util.Arrays;
+import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * A Calimero KNX device.
- *
- * @author B. Malinowsky
- */
-public interface KnxDevice
-{
-	/**
-	 * Returns the currently assigned device individual address or default individual address of this device.
-	 *
-	 * @return the currently set device address
-	 */
-	IndividualAddress getAddress();
+final class ThreadSafeByteArray implements KnxDevice.Memory {
+	private final byte[] array;
+	private final ReentrantLock lock = new ReentrantLock();
 
-	/**
-	 * Sets the communication link used by this device; assigns the device address from the link's
-	 * medium settings, if that individual address denotes a device address.
-	 *
-	 * @param link the network link
-	 * @throws KNXLinkClosedException if the supplied link is closed
-	 */
-	void setDeviceLink(KNXNetworkLink link) throws KNXLinkClosedException;
+	ThreadSafeByteArray(final int size) { array = new byte[size]; }
 
-	/**
-	 * Returns the KNX network link this device is attached to.
-	 *
-	 * @return the link
-	 */
-	KNXNetworkLink getDeviceLink();
+	@Override
+	public int size() { return array.length; }
 
-	/**
-	 * Returns the Interface Object Server (IOS) used for KNX property services and device information.
-	 *
-	 * @return the interface object server
-	 */
-	InterfaceObjectServer getInterfaceObjectServer();
-
-	/**
-	 * KNX device memory accessor.
-	 */
-	interface Memory {
-		int size();
-
-		int get(int offset);
-
-		byte[] get(int offset, int bytes);
-
-		void set(int offset, int bite);
-
-		void set(int offset, byte... bytes);
+	@Override
+	public int get(final int offset) {
+		lock.lock();
+		try {
+			return array[offset] & 0xff;
+		}
+		finally {
+			lock.unlock();
+		}
 	}
 
-	/**
-	 * Access to KNX device memory.
-	 *
-	 * @return accessor for device memory
-	 */
-	Memory deviceMemory();
+	@Override
+	public byte[] get(final int offset, final int bytes) {
+		lock.lock();
+		try {
+			return Arrays.copyOfRange(array, offset, offset + bytes);
+		}
+		finally {
+			lock.unlock();
+		}
+	}
+
+	@Override
+	public void set(final int offset, final int bite) {
+		lock.lock();
+		try {
+			array[offset] = (byte) bite;
+		}
+		finally {
+			lock.unlock();
+		}
+	}
+
+	@Override
+	public void set(final int offset, final byte... bites) {
+		lock.lock();
+		try {
+			System.arraycopy(bites, 0, array, offset, bites.length);
+		}
+		finally {
+			lock.unlock();
+		}
+	}
 }
