@@ -61,8 +61,6 @@ import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
-import tuwien.auto.calimero.SecurityControl;
-import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
@@ -91,6 +89,8 @@ import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.process.ProcessEvent;
+import tuwien.auto.calimero.secure.SecurityControl;
+import tuwien.auto.calimero.secure.SecurityControl.DataSecurity;
 
 /**
  * Provides the default application layer service logic of a KNX device, without assuming any

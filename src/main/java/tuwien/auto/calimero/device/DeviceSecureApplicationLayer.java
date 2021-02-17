@@ -53,21 +53,21 @@ import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXIllegalArgumentException;
-import tuwien.auto.calimero.KnxSecureException;
 import tuwien.auto.calimero.ReturnCode;
-import tuwien.auto.calimero.SecurityControl;
-import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
-import tuwien.auto.calimero.internal.Security;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.SecureManagement;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
+import tuwien.auto.calimero.secure.KnxSecureException;
+import tuwien.auto.calimero.secure.Security;
+import tuwien.auto.calimero.secure.SecurityControl;
+import tuwien.auto.calimero.secure.SecurityControl.DataSecurity;
 
 final class DeviceSecureApplicationLayer extends SecureManagement {
 	private static final int SeqSize = 6;

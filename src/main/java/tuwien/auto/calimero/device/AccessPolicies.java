@@ -42,13 +42,13 @@ import java.util.Map;
 import java.util.Set;
 
 import tuwien.auto.calimero.KNXIllegalArgumentException;
-import tuwien.auto.calimero.SecurityControl;
-import tuwien.auto.calimero.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
+import tuwien.auto.calimero.secure.SecurityControl;
+import tuwien.auto.calimero.secure.SecurityControl.DataSecurity;
 
 public final class AccessPolicies {
 
