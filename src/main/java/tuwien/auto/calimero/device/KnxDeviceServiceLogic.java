@@ -816,7 +816,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	@Override
 	public ServiceResult<Integer> readADC(final int channel, final int consecutiveReads)
 	{
-		return ServiceResult.of(0x100);
+		final int peiType = 10;
+		// peiType = (10 * adcValue + 60) / 128 / consecutiveReads;
+		final int adcValue = Math.max(0, (peiType * 128 * consecutiveReads - 60) / 10);
+		return ServiceResult.of(adcValue);
 	}
 
 	@Override
