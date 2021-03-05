@@ -41,14 +41,17 @@ import static tuwien.auto.calimero.device.ios.InterfaceObject.APPLICATIONPROGRAM
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ASSOCIATIONTABLE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.KNXNETIP_PARAMETER_OBJECT;
+import static tuwien.auto.calimero.knxnetip.servicetype.KNXnetIPHeader.SEARCH_REQ;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -59,8 +62,10 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EventObject;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -71,6 +76,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import javax.crypto.Cipher;
@@ -87,6 +93,7 @@ import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
+import tuwien.auto.calimero.KNXFormatException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.SerialNumber;
@@ -101,7 +108,14 @@ import tuwien.auto.calimero.device.ios.PropertyEvent;
 import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
+import tuwien.auto.calimero.knxnetip.KNXnetIPConnection;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
+import tuwien.auto.calimero.knxnetip.servicetype.KNXnetIPHeader;
+import tuwien.auto.calimero.knxnetip.servicetype.SearchResponse;
+import tuwien.auto.calimero.knxnetip.util.DeviceDIB;
+import tuwien.auto.calimero.knxnetip.util.HPAI;
+import tuwien.auto.calimero.knxnetip.util.ServiceFamiliesDIB;
+import tuwien.auto.calimero.knxnetip.util.ServiceFamiliesDIB.ServiceFamily;
 import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
@@ -111,10 +125,10 @@ import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
-import tuwien.auto.calimero.secure.SecureApplicationLayer;
-import tuwien.auto.calimero.secure.SecurityControl.DataSecurity;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
+import tuwien.auto.calimero.secure.SecureApplicationLayer;
+import tuwien.auto.calimero.secure.SecurityControl.DataSecurity;
 
 /**
  * Implementation of a KNX device for common device tasks. This type can either be used directly, with the device logic
@@ -886,28 +900,48 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		byte[] mac = new byte[6];
 		byte[] mcast = new byte[4];
 		try {
-			ip = InetAddress.getLocalHost().getAddress();
-
 			final KNXnetIPRouting conn = connectionOfLink();
 			mcast = conn.getRemoteAddress().getAddress().getAddress();
 
-			final NetworkInterface netif = conn.networkInterface();
+			NetworkInterface netif = conn.networkInterface();
+			Optional<InterfaceAddress> addr = Optional.empty();
+
 			// workaround to verify that interface is actually configured
 			if (NetworkInterface.getByName(netif.getName()) != null) {
-				final List<InterfaceAddress> addresses = netif.getInterfaceAddresses();
-				final Optional<InterfaceAddress> addr = addresses.stream()
-						.filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
-				if (addr.isPresent()) {
-					ip = addr.get().getAddress().getAddress();
-
-					final int prefixLength = addr.get().getNetworkPrefixLength();
-					final long defMask = 0xffffffffL;
-					final long intMask = defMask ^ (defMask >> prefixLength);
-					ByteBuffer.wrap(mask).putInt((int) intMask);
+				final var addresses = netif.getInterfaceAddresses();
+				addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
+			}
+			else {
+				// best-effort lookup of default interface
+				for (final var nif : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+					try {
+						if (nif.isUp() && nif.supportsMulticast() && !nif.isLoopback() && !nif.isPointToPoint()) {
+							final var addresses = nif.getInterfaceAddresses();
+							addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
+							if (addr.isPresent()) {
+								netif = nif;
+								break;
+							}
+						}
+					}
+					catch (final SocketException e) {}
 				}
 			}
 
+			if (addr.isPresent()) {
+				ip = addr.get().getAddress().getAddress();
+				final int prefixLength = addr.get().getNetworkPrefixLength();
+				final long defMask = 0xffffffffL;
+				final long intMask = defMask ^ (defMask >> prefixLength);
+				ByteBuffer.wrap(mask).putInt((int) intMask);
+			}
+
 			mac = Optional.ofNullable(netif.getHardwareAddress()).orElse(mac);
+
+			final var lookup = MethodHandles.privateLookupIn(KNXnetIPRouting.class, MethodHandles.lookup());
+			final var callback = lookup.findVarHandle(KNXnetIPRouting.class, "searchRequestCallback",
+					BiFunction.class);
+			callback.setVolatile(conn, (BiFunction<KNXnetIPHeader, ByteBuffer, SearchResponse>) this::ipSearchRequest);
 		}
 		catch (ReflectiveOperationException | IOException | RuntimeException e) {
 			logger.warn("initializing KNX IP properties, {}", e.toString());
@@ -963,6 +997,46 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		for (final InterfaceObject io : ios.getInterfaceObjects())
 			found |= io.getType() == ioType;
 		return found;
+	}
+
+	private SearchResponse ipSearchRequest(final KNXnetIPHeader h, final ByteBuffer data) {
+		try {
+			return searchResponse(h, data);
+		}
+		catch (KNXFormatException | IOException e) {
+			throw new KnxRuntimeException("creating search response", e);
+		}
+	}
+
+	private SearchResponse searchResponse(final KNXnetIPHeader h, final ByteBuffer data)
+			throws KNXFormatException, IOException {
+		final int svc = h.getServiceType();
+		if (svc != SEARCH_REQ)
+			return null;
+
+		final DeviceObject deviceObject = DeviceObject.lookup(ios);
+		final var deviceAddress = deviceObject.deviceAddress();
+		final var progmode = deviceObject.programmingMode();
+		final var sno = deviceObject.serialNumber();
+
+		final var ip = InetAddress.getByAddress(ipProperty(PropertyAccess.PID.CURRENT_IP_ADDRESS));
+		final var mcast = InetAddress.getByAddress(ipProperty(PropertyAccess.PID.ROUTING_MULTICAST_ADDRESS));
+		final var deviceName = new String(
+				ios.getProperty(KNXNETIP_PARAMETER_OBJECT, 1, PropertyAccess.PID.FRIENDLY_NAME, 1, 29),
+				StandardCharsets.ISO_8859_1);
+		final var projectInstId = (int) unsigned(ipProperty(PropertyAccess.PID.PROJECT_INSTALLATION_ID));
+		final var mac = ipProperty(PropertyAccess.PID.MAC_ADDRESS);
+
+		final var deviceDib = new DeviceDIB(deviceName, progmode ? 1 : 0, projectInstId,
+				KNXMediumSettings.MEDIUM_KNXIP, deviceAddress, sno, mcast, mac);
+		final ServiceFamiliesDIB svcFamilies = new ServiceFamiliesDIB(Map.of(ServiceFamily.Core, 1));
+
+		final HPAI ctrlEndpoint = new HPAI(ip, KNXnetIPConnection.DEFAULT_PORT);
+		return new SearchResponse(ctrlEndpoint, deviceDib, svcFamilies);
+	}
+
+	private byte[] ipProperty(final int pid) {
+		return ios.getProperty(KNXNETIP_PARAMETER_OBJECT, 1, pid, 1, 1);
 	}
 
 	private void propertyChanged(final PropertyEvent pe) {
