@@ -46,7 +46,7 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
  *
  * @author B. Malinowsky
  */
-public interface KnxDevice
+public interface KnxDevice extends AutoCloseable
 {
 	/**
 	 * Returns the currently assigned device individual address or default individual address of this device.
@@ -99,4 +99,7 @@ public interface KnxDevice
 	 * @return accessor for device memory
 	 */
 	Memory deviceMemory();
+
+	@Override
+	default void close() {}
 }
