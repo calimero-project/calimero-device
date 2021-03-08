@@ -91,6 +91,7 @@ import org.slf4j.Logger;
 
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
+import tuwien.auto.calimero.DeviceDescriptor.DD0;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXFormatException;
@@ -188,7 +189,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private final List<Runnable> tasks = new ArrayList<>();
 
 	private final String name;
-	private final DeviceDescriptor dd; // kept as variable in case it's DD2
 	private final InterfaceObjectServer ios;
 	private final Logger logger;
 
@@ -224,12 +224,11 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 *        load/store a plain (unencrypted) interface object server
 	 * @throws KnxPropertyException on error setting KNX properties during device initialization
 	 */
-	public BaseKnxDevice(final String name, final DeviceDescriptor dd, final ProcessCommunicationService process,
+	public BaseKnxDevice(final String name, final DeviceDescriptor.DD0 dd, final ProcessCommunicationService process,
 		final ManagementService mgmt, final URI iosResource, final char[] iosPassword) throws KnxPropertyException
 	{
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
 		this.name = name;
-		this.dd = dd;
 		ios = new InterfaceObjectServer(false);
 		ios.addServerListener(this::propertyChanged);
 		logger = LogService.getLogger("calimero.device." + name);
@@ -240,16 +239,16 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		this.process = process;
 		this.mgmt = mgmt;
 
-		initIos();
+		initIos(dd);
 		loadDeviceMemory();
 	}
 
 	/**
-	 * @deprecated Use {@link #BaseKnxDevice(String, DeviceDescriptor, ProcessCommunicationService, ManagementService, URI, char[])}
+	 * @deprecated Use {@link #BaseKnxDevice(String, DeviceDescriptor.DD0, ProcessCommunicationService, ManagementService, URI, char[])}
 	 * and {@link #setDeviceLink(KNXNetworkLink)}.
 	 */
 	@Deprecated
-	public BaseKnxDevice(final String name, final DeviceDescriptor dd, final IndividualAddress device,
+	public BaseKnxDevice(final String name, final DeviceDescriptor.DD0 dd, final IndividualAddress device,
 		final KNXNetworkLink link, final ProcessCommunicationService process,
 		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
 	{
@@ -258,7 +257,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		setAddress(device);
 	}
 
-	BaseKnxDevice(final String name, final DeviceDescriptor dd, final KNXNetworkLink link,
+	BaseKnxDevice(final String name, final DeviceDescriptor.DD0 dd, final KNXNetworkLink link,
 			final ProcessCommunicationService process, final ManagementService mgmt)
 			throws KNXLinkClosedException, KnxPropertyException {
 		this(name, dd, process, mgmt, null, NoPwd);
@@ -298,7 +297,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * <p>
 	 * The device address is supplied by the link's medium settings, and is only used if the address is not 0.0.0. An
 	 * address should be a subnetwork unique device address or a default individual address (see
-	 * {@link #BaseKnxDevice(String, DeviceDescriptor, IndividualAddress, KNXNetworkLink, ProcessCommunicationService, ManagementService)}).
+	 * {@link #BaseKnxDevice(String, DeviceDescriptor.DD0, IndividualAddress, KNXNetworkLink, ProcessCommunicationService, ManagementService)}).
 	 *
 	 * @param name KNX device name, used for human readable naming or device identification
 	 * @param logic KNX device service logic
@@ -492,12 +491,11 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	// prepare properties usually required for ETS download
-	public void identification(final DeviceDescriptor dd, final int manufacturerId, final SerialNumber serialNumber,
+	public void identification(final DeviceDescriptor.DD0 dd, final int manufacturerId, final SerialNumber serialNumber,
 			final byte[] hardwareType, final byte[] programVersion, final byte[] fdsk) {
 		final var deviceObject = DeviceObject.lookup(ios);
 		// matching device descriptor to indicate BCU
-		if (dd instanceof DeviceDescriptor.DD0)
-			deviceObject.set(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
+		deviceObject.set(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
 		deviceObject.set(PID.MANUFACTURER_ID, (byte) (manufacturerId >> 8), (byte) manufacturerId);
 		deviceObject.set(PID.SERIAL_NUMBER, serialNumber.array());
 		deviceObject.set(78, hardwareType);
@@ -509,10 +507,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	/**
-	 * @deprecated Use {@link #identification(DeviceDescriptor, int, SerialNumber, byte[], byte[], byte[])}
+	 * @deprecated Use {@link #identification(DeviceDescriptor.DD0, int, SerialNumber, byte[], byte[], byte[])}
 	 */
 	@Deprecated(forRemoval = true)
-	public void identification(final DeviceDescriptor dd, final int manufacturerId, final byte[] serialNumber,
+	public void identification(final DeviceDescriptor.DD0 dd, final int manufacturerId, final byte[] serialNumber,
 			final byte[] hardwareType, final byte[] programVersion, final byte[] fdsk) {
 		identification(dd, manufacturerId, SerialNumber.from(serialNumber), hardwareType, programVersion, fdsk);
 	}
@@ -638,17 +636,12 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 	}
 
-	DeviceDescriptor deviceDescriptor()
-	{
-		return dd;
-	}
-
 	Logger logger()
 	{
 		return logger;
 	}
 
-	private void initIos() {
+	private void initIos(final DD0 dd) {
 		if (loadIosFromResource())
 			return;
 
@@ -671,7 +664,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
 		ios.addInterfaceObject(InterfaceObject.SECURITY_OBJECT);
 
-		initDeviceInfo();
+		initDeviceInfo(dd);
 	}
 
 	private boolean loadIosFromResource() {
@@ -747,7 +740,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(idx, PID.MCB_TABLE, 1, elems, new byte[elems * 8]);
 	}
 
-	private void initDeviceInfo() throws KnxPropertyException
+	private void initDeviceInfo(final DD0 dd) throws KnxPropertyException
 	{
 		// Device Object settings
 
@@ -781,15 +774,11 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		deviceObject.set(pidHardwareType, hwType);
 
 		// device descriptor
-		if (dd instanceof DeviceDescriptor.DD0) {
-			deviceObject.set(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
-
-			// validity check on mask and hardware type octets (AN059v3, AN089v3)
-			final DeviceDescriptor.DD0 dd0 = (DeviceDescriptor.DD0) dd;
-			final int maskVersion = dd0.maskVersion();
-			if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
-				logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
-			}
+		deviceObject.set(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
+		// validity check on mask and hardware type octets (AN059v3, AN089v3)
+		final int maskVersion = dd.maskVersion();
+		if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
+			logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
 		}
 
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)

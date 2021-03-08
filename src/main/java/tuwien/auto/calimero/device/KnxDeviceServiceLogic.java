@@ -805,11 +805,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		if (type == 0)
 			return ServiceResult.of(DeviceObject.lookup(ios).deviceDescriptor());
-		if (device instanceof BaseKnxDevice) {
-			final DeviceDescriptor dd = ((BaseKnxDevice) device).deviceDescriptor();
-			if (dd instanceof DeviceDescriptor.DD2)
-				return ServiceResult.of(dd);
-		}
 		throw new KnxRuntimeException("cannot provide DD2");
 	}
 
