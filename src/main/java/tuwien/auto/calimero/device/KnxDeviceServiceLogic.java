@@ -45,7 +45,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.WeakHashMap;
 
 import org.slf4j.Logger;
@@ -53,6 +55,7 @@ import org.slf4j.LoggerFactory;
 
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DeviceDescriptor;
+import tuwien.auto.calimero.DeviceDescriptor.DD0;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
@@ -68,6 +71,7 @@ import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
 import tuwien.auto.calimero.datapoint.StateDP;
+import tuwien.auto.calimero.device.KnxDevice.Memory;
 import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
@@ -586,28 +590,67 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private static final int addrGroupAddrTable = 0x0116; // max. length 233
+	private static final int addrGroupAddrTable5705 = 0x4000; // max. 255 group objects
 
 	@Override
 	public ServiceResult<byte[]> readMemory(final int startAddress, final int bytes)
 	{
-		final int size = device.deviceMemory().size();
+		final Memory mem = device.deviceMemory();
+		final int size = mem.size();
 		if (startAddress >= size)
 			return ServiceResult.error(ReturnCode.AddressVoid);
 		if (startAddress + bytes >= size)
 			return ServiceResult.error(ReturnCode.AccessDenied);
 
-		final byte[] mem = device.deviceMemory().get(0, size);
+		final byte[] tableData = checkGroupAddressTableAccess(startAddress, bytes);
+
+		return ServiceResult.of(tableData != null ? tableData : mem.get(startAddress, bytes));
+	}
+
+	// check group address table query for the various GrAT realization types
+	private byte[] checkGroupAddressTableAccess(final int startAddress, final int bytes) {
+		final var dd0 = DeviceObject.lookup(ios).deviceDescriptor();
+		// system 300 doesn't provide memory access for GrAT
+		if (dd0 == DD0.TYPE_0300)
+			return null;
+
+		final int addrTableLoc = dd0 == DD0.TYPE_5705 ? addrGroupAddrTable5705 : addrGroupAddrTable;
+		// System B provides memory mapped access to address table data (realization type 7) with different layout
+		// than other realization types
+		final boolean systemB = dd0 == DD0.TYPE_07B0 || dd0 == DD0.TYPE_17B0 || dd0 == DD0.TYPE_27B0
+				|| dd0 == DD0.TYPE_57B0;
+		final int lengthSize = systemB ? 2 : 1;
+		final int maxGroupAddrTableSize = lengthSize + 100 * 2; // TODO arbitrary
+
+		if (startAddress < addrTableLoc || startAddress >= addrTableLoc + maxGroupAddrTableSize)
+			return null;
+
+		final long tableSize = unsigned(device.deviceMemory().get(addrTableLoc, lengthSize));
+		// if there is a table initialized in memory, answer with that
+		if (tableSize != 0)
+			return null;
+
 		final Collection<Datapoint> c = ((DatapointMap<Datapoint>) datapoints).getDatapoints();
-		final int groupAddrTableSize = 4 + c.size() * 2;
-		if (startAddress >= addrGroupAddrTable && startAddress < addrGroupAddrTable + groupAddrTableSize) {
-			final ByteBuffer bb = ByteBuffer.allocate(groupAddrTableSize);
-			bb.putShort((byte) c.size());
+		final boolean storeDeviceAddr = !systemB;
+		final int entries = c.size() + (storeDeviceAddr ? 1 : 0);
+		final int groupAddrTableSize = lengthSize + entries * 2;
+		final int from = startAddress - addrTableLoc;
+		if (from >= groupAddrTableSize)
+			return null;
+
+		final ByteBuffer bb = ByteBuffer.allocate(groupAddrTableSize);
+		if (systemB)
+			bb.putShort((short) entries);
+		else {
+			bb.put((byte) entries);
 			bb.put(device.getAddress().toByteArray());
-			c.forEach(dp -> bb.put(dp.getMainAddress().toByteArray()));
-			final int from = startAddress - addrGroupAddrTable;
-			return ServiceResult.of(Arrays.copyOfRange(bb.array(), from, from + bytes));
 		}
-		return ServiceResult.of(Arrays.copyOfRange(mem, startAddress, startAddress + bytes));
+
+		// ordered by GA
+		final var set = new TreeSet<Datapoint>(Comparator.comparing(Datapoint::getMainAddress));
+		set.addAll(c);
+		set.forEach(dp -> bb.put(dp.getMainAddress().toByteArray()));
+		return Arrays.copyOfRange(bb.array(), from, from + bytes);
 	}
 
 	@Override
@@ -926,17 +969,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int objectInstance = 1;
 		final int ref = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.TABLE_REFERENCE, 1, 1));
 
-		final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
-		final var description = ios.getDescription(idx, PID.TABLE);
-		final int typeSize = PropertyTypes.bitSize(description.getPDT()).orElse(16) / 8;
-
-		final byte[] tableSize = device.deviceMemory().get(ref, 2);
-		final int size = (tableSize[0] & 0xff) << 8 | tableSize[1] & 0xff;
-		if (size > 0) {
-			final int max = size;
+		final int tableEntries = (int) unsigned(device.deviceMemory().get(ref, 2));
+		if (tableEntries > 0) {
+			final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
+			final var description = ios.getDescription(idx, PID.TABLE);
+			final int max = tableEntries;
 			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, 0, true, 0, max, 3, 3), true);
-			final byte[] data = device.deviceMemory().get(ref + 2, size * typeSize);
-			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, size, data);
+
+			final int typeSize = PropertyTypes.bitSize(description.getPDT()).orElse(16) / 8;
+			final byte[] data = device.deviceMemory().get(ref + 2, tableEntries * typeSize);
+			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, tableEntries, data);
 		}
 	}
 

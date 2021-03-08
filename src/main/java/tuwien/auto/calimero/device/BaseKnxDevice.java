@@ -646,7 +646,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			return;
 
 		final var addressTable = ios.addInterfaceObject(ADDRESSTABLE_OBJECT);
-		initTableProperties(addressTable, 0x0116);
+		initTableProperties(addressTable, dd == DD0.TYPE_5705 ? 0x4000 : 0x0116);
 
 		final var assocTable = ios.addInterfaceObject(ASSOCIATIONTABLE_OBJECT);
 		initTableProperties(assocTable, 0x1000);
