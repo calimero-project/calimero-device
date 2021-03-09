@@ -620,7 +620,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final boolean systemB = dd0 == DD0.TYPE_07B0 || dd0 == DD0.TYPE_17B0 || dd0 == DD0.TYPE_27B0
 				|| dd0 == DD0.TYPE_57B0;
 		final int lengthSize = systemB ? 2 : 1;
-		final int maxGroupAddrTableSize = lengthSize + 100 * 2; // TODO arbitrary
+		final int maxGroupAddrTableSize = lengthSize + 255 * 2;
 
 		if (startAddress < addrTableLoc || startAddress >= addrTableLoc + maxGroupAddrTableSize)
 			return null;
@@ -933,7 +933,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private void syncDatapoints() {
-		syncTableWithMemory(InterfaceObject.ADDRESSTABLE_OBJECT);
+		syncTableWithMemory(ADDRESSTABLE_OBJECT);
 		syncTableWithMemory(InterfaceObject.ASSOCIATIONTABLE_OBJECT);
 		syncTableWithMemory(GROUP_OBJECT_TABLE_OBJECT);
 
