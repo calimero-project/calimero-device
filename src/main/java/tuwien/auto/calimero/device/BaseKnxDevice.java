@@ -496,6 +496,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final var deviceObject = DeviceObject.lookup(ios);
 		// matching device descriptor to indicate BCU
 		deviceObject.set(PID.DEVICE_DESCRIPTOR, dd.toByteArray());
+
+		final ByteBuffer memAddr = ByteBuffer.allocate(4).putInt(dd == DD0.TYPE_0705 ? 0x4000 : 0x0116);
+		ios.setProperty(ADDRESSTABLE_OBJECT, PID.TABLE_REFERENCE, 1, 1, memAddr.array());
+
 		deviceObject.set(PID.MANUFACTURER_ID, (byte) (manufacturerId >> 8), (byte) manufacturerId);
 		deviceObject.set(PID.SERIAL_NUMBER, serialNumber.array());
 		deviceObject.set(78, hardwareType);
