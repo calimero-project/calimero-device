@@ -966,10 +966,21 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private void syncTableWithMemory(final int objectType) {
+		final var dd0 = DeviceObject.lookup(ios).deviceDescriptor();
+		// System 300 doesn't provide memory mapped access
+		if (dd0 == DD0.TYPE_0300)
+			return;
+
 		final int objectInstance = 1;
 		final int ref = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.TABLE_REFERENCE, 1, 1));
 
-		final int tableEntries = (int) unsigned(device.deviceMemory().get(ref, 2));
+		// System B provides memory mapped access to address table data (realization type 7) with different layout
+		// than other realization types
+		final boolean systemB = dd0 == DD0.TYPE_07B0 || dd0 == DD0.TYPE_17B0 || dd0 == DD0.TYPE_27B0
+				|| dd0 == DD0.TYPE_57B0;
+		final int lengthSize = systemB ? 2 : 1;
+
+		final int tableEntries = (int) unsigned(device.deviceMemory().get(ref, lengthSize));
 		if (tableEntries > 0) {
 			final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
 			final var description = ios.getDescription(idx, PID.TABLE);
@@ -977,7 +988,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, 0, true, 0, max, 3, 3), true);
 
 			final int typeSize = PropertyTypes.bitSize(description.getPDT()).orElse(16) / 8;
-			final byte[] data = device.deviceMemory().get(ref + 2, tableEntries * typeSize);
+			final byte[] data = device.deviceMemory().get(ref + lengthSize, tableEntries * typeSize);
 			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, tableEntries, data);
 		}
 	}
