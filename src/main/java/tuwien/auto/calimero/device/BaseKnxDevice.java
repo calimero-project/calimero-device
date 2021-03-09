@@ -649,20 +649,22 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (loadIosFromResource())
 			return;
 
+		// initialization continues here only if no resource was loaded
+
 		final var addressTable = ios.addInterfaceObject(ADDRESSTABLE_OBJECT);
-		initTableProperties(addressTable, dd == DD0.TYPE_5705 ? 0x4000 : 0x0116);
+		initTableProperties(addressTable, dd == DD0.TYPE_5705 ? 0x4000 : 0x0116, dd);
 
 		final var assocTable = ios.addInterfaceObject(ASSOCIATIONTABLE_OBJECT);
-		initTableProperties(assocTable, 0x1000);
+		initTableProperties(assocTable, 0x1000, dd);
 
 		final var groupObjectTable = ios.addInterfaceObject(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT);
-		initTableProperties(groupObjectTable, 0x3000);
+		initTableProperties(groupObjectTable, 0x3000, dd);
 		final int pidGODiagnostics = 66;
 		ios.setDescription(new Description(groupObjectTable.getIndex(), 0, pidGODiagnostics,
 				PropertyTypes.PDT_FUNCTION, 0, true, 0, 1, 3, 3), true);
 
 		final var appObject = ios.addInterfaceObject(APPLICATIONPROGRAM_OBJECT);
-		initTableProperties(appObject, 0x4000);
+		initTableProperties(appObject, 0x4000, dd);
 
 		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
 		ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
@@ -731,12 +733,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		return Optional.of(memResource);
 	}
 
-	private void initTableProperties(final InterfaceObject io, final int memAddress) {
+	private void initTableProperties(final InterfaceObject io, final int memAddress, final DD0 dd0) {
 		final int idx = io.getIndex();
 		ios.setProperty(idx, PID.LOAD_STATE_CONTROL, 1, 1, (byte) LoadState.Loaded.ordinal());
 		ios.setProperty(idx, PID.TABLE_REFERENCE, 1, 1, ByteBuffer.allocate(4).putInt(memAddress).array());
 
-		final int pdt = io.getType() == ASSOCIATIONTABLE_OBJECT ? PropertyTypes.PDT_GENERIC_04
+		final boolean systemB = dd0.firmwareVersion() == 0xB;
+		final boolean bigAssocTable = dd0 == DD0.TYPE_0300 || systemB;
+		final int pdt = io.getType() == ASSOCIATIONTABLE_OBJECT && bigAssocTable ? PropertyTypes.PDT_GENERIC_04
 				: PropertyTypes.PDT_GENERIC_02;
 		ios.setDescription(new Description(idx, 0, PID.TABLE, 0, pdt, true, 0, 100, 3, 3), true);
 
