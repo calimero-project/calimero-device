@@ -8,7 +8,7 @@ apply plugin:'application'
 
 mainClassName = 'tuwien.auto.calimero.TestNetwork'
 group = 'com.github.calimero'
-version = '2.4-SNAPSHOT'
+version = '2.5-M1'
 
 run {
 	// for attaching to debugger, start with -Ddebug=true
