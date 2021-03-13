@@ -827,7 +827,22 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return ServiceResult.of(sn.array());
 			}
 		}
+		if (objectType == InterfaceObject.ADDRESSTABLE_OBJECT && pid == PID.TABLE && info.length == 3)
+			return nwMgmtGroupAddressScan(info);
+
 		return ServiceResult.empty();
+	}
+
+	private ServiceResult<byte[]> nwMgmtGroupAddressScan(final byte[] info) {
+		final int range = info[0] & 0xff;
+		final int startAddress = (info[1] & 0xff) << 8 | info[2] & 0xff;
+		for (int address = startAddress; address < startAddress + range; address++) {
+			if (address > 0xffff)
+				break;
+			if (datapoints.contains(new GroupAddress(address)))
+				return ServiceResult.of(info);
+		}
+		return new ServiceResult<>();
 	}
 
 	private boolean randomWait(final String svc, final int maxWaitMillis) {
