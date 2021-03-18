@@ -740,8 +740,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		final boolean systemB = dd0.firmwareVersion() == 0xB;
 		final boolean bigAssocTable = dd0 == DD0.TYPE_0300 || systemB;
-		final int pdt = io.getType() == ASSOCIATIONTABLE_OBJECT && bigAssocTable ? PropertyTypes.PDT_GENERIC_04
-				: PropertyTypes.PDT_GENERIC_02;
+		final int pdt;
+		if (io.getType() == ASSOCIATIONTABLE_OBJECT && bigAssocTable)
+			pdt = PropertyTypes.PDT_GENERIC_04;
+		else if (io.getType() == InterfaceObject.GROUP_OBJECT_TABLE_OBJECT)
+			pdt = systemB ? PropertyTypes.PDT_GENERIC_02 : dd0 == DD0.TYPE_0300 ? PropertyTypes.PDT_GENERIC_06
+					: PropertyTypes.PDT_GENERIC_03;
+		else
+			pdt = PropertyTypes.PDT_GENERIC_02;
 		ios.setDescription(new Description(idx, 0, PID.TABLE, 0, pdt, true, 0, 100, 3, 3), true);
 
 		final int elems = 4;
@@ -835,7 +841,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			4, // Starting, required for apps with >2 s startup time
 			5, // Shutting down
 		};
-		// TODO format is usage dependent: 1 byte read / 10 bytes write
 		final int runState = runStateEnum[1];
 		// Run State
 		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.RUN_STATE_CONTROL, 1, 1, (byte) runState);

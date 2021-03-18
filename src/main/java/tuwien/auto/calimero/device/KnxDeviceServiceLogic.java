@@ -89,6 +89,7 @@ import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
+import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.mgmt.TransportLayer;
@@ -589,9 +590,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return invalidCommandResult;
 	}
 
-	private static final int addrGroupAddrTable = 0x0116; // max. length 233
-	private static final int addrGroupAddrTable5705 = 0x4000; // max. 255 group objects
-
 	@Override
 	public ServiceResult<byte[]> readMemory(final int startAddress, final int bytes)
 	{
@@ -614,11 +612,11 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (dd0 == DD0.TYPE_0300)
 			return null;
 
-		final int addrTableLoc = dd0 == DD0.TYPE_5705 ? addrGroupAddrTable5705 : addrGroupAddrTable;
+		final int addrTableLoc = (int) unsigned(ios.getProperty(ADDRESSTABLE_OBJECT, 1, PID.TABLE_REFERENCE, 1, 1));
+
 		// System B provides memory mapped access to address table data (realization type 7) with different layout
 		// than other realization types
-		final boolean systemB = dd0 == DD0.TYPE_07B0 || dd0 == DD0.TYPE_17B0 || dd0 == DD0.TYPE_27B0
-				|| dd0 == DD0.TYPE_57B0;
+		final boolean systemB = isSystemB(dd0);
 		final int lengthSize = systemB ? 2 : 1;
 		final int maxGroupAddrTableSize = lengthSize + 255 * 2;
 
@@ -973,7 +971,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					dp.setPriority((Priority) flags[1]);
 					datapoints.add(dp);
 				}
-				catch (final KnxPropertyException | KNXException e) {
+				catch (KNXException | RuntimeException e) { // KnxPropertyException
 					e.printStackTrace();
 				}
 			}
@@ -991,20 +989,42 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		// System B provides memory mapped access to address table data (realization type 7) with different layout
 		// than other realization types
-		final boolean systemB = dd0 == DD0.TYPE_07B0 || dd0 == DD0.TYPE_17B0 || dd0 == DD0.TYPE_27B0
-				|| dd0 == DD0.TYPE_57B0;
+		final boolean systemB = isSystemB(dd0);
 		final int lengthSize = systemB ? 2 : 1;
+
+		logger.trace("sync {} from address 0x{}", PropertyClient.getObjectTypeName(objectType), Integer.toHexString(ref));
 
 		final int tableEntries = (int) unsigned(device.deviceMemory().get(ref, lengthSize));
 		if (tableEntries > 0) {
+
+			// address table contains device address, except for realization type 7 (system B)
+			int devAddrOffset = 0;
+			int copyEntries = tableEntries;
+			if (objectType == ADDRESSTABLE_OBJECT && !systemB) {
+				devAddrOffset = 2;
+				--copyEntries;
+			}
+
 			final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
 			final var description = ios.getDescription(idx, PID.TABLE);
-			final int max = tableEntries;
-			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, 0, true, 0, max, 3, 3), true);
+			int pdt = description.getPDT();
+			// system 7 group object table contains RAM flags table pointer
+			int flagsTablePtrOffset = 0;
+			if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
+				if (systemB)
+					pdt = PropertyTypes.PDT_GENERIC_02;
+				else if (isSystem7(ios)) {
+					pdt = PropertyTypes.PDT_GENERIC_04;
+					flagsTablePtrOffset = 2;
+				}
+			}
 
-			final int typeSize = PropertyTypes.bitSize(description.getPDT()).orElse(16) / 8;
-			final byte[] data = device.deviceMemory().get(ref + lengthSize, tableEntries * typeSize);
-			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, tableEntries, data);
+			final int max = copyEntries;
+			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, pdt, true, 0, max, 3, 3), true);
+			final int typeSize = PropertyTypes.bitSize(pdt).orElse(16) / 8;
+			final byte[] data = device.deviceMemory().get(ref + lengthSize + devAddrOffset + flagsTablePtrOffset,
+					copyEntries * typeSize);
+			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, copyEntries, data);
 		}
 	}
 
@@ -1034,25 +1054,63 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	static Optional<Integer> groupObjectIndex(final InterfaceObjectServer ios, final int groupAddressIndex) {
 		final byte[] assoc = ios.getProperty(InterfaceObject.ASSOCIATIONTABLE_OBJECT, 1, PropertyAccess.PID.TABLE, 1,
 				Integer.MAX_VALUE);
+
+		final int idx = (int) unsigned(ios.getProperty(InterfaceObject.ASSOCIATIONTABLE_OBJECT, 1, PID.OBJECT_INDEX, 1, 1));
+		final var description = ios.getDescription(idx, PID.TABLE);
+		final boolean bigAssocTable = description.getPDT() == PropertyTypes.PDT_GENERIC_04;
+
+		final boolean system7 = isSystem7(ios);
+
 		final var buffer = ByteBuffer.wrap(assoc);
 		while (buffer.hasRemaining()) {
-			if ((buffer.getShort() & 0xffff) == groupAddressIndex)
-				return Optional.of(buffer.getShort() & 0xffff);
-			buffer.getShort();
+			final int tsap = bigAssocTable ? buffer.getShort() & 0xffff : buffer.get() & 0xff;
+			final int asap = bigAssocTable ? buffer.getShort() & 0xffff : buffer.get() & 0xff;
+			if (tsap == groupAddressIndex)
+				return Optional.of(asap + (system7 ? 1 : 0)); // System 7 ASAP is 0-based
 		}
 		return Optional.empty();
 	}
 
 	private static Object[] groupObjectDescriptor(final byte[] descriptor) {
-		final int flags = descriptor[0] & 0xff;
-		final int priority = flags & 0x3;
-		final boolean enable = (flags & 0x04) != 0;
-		final boolean responder = enable && (flags & 0x08) != 0;
-		final boolean update = (flags & 0x80) != 0;
+		final int config;
+		final int bitsize;
 
-		final int bitsize = valueFieldTypeToBits(descriptor[1] & 0xff);
+		switch (descriptor.length) {
+		case 2:
+			// System B
+			config = descriptor[0] & 0xff;
+			bitsize = valueFieldTypeToBits(descriptor[1] & 0xff);
+			break;
+		case 3:
+			// realization type 1 & 2, most devices
+			config = descriptor[1] & 0xff;
+			bitsize = valueFieldTypeToBits(descriptor[2] & 0xff);
+			break;
+		case 4:
+			// system 7
+			config = descriptor[2] & 0xff;
+			bitsize = valueFieldTypeToBits(descriptor[3] & 0xff);
+			break;
+		case 6:
+			// System 300
+			// config is 2 bytes, but high byte is always 0
+			config = descriptor[1] & 0xff;
 
-		return new Object[] { bitsize, Priority.get(priority), responder, update };
+			final int mainType = (descriptor[2] & 0xff) << 8 | descriptor[3] & 0xff;
+			final int subType = (descriptor[4] & 0xff) << 8 | descriptor[5] & 0xff;
+			final String dptId = mainType + "." + subType;
+			bitsize = translatorBitSize(dptId);
+			break;
+		default:
+			throw new KnxRuntimeException("unsupported group object descriptor of " + descriptor.length + " bytes");
+		}
+
+		final int priority = config & 0x03;
+		final boolean enable = (config & 0x04) != 0;
+		final boolean responder = enable && (config & 0x08) != 0;
+		final boolean updateOnResponse = enable && (config & 0x80) != 0;
+
+		return new Object[] { bitsize, Priority.get(priority), responder, updateOnResponse };
 	}
 
 	static byte[] groupObjectDescriptor(final String dpt, final Priority p, final boolean responder,
@@ -1060,14 +1118,17 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int enableFlag = 0x04;
 		final int respondFlag = responder ? 0x08 : 0;
 		final int updateFlag = update ? 0x80 : 0;
-		int bitsize = 1;
+		final int bitsize = translatorBitSize(dpt);
+		return new byte[] { (byte) (updateFlag | respondFlag | enableFlag | p.value), (byte) bitsToValueFieldType(bitsize) };
+	}
+
+	private static int translatorBitSize(final String dptId) {
 		try {
-			bitsize = TranslatorTypes.createTranslator(dpt).bitSize();
+			return TranslatorTypes.createTranslator(dptId).bitSize();
 		}
 		catch (final KNXException e) {
-			e.printStackTrace();
+			return 0;
 		}
-		return new byte[] { (byte) (updateFlag | respondFlag | enableFlag | p.value), (byte) bitsToValueFieldType(bitsize) };
 	}
 
 	// decodes group object descriptor value field type into PDT bit size
@@ -1100,6 +1161,15 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			case 252: return 255;
 		}
 		return bytes + 6;
+	}
+
+	private static boolean isSystem7(final InterfaceObjectServer ios) {
+		final var dd0 = DeviceObject.lookup(ios).deviceDescriptor();
+		return dd0.firmwareType() == 7 && dd0.firmwareVersion() == 0;
+	}
+
+	private static boolean isSystemB(final DD0 dd0) {
+		return dd0 == DD0.TYPE_07B0 || dd0 == DD0.TYPE_17B0 || dd0 == DD0.TYPE_27B0 || dd0 == DD0.TYPE_57B0;
 	}
 
 	void destinationDisconnected(final Destination remote) {
