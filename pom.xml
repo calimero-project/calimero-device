@@ -43,13 +43,6 @@
 			<artifactId>calimero-core</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>com.github.calimero</groupId>
-			<artifactId>calimero-core</artifactId>
-			<version>${project.version}</version>
-			<type>test-jar</type>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
 	<repositories>
 		<repository>
