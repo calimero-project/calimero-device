@@ -83,11 +83,11 @@ import tuwien.auto.calimero.mgmt.KNXDisconnectException;
 import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
-import tuwien.auto.calimero.secure.SecurityControl;
 import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.mgmt.TransportListener;
+import tuwien.auto.calimero.secure.SecurityControl;
 
 /**
  * Listens to TL notifications, dispatches them to the appropriate management services, and answers back to the sender
@@ -625,7 +625,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		if (!verifyLength(data.length, 5, 14, name))
 			return;
 		if (data[0] == 0 && data.length == 5) {
-			// Type 0 – two byte DoA
+			// Type 0 - two byte DoA
 			final byte[] domain = Arrays.copyOfRange(data, 0, 2);
 			final IndividualAddress ia = new IndividualAddress(Arrays.copyOfRange(data, 2, 4));
 			final int range = data[4] & 0xff;
@@ -635,7 +635,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			sendDoAresponse(respondTo, sr);
 		}
 		else if (data[0] == 1 && data.length == 14) {
-			// Type 1 – six byte DoA
+			// Type 1 - six byte DoA
 			final byte[] start = Arrays.copyOfRange(data, 1, 1 + 6);
 			final byte[] end = Arrays.copyOfRange(data, 1 + 6, 1 + 6 + 6);
 			logger.trace("{}->{} {} {} - {}", respondTo.getAddress(), device.getAddress(), name, toHex(start, ""),
@@ -1003,7 +1003,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int address = ((data[1] & 0xff) << 8) | (data[2] & 0xff);
 
 		// the remote application layer shall ignore a memory-write.ind if
-		// the value of the parameter number is greater than maximum APDU length – 3
+		// the value of the parameter number is greater than maximum APDU length - 3
 		if (bytes > getMaxApduLength() - 3) {
 			logger.error("{} of length {} > max. {} bytes - ignore", name, bytes, getMaxApduLength() - 3);
 			return;
