@@ -40,9 +40,14 @@ import java.util.EventObject;
 
 import tuwien.auto.calimero.DataUnitBuilder;
 import tuwien.auto.calimero.DetachEvent;
+import tuwien.auto.calimero.FrameEvent;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.KNXTimeoutException;
+import tuwien.auto.calimero.cemi.CEMILData;
+import tuwien.auto.calimero.cemi.CEMILDataEx;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
+import tuwien.auto.calimero.link.NetworkLinkListener;
+import tuwien.auto.calimero.process.LteProcessEvent;
 import tuwien.auto.calimero.process.ProcessCommunicator;
 import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
@@ -54,11 +59,59 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 	static final int GROUP_RESPONSE = 0x40;
 	static final int GROUP_WRITE = 0x80;
 
+	private static final int GroupPropRead = 0b1111101000;
+	private static final int GroupPropResponse = 0b1111101001;
+	private static final int GroupPropWrite = 0b1111101010;
+	private static final int GroupPropInfo = 0b1111101011;
+
 	private final BaseKnxDevice device;
 	private final ProcessCommunicationService svc;
 	private final ProcessCommunicator recv;
 	private final ProcessCommunicationResponder res;
 
+	private final class LteListener implements NetworkLinkListener {
+		@Override
+		public void indication(final FrameEvent e) {
+			final CEMILData ldata = (CEMILData) e.getFrame();
+			if (!(ldata instanceof CEMILDataEx))
+				return;
+
+			final var apdu = ldata.getPayload();
+			// can't be a process communication indication if too short
+			if (apdu.length < 2)
+				return;
+
+			try {
+				final byte[] data = ldata.toByteArray();
+				final int ctrl2 = data[3 + data[1]] & 0xff;
+				if ((ctrl2 & 0x04) == 0)
+					return;
+
+				final int svc = DataUnitBuilder.getAPDUService(apdu);
+				if ((svc & 0b1111111100) == 0b1111101000) {
+					// group property service
+					final byte[] tpdu = ldata.getPayload();
+					fireGroupReadWrite(ldata, ctrl2 & 0x0f, tpdu, svc);
+				}
+			}
+			catch (final RuntimeException rte) {
+				device.logger().error("on group property indication from {}", ldata.getSource(), rte);
+			}
+		}
+
+		private void fireGroupReadWrite(final CEMILData f, final int eff, final byte[] tpdu, final int svc) {
+			final ProcessEvent e = new LteProcessEvent(ProcessServiceNotifier.this.recv, f.getSource(), eff,
+					(GroupAddress) f.getDestination(), tpdu);
+			if (svc == GroupPropRead)
+				groupReadRequest(e);
+			else if (svc == GroupPropInfo)
+				groupLteInfo(e);
+			else if (svc == GroupPropWrite)
+				groupWrite(e);
+		}
+	}
+
+	private final boolean lte = true;
 
 	// pre-condition: device != null, device.link != null
 	ProcessServiceNotifier(final BaseKnxDevice device, final ProcessCommunicationService service)
@@ -72,6 +125,9 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 		recv = new ProcessCommunicatorImpl(device.getDeviceLink(), device.sal);
 		res = new ProcessCommunicationResponder(device.getDeviceLink(), device.sal);
 		recv.addProcessListener(this);
+
+		if (lte)
+			device.getDeviceLink().addLinkListener(new LteListener());
 	}
 
 	@Override
@@ -88,6 +144,11 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 
 	@Override
 	public void groupWrite(final ProcessEvent e)
+	{
+		device.dispatch(e, () -> { svc.groupWrite(e); return null; }, this::respond);
+	}
+
+	public void groupLteInfo(final ProcessEvent e)
 	{
 		device.dispatch(e, () -> { svc.groupWrite(e); return null; }, this::respond);
 	}

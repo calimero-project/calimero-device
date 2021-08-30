@@ -62,11 +62,14 @@ import tuwien.auto.calimero.KNXAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.KnxRuntimeException;
+import tuwien.auto.calimero.LteHeeTag;
 import tuwien.auto.calimero.Priority;
 import tuwien.auto.calimero.ReturnCode;
 import tuwien.auto.calimero.SerialNumber;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt;
 import tuwien.auto.calimero.cemi.CEMIDevMgmt.ErrorCodes;
+import tuwien.auto.calimero.cemi.CEMILData;
+import tuwien.auto.calimero.cemi.CEMILDataEx;
 import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
@@ -943,6 +946,37 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public boolean isVerifyModeEnabled()
 	{
 		return verifyMode;
+	}
+
+	protected void sendLteHee(final int service, final LteHeeTag tag, final int iot, final int oi, final int pid) {
+		// create apdu
+		final var builder = DataUnitBuilder.apdu(service).putShort(iot).put(oi).put(pid);
+		if (pid == 255) {
+			final int mfr = DeviceObject.lookup(ios).manufacturer();
+			final int privatePid = 0; // NYI
+			builder.putShort(mfr).put(privatePid);
+		}
+		final byte[] data = ios.getProperty(iot, oi, pid, 1, 1);
+		final byte[] tpdu = builder.put(data).build();
+
+		final int dataTagGroup = 0x04;
+		tpdu[0] |= dataTagGroup;
+
+		final var link = device.getDeviceLink();
+		final boolean knxip = link.getKNXMedium().getMedium() == KNXMediumSettings.MEDIUM_KNXIP;
+		final CEMILDataEx ldata = new CEMILDataEx(knxip ? CEMILData.MC_LDATA_IND : CEMILData.MC_LDATA_REQ,
+				KNXMediumSettings.BackboneRouter, tag.toGroupAddress(), tpdu, Priority.LOW, true, false, false, 6) {{
+				// adjust cEMI Ext Ctrl field with frame format parameters for LTE
+				ctrl2 |= 0x04 | tag.type().ordinal();
+		}};
+		logger.debug("send LTE-HEE {} {} IOT {} OI {} PID {} data [{}]",
+				DataUnitBuilder.decodeAPCI(service), tag, iot, oi, pid, DataUnitBuilder.toHex(data, ""));
+		try {
+			link.send(ldata, true);
+		}
+		catch (KNXTimeoutException | KNXLinkClosedException e) {
+			logger.warn("sending {}", ldata, e);
+		}
 	}
 
 	private void syncDatapoints() {
