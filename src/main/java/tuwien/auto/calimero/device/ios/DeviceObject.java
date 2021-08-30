@@ -81,6 +81,8 @@ public final class DeviceObject extends InterfaceObject {
 
 	public int maxApduLength() { return (int) unsigned(get(PID.MAX_APDULENGTH)); }
 
+	public int manufacturer() { return (int) unsigned(get(PID.MANUFACTURER_ID)); }
+
 	public SerialNumber serialNumber() { return SerialNumber.from(get(PropertyAccess.PID.SERIAL_NUMBER)); }
 
 	public byte[] domainAddress(final boolean rfMedium) {
