@@ -1189,7 +1189,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int propIndex = (data[5] & 0xf) << 8 | data[6] & 0xff;
 
 		final int objIndex = objectIndex(iot, instance);
-		logger.trace("{}->{} {} {}()|{} pidx {}{}", respondTo.getAddress(), dst, name, iot,
+		logger.trace("{}->{} {} {}({})|{} pidx {}{}", respondTo.getAddress(), dst, name, iot,
 				instance, pid, propIndex, propertyName(objIndex, pid));
 
 		ServiceResult<Description> sr = ServiceResult.empty();
