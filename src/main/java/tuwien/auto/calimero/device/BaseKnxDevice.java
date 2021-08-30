@@ -207,7 +207,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
-	private static final int deviceMemorySize = 0x10010;
+	private static final int deviceMemorySize = 0x10010; // multiple of 4
 	private final Memory memory = new ThreadSafeByteArray(deviceMemorySize);
 
 	/**
@@ -541,8 +541,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (sal != null)
 			sal.close();
 
-		saveIos();
 		saveDeviceMemory();
+		saveIos();
 	}
 
 	private void saveIos() {
@@ -697,40 +697,45 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 	}
 
+	private static final int objectTypeDeviceMemory = 54321;
+	private static final int pidDeviceMemory = 201;
+
 	private void loadDeviceMemory() {
-		memResource().filter(Files::isRegularFile).ifPresent(path -> {
+		if (iosResource == null || "".equals(iosResource.toString()))
+			return;
+
+		try {
+			final var io = ios.lookup(objectTypeDeviceMemory, 1);
 			try {
-				logger.debug("loading device memory from {}", path);
-				final byte[] bytes = Files.readAllBytes(path);
+				final byte[] bytes = ios.getProperty(objectTypeDeviceMemory, 1, pidDeviceMemory, 1, Integer.MAX_VALUE);
+				ios.removeInterfaceObject(io);
 				if (bytes.length != memory.size())
-					logger.warn("loaded {} bytes from {}, available device memory is {} bytes", bytes.length, path,
-							memory.size());
+					logger.warn("loaded {} bytes from {}, available device memory is {} bytes", bytes.length,
+							iosResource, memory.size());
 				memory.set(0, bytes);
 			}
-			catch (final IOException | RuntimeException e) {
-				logger.warn("loading device memory from {}", path, e);
+			catch (final KnxPropertyException e) {
+				logger.warn("loading device memory from {}", iosResource, e);
 			}
-		});
+	}
+		catch (final KnxPropertyException e) { // lookup failed, no device memory stored
+			return;
+			}
 	}
 
 	private void saveDeviceMemory() {
-		memResource().ifPresent(path -> {
-			try {
-				logger.debug("saving device memory to {}", path);
-				Files.write(path, memory.get(0, memory.size()));
-			}
-			catch (IOException | RuntimeException e) {
-				logger.warn("saving device memory to {}", path, e);
-			}
-		});
-	}
-
-	private Optional<Path> memResource() {
 		if (iosResource == null || "".equals(iosResource.toString()))
-			return Optional.empty();
+			return;
 
-		final Path memResource = Path.of(URI.create(iosResource.toString().replace(".xml", ".mem")));
-		return Optional.of(memResource);
+		try {
+			logger.debug("saving device memory to {}", iosResource);
+			final byte[] bytes = memory.get(0, memory.size());
+			ios.addInterfaceObject(objectTypeDeviceMemory);
+			ios.setProperty(objectTypeDeviceMemory, 1, pidDeviceMemory, 1, bytes.length / 4, bytes);
+		}
+		catch (final KnxPropertyException e) {
+			logger.warn("saving device memory to {}", iosResource, e);
+		}
 	}
 
 	private void initTableProperties(final InterfaceObject io, final int memAddress, final DD0 dd0) {
