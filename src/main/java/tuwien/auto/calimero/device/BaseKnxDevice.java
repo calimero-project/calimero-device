@@ -243,20 +243,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		loadDeviceMemory();
 	}
 
-	/**
-	 * @deprecated Use {@link #BaseKnxDevice(String, DeviceDescriptor.DD0, ProcessCommunicationService, ManagementService, URI, char[])}
-	 * and {@link #setDeviceLink(KNXNetworkLink)}.
-	 */
-	@Deprecated
-	public BaseKnxDevice(final String name, final DeviceDescriptor.DD0 dd, final IndividualAddress device,
-		final KNXNetworkLink link, final ProcessCommunicationService process,
-		final ManagementService mgmt) throws KNXLinkClosedException, KnxPropertyException
-	{
-		this(name, dd, process, mgmt, null, NoPwd);
-		setDeviceLink(link);
-		setAddress(device);
-	}
-
 	BaseKnxDevice(final String name, final DeviceDescriptor.DD0 dd, final KNXNetworkLink link,
 			final ProcessCommunicationService process, final ManagementService mgmt)
 			throws KNXLinkClosedException, KnxPropertyException {
@@ -296,8 +282,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} and a network link argument.
 	 * <p>
 	 * The device address is supplied by the link's medium settings, and is only used if the address is not 0.0.0. An
-	 * address should be a subnetwork unique device address or a default individual address (see
-	 * {@link #BaseKnxDevice(String, DeviceDescriptor.DD0, IndividualAddress, KNXNetworkLink, ProcessCommunicationService, ManagementService)}).
+	 * address should be a subnetwork unique device address or a default individual address.
 	 *
 	 * @param name KNX device name, used for human readable naming or device identification
 	 * @param logic KNX device service logic
@@ -508,15 +493,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		// fdsk for secure device download
 		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
-	}
-
-	/**
-	 * @deprecated Use {@link #identification(DeviceDescriptor.DD0, int, SerialNumber, byte[], byte[], byte[])}
-	 */
-	@Deprecated(forRemoval = true)
-	public void identification(final DeviceDescriptor.DD0 dd, final int manufacturerId, final byte[] serialNumber,
-			final byte[] hardwareType, final byte[] programVersion, final byte[] fdsk) {
-		identification(dd, manufacturerId, SerialNumber.from(serialNumber), hardwareType, programVersion, fdsk);
 	}
 
 	private static final int SeqSize = 6;
