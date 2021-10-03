@@ -964,8 +964,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		final var link = device.getDeviceLink();
 		final boolean knxip = link.getKNXMedium().getMedium() == KNXMediumSettings.MEDIUM_KNXIP;
+		final boolean domainBroadcast = true;
 		final CEMILDataEx ldata = new CEMILDataEx(knxip ? CEMILData.MC_LDATA_IND : CEMILData.MC_LDATA_REQ,
-				KNXMediumSettings.BackboneRouter, tag.toGroupAddress(), tpdu, Priority.LOW, true, false, false, 6) {{
+				KNXMediumSettings.BackboneRouter, tag.toGroupAddress(), tpdu, Priority.LOW, true, domainBroadcast,
+				false, 6) {{
 				// adjust cEMI Ext Ctrl field with frame format parameters for LTE
 				ctrl2 |= 0x04 | tag.type().ordinal();
 		}};
