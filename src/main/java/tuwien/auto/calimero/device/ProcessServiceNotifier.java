@@ -61,8 +61,8 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 
 	private static final int GroupPropRead = 0b1111101000;
 	private static final int GroupPropResponse = 0b1111101001;
-	private static final int GroupPropWrite = 0b1111101010;
-	private static final int GroupPropInfo = 0b1111101011;
+	static final int GroupPropWrite = 0b1111101010;
+	static final int GroupPropInfo = 0b1111101011;
 
 	private final BaseKnxDevice device;
 	private final ProcessCommunicationService svc;
