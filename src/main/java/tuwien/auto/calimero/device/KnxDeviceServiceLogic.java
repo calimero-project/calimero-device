@@ -966,9 +966,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final boolean knxip = link.getKNXMedium().getMedium() == KNXMediumSettings.MEDIUM_KNXIP;
 		final var priority = service == ProcessServiceNotifier.GroupPropInfo
 				|| service == ProcessServiceNotifier.GroupPropWrite ? Priority.NORMAL : Priority.LOW;
+		final boolean repeat = !knxip;
 		final boolean domainBroadcast = true;
 		final var ldata = CEMILDataEx.newLte(knxip ? CEMILData.MC_LDATA_IND : CEMILData.MC_LDATA_REQ,
-				KNXMediumSettings.BackboneRouter, tag, tpdu, priority, true, domainBroadcast, false, 6);
+				KNXMediumSettings.BackboneRouter, tag, tpdu, priority, repeat, domainBroadcast, false, 6);
 		logger.debug("send LTE-HEE {} {} IOT {} OI {} PID {} data [{}]",
 				DataUnitBuilder.decodeAPCI(service), tag, iot, oi, pid, DataUnitBuilder.toHex(data, ""));
 		try {
