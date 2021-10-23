@@ -403,7 +403,10 @@ public class InterfaceObject
 			return new Description(getIndex(), d.getObjectType(), d.getPID(), d.getPropIndex(), d.getPDT(),
 					d.isWriteEnabled(), elems, d.getMaxElements(), d.getReadLevel(), d.getWriteLevel()).toByteArray();
 		}
-		throw new KnxPropertyException("no description found for " + getTypeName()
+		var typeName = getTypeName();
+		if (typeName.isEmpty())
+			typeName = "OT " + type;
+		throw new KnxPropertyException("no description found for " + typeName
 				+ (pid != 0 ? " PID " + pid : " property index " + propIndex));
 	}
 
