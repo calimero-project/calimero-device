@@ -280,7 +280,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] asdu = DataUnitBuilder.extractASDU(tpdu);
 
 		if (tpdu.length - 1 > getMaxApduLength()) {
-			logger.error("discard {}->{} {}: exceeds max. allowed APDU length of {}", sender, dst,
+			logger.warn("discard {}->{} {}: exceeds max. allowed APDU length of {}", sender, dst,
 					DataUnitBuilder.decode(tpdu, dst), getMaxApduLength());
 			return;
 		}
@@ -289,7 +289,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			dispatchToService(svc, asdu, dst, d, fe.security().orElse(SecurityControl.Plain));
 		}
 		catch (final RuntimeException rte) {
-			logger.error("failed to execute service {}->{} {}: {}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
+			logger.warn("failed to execute service {}->{} {}: {}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
 					toHex(asdu, " "), rte);
 		}
 	}
@@ -1005,7 +1005,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// the remote application layer shall ignore a memory-write.ind if
 		// the value of the parameter number is greater than maximum APDU length - 3
 		if (bytes > getMaxApduLength() - 3) {
-			logger.error("{} of length {} > max. {} bytes - ignore", name, bytes, getMaxApduLength() - 3);
+			logger.warn("{} of length {} > max. {} bytes - ignore", name, bytes, getMaxApduLength() - 3);
 			return;
 		}
 
@@ -1049,7 +1049,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final ReturnCode rc;
 		Priority priority = Priority.LOW;
 		if (bytes > getMaxApduLength() - 4) {
-			logger.error("memory-write of length {} > max. {} bytes - ignore", bytes, getMaxApduLength() - 4);
+			logger.warn("memory-write of length {} > max. {} bytes - ignore", bytes, getMaxApduLength() - 4);
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
@@ -1372,9 +1372,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private boolean verifyLength(final int length, final int minExpected, final int maxExpected, final String svcType)
 	{
 		if (length < minExpected)
-			logger.error(svcType + " SDU of length " + length + " too short, expected " + minExpected);
+			logger.warn(svcType + " SDU of length " + length + " too short, expected " + minExpected);
 		else if (length > maxExpected)
-			logger.error(svcType + " SDU of length " + length + " too long, maximum " + maxExpected);
+			logger.warn(svcType + " SDU of length " + length + " too long, maximum " + maxExpected);
 		return length >= minExpected && length <= maxExpected;
 	}
 
@@ -1402,7 +1402,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			Thread.currentThread().interrupt();
 		}
 		catch (KNXLinkClosedException | KNXTimeoutException e) {
-			logger.error("{}->[{} broadcast] {} {}: {}", device.getAddress(), type, service, toHex(apdu, " "),
+			logger.warn("{}->[{} broadcast] {} {}: {}", device.getAddress(), type, service, toHex(apdu, " "),
 					e.getMessage());
 		}
 	}
@@ -1433,7 +1433,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			Thread.currentThread().interrupt();
 		}
 		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException e) {
-			logger.error("{}->{} {} {}: {}, {}", device.getAddress(), dst, service, toHex(apdu, " "), e.getMessage(),
+			logger.warn("{}->{} {} {}: {}, {}", device.getAddress(), dst, service, toHex(apdu, " "), e.getMessage(),
 					respondTo);
 		}
 	}
