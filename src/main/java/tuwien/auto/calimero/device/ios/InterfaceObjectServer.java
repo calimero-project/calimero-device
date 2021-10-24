@@ -787,12 +787,10 @@ public class InterfaceObjectServer implements PropertyAccess
 		private XmlReader r;
 		private XmlWriter w;
 
-		private final Logger logger;
 		private final Map<PropertyKey, Property> definitions;
 
 		XmlSerializer(final Logger l, final Map<PropertyKey, Property> definitions)
 		{
-			logger = l;
 			this.definitions = definitions;
 		}
 
@@ -894,7 +892,6 @@ public class InterfaceObjectServer implements PropertyAccess
 				boolean valueExpected = false;
 
 				int index = 0;
-				Description currentDesc = null;
 				while (r.next() != XmlReader.END_DOCUMENT) {
 					if (r.getEventType() == XmlReader.START_ELEMENT) {
 						if (r.getLocalName().equals(TAG_PROPERTY)) {
@@ -909,16 +906,13 @@ public class InterfaceObjectServer implements PropertyAccess
 							index++;
 							if (valueExpected) {
 								values.add(new byte[2]);
-								logger.trace("{}: 0000", currentDesc);
 							}
 							valueExpected = true;
-							currentDesc = d;
 						}
 						else if (r.getLocalName().equals(TAG_DATA)) {
 							String s = r.getElementText();
 							if (s.length() % 2 != 0)
 								s = "0" + s;
-							logger.trace("{}: {}", currentDesc, s);
 							final byte[] data = DataUnitBuilder.fromHex(s);
 							values.add(data.length == 0 ? new byte[2] : data);
 							valueExpected = false;
