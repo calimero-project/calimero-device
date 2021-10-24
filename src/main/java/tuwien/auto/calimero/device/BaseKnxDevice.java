@@ -43,6 +43,7 @@ import static tuwien.auto.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.KNXNETIP_PARAMETER_OBJECT;
 import static tuwien.auto.calimero.knxnetip.servicetype.KNXnetIPHeader.SEARCH_REQ;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandles;
@@ -662,8 +663,13 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			return true;
 		}
 		catch (final UncheckedIOException e) {
-			logger.info("could not open {}, create resource on closing device ({})", iosResource,
-					e.getCause().getMessage());
+			final var cause = e.getCause();
+			if (cause instanceof FileNotFoundException)
+				logger.debug("no interface object server resource, create resource on closing device: {}",
+						cause.getMessage());
+			else
+				logger.info("could not open {}, create resource on closing device ({})", iosResource,
+						cause.getMessage());
 			// re-add device object
 			ios.addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
 			return false;
