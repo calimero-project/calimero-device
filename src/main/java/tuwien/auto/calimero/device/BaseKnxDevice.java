@@ -458,21 +458,52 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityObject.Pid.GoSecurityFlags,
 					newGaIdx, 1, (byte) goSecurity);
 
+			final boolean bigAssocTable = isBigAssocTable();
+
 			final byte[] table = ios.getProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, 1,
 					Integer.MAX_VALUE);
 			final var buffer = ByteBuffer.wrap(table);
 			int maxGoIdx = 0;
 			while (buffer.hasRemaining()) {
-				buffer.getShort();
-				maxGoIdx = Math.max(maxGoIdx, (buffer.getShort() & 0xffff));
+				final int goIdx;
+				if (bigAssocTable) {
+					buffer.getShort();
+					goIdx = buffer.getShort() & 0xffff;
+				}
+				else {
+					buffer.get();
+					goIdx = buffer.get() & 0xff;
+				}
+				maxGoIdx = Math.max(maxGoIdx, goIdx);
 			}
 
 			final int newGoIdx = maxGoIdx + 1;
-			final int newAssocIdx = table.length / 4 + 1;
-			final byte[] assoc = ByteBuffer.allocate(4).putShort((short) newGaIdx).putShort((short) newGoIdx).array();
+			final int assocEntrySize = bigAssocTable ? 4 : 2;
+			final int newAssocIdx = table.length / assocEntrySize + 1;
+			final var bb = ByteBuffer.allocate(assocEntrySize);
+			if (bigAssocTable)
+				bb.putShort((short) newGaIdx).putShort((short) newGoIdx);
+			else
+				bb.put((byte) newGaIdx).put((byte) newGoIdx);
+			final byte[] assoc = bb.array();
 			ios.setProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, newAssocIdx, 1, assoc);
+
+			final byte[] groupObjectDescriptor;
+			final int groupObjTablePdt = groupObjTablePdt();
+			switch (groupObjTablePdt) {
+			case PropertyTypes.PDT_GENERIC_02:
+				groupObjectDescriptor = KnxDeviceServiceLogic.groupObjectDescriptor(dp.getDPT(), dp.getPriority(),
+						false, update);
+				break;
+			case PropertyTypes.PDT_GENERIC_03:
+				groupObjectDescriptor = KnxDeviceServiceLogic.groupObjectDescriptor3Bytes(dp.getDPT(), dp.getPriority(),
+						false, update);
+				break;
+			default:
+				throw new KnxRuntimeException("group object table: PID Table PDT " + groupObjTablePdt + " not supported");
+			}
 			ios.setProperty(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, newGoIdx, 1,
-					KnxDeviceServiceLogic.groupObjectDescriptor(dp.getDPT(), dp.getPriority(), false, update));
+					groupObjectDescriptor);
 		}
 	}
 
@@ -739,6 +770,21 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		final int elems = 4;
 		ios.setProperty(idx, PID.MCB_TABLE, 1, elems, new byte[elems * 8]);
+	}
+
+	private boolean isBigAssocTable() {
+		final var dd0 = DeviceObject.lookup(ios).deviceDescriptor();
+		final boolean systemB = dd0.firmwareVersion() == 0xB;
+		final boolean bigAssocTable = dd0 == DD0.TYPE_0300 || systemB;
+		return bigAssocTable;
+	}
+
+	private int groupObjTablePdt() {
+		final var dd0 = DeviceObject.lookup(ios).deviceDescriptor();
+		final boolean systemB = dd0.firmwareVersion() == 0xB;
+		final int pdt = systemB ? PropertyTypes.PDT_GENERIC_02 : dd0 == DD0.TYPE_0300 ? PropertyTypes.PDT_GENERIC_06
+				: PropertyTypes.PDT_GENERIC_03;
+		return pdt;
 	}
 
 	private void initDeviceInfo(final DD0 dd) throws KnxPropertyException

@@ -1157,6 +1157,17 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return new byte[] { (byte) (updateFlag | respondFlag | enableFlag | p.value), (byte) bitsToValueFieldType(bitsize) };
 	}
 
+	static byte[] groupObjectDescriptor3Bytes(final String dpt, final Priority p, final boolean responder,
+			final boolean update) {
+		final int enableFlag = 0x04;
+		final int respondFlag = responder ? 0x08 : 0;
+		final int transmitEnable = enableFlag != 0 ? 0x40 : 0;
+		final int updateFlag = update ? 0x80 : 0;
+		final int bitsize = translatorBitSize(dpt);
+		return new byte[] { 0, (byte) (updateFlag | transmitEnable | respondFlag | enableFlag | p.value),
+				(byte) bitsToValueFieldType(bitsize) };
+	}
+
 	private static int translatorBitSize(final String dptId) {
 		try {
 			return TranslatorTypes.createTranslator(dptId).bitSize();
