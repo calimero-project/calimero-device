@@ -347,9 +347,14 @@ public class InterfaceObject
 		final int typeSize = PropertyTypes.bitSize(pdt).or(() -> id.flatMap(InterfaceObject::dptBitSize))
 				.map(size -> Math.max(size / 8, 1)).orElseGet(() -> elements > 0 ? data.length / elements : 1);
 
-		if (elements > 0 && typeSize != data.length / elements)
-			throw new KnxPropertyException("property type size is " + typeSize + ", not " + data.length / elements,
+		if (elements > 0 && typeSize != data.length / elements) {
+			var typeName = PropertyClient.getObjectTypeName(type);
+			if (typeName.isEmpty())
+				typeName = "OT " + type;
+			throw new KnxPropertyException(
+					typeName + " PID " + pid + " property type size is " + typeSize + ", not " + data.length / elements,
 					ErrorCodes.TYPE_CONFLICT);
+		}
 
 		// I dynamically increase the value array if the new element size exceeds
 		// the current element size, and adjust the current element number
