@@ -674,7 +674,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final var appObject = ios.addInterfaceObject(APPLICATIONPROGRAM_OBJECT);
 		initTableProperties(appObject, 0x4000, dd);
 
-		ios.addInterfaceObject(InterfaceObject.INTERFACEPROGRAM_OBJECT);
+		ios.addInterfaceObject(InterfaceObject.APPLICATION_PROGRAM2);
 		ios.addInterfaceObject(InterfaceObject.CEMI_SERVER_OBJECT);
 		ios.addInterfaceObject(InterfaceObject.SECURITY_OBJECT);
 

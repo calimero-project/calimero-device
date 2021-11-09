@@ -96,9 +96,15 @@ public class InterfaceObject
 	public static final int APPLICATIONPROGRAM_OBJECT = 3;
 
 	/**
-	 * Interface object type 'interface program object' ({@value INTERFACEPROGRAM_OBJECT}).
+	 * @deprecated Use {@link #APPLICATION_PROGRAM2}
 	 */
+	@Deprecated(forRemoval = true)
 	public static final int INTERFACEPROGRAM_OBJECT = 4;
+
+	/**
+	 * Interface object type 'application program 2 object' ({@value}).
+	 */
+	public static final int APPLICATION_PROGRAM2 = 4;
 
 	// never used in practice
 	// public static final int EIB_OBJECT_ASSOCIATIONTABLE_OBJECT = 5;
