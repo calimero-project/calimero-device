@@ -54,7 +54,6 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -991,15 +990,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		setIpProperty(PID.SUBNET_MASK, mask);
 		setIpProperty(PID.DEFAULT_GATEWAY, gw);
 		setIpProperty(PID.MAC_ADDRESS, mac);
-
-		try {
-			final InetAddress defMcast = InetAddress.getByName(KNXnetIPRouting.DEFAULT_MULTICAST);
-			setIpProperty(PID.SYSTEM_SETUP_MULTICAST_ADDRESS, defMcast.getAddress());
-		}
-		catch (final UnknownHostException ignore) {}
-
-
-		setIpProperty(PID.ROUTING_MULTICAST_ADDRESS, mcast);
+		setIpProperty(PID.SYSTEM_SETUP_MULTICAST_ADDRESS, KNXnetIPRouting.DefaultMulticast.getAddress());
+		if (!Arrays.equals(mcast, new byte[4]))
+			setIpProperty(PID.ROUTING_MULTICAST_ADDRESS, mcast);
 		// set default ttl
 		setIpProperty(PID.TTL, (byte) 16);
 
