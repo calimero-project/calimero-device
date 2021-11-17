@@ -84,6 +84,7 @@ import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient;
+import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.mgmt.TransportListener;
@@ -403,8 +404,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		var info = new byte[buffer.remaining()];
 		buffer.get(info);
 
+		final String propertyName = propertyNameByObjectType(objectType, pid);
 		logger.trace("{}->{} {} {}(1)|{}{} info {}", respondTo.getAddress(), GroupAddress.Broadcast, name,
-				objectType, pid, propertyName(objectIndex(objectType, 1), pid), toHex(info, " "));
+				objectType, pid, propertyName, toHex(info, " "));
 
 		final ServiceResult<byte[]> sr = mgmtSvc.readParameter(objectType, pid, info);
 		if (ignoreOrSchedule(sr))
@@ -449,7 +451,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final var info = new byte[buffer.remaining()];
 		buffer.get(info);
 		logger.trace("{}->{} {} {}(1)|{}{} info {}", respondTo.getAddress(), "[]", name,
-				objectType, pid, propertyName(objectIndex(objectType, 1), pid), toHex(info, " "));
+				objectType, pid, propertyNameByObjectType(objectType, pid), toHex(info, " "));
 
 		mgmtSvc.writeParameter(objectType, pid, info);
 	}
@@ -1188,12 +1190,12 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 		final int propIndex = (data[5] & 0xf) << 8 | data[6] & 0xff;
 
-		final int objIndex = objectIndex(iot, instance);
 		logger.trace("{}->{} {} {}({})|{} pidx {}{}", respondTo.getAddress(), dst, name, iot,
-				instance, pid, propIndex, propertyName(objIndex, pid));
+				instance, pid, propIndex, propertyNameByObjectType(iot, pid));
 
 		ServiceResult<Description> sr = ServiceResult.empty();
 		try {
+			final int objIndex = objectIndex(iot, instance);
 			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
 			if (ignoreOrSchedule(sr))
 				return;
@@ -1232,19 +1234,18 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int elements = data[5] & 0xff;
 		final int start = (data[6] & 0xff) << 8 | data[7] & 0xff;
 
-		final int objIndex = objectIndex(iot, instance);
 		logger.trace("{}->{} {} {}({})|{}{} {}..{}", respondTo.getAddress(), dst, name, iot,
-				instance, pid, propertyName(objIndex, pid), start, start + elements - 1);
+				instance, pid, propertyNameByObjectType(iot, pid), start, start + elements - 1);
 
 		ServiceResult<byte[]> sr = ServiceResult.error(ReturnCode.AccessDenied);
-		if (checkPropertyAccess(objIndex, pid, true)) {
-			try {
+		try {
+			final int objIndex = objectIndex(iot, instance);
+			if (checkPropertyAccess(objIndex, pid, true))
 				sr = mgmtSvc.readProperty(respondTo, objIndex, pid, start, elements);
-			}
-			catch (KNXIllegalArgumentException | KnxPropertyException e) {
-				logger.warn("reading property data: {}", e.getMessage());
-				sr = ServiceResult.error(ReturnCode.AddressVoid);
-			}
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("reading property data: {}", e.getMessage());
+			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
 		final int length = Math.max(1, sr.result().length);
@@ -1272,19 +1273,18 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int start = (data[6] & 0xff) << 8 | data[7] & 0xff;
 		final byte[] propertyData = Arrays.copyOfRange(data, 8, data.length);
 
-		final int objIndex = objectIndex(iot, instance);
 		logger.trace("{}->{} {} {}({})|{}{} {}..{}: {}", respondTo.getAddress(), dst, name, iot,
-				instance, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, " "));
+				instance, pid, propertyNameByObjectType(iot, pid), start, start + elements - 1, toHex(propertyData, " "));
 
 		ServiceResult<Void> sr = ServiceResult.error(ReturnCode.AccessDenied);
-		if (checkPropertyAccess(objIndex, pid, false)) {
-			try {
+		try {
+			final int objIndex = objectIndex(iot, instance);
+			if (checkPropertyAccess(objIndex, pid, false))
 				sr = mgmtSvc.writeProperty(respondTo, objIndex, pid, start, elements, propertyData);
-			}
-			catch (KNXIllegalArgumentException | KnxPropertyException e) {
-				logger.warn("writing property data: {}", e.getMessage());
-				sr = ServiceResult.error(ReturnCode.AddressVoid);
-			}
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("writing property data: {}", e.getMessage());
+			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 		if (!confirm)
 			return;
@@ -1457,20 +1457,26 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		return toUnsigned(device.getInterfaceObjectServer().getProperty(objectIndex, PID.OBJECT_TYPE, 1, 1));
 	}
 
-	private String propertyName(final int objectIndex, final int pid) {
+	private String propertyNameByObjectType(final int iot, final int pid) {
 		final InterfaceObjectServer ios = device.getInterfaceObjectServer();
-		final PropertyClient.PropertyKey key;
+		final PropertyKey key;
 		if (pid <= 50)
-			key = new PropertyClient.PropertyKey(pid);
-		else {
-			final var objects = ios.getInterfaceObjects();
-			final int objectType = objectIndex < objects.length ? objects[objectIndex].getType() : 0;
-			key = new PropertyClient.PropertyKey(objectType, pid);
-		}
+			key = new PropertyKey(pid);
+		else
+			key = new PropertyKey(iot, pid);
 		final var property = ios.propertyDefinitions().get(key);
 		if (property != null)
 			return " (" + property.getName() + ")";
 		return "";
+	}
+
+	private String propertyName(final int objectIndex, final int pid) {
+		if (pid <= 50)
+			return propertyNameByObjectType(0, pid);
+
+		final var objects = device.getInterfaceObjectServer().getInterfaceObjects();
+		final int objectType = objectIndex < objects.length ? objects[objectIndex].getType() : 0;
+		return propertyNameByObjectType(objectType, pid);
 	}
 
 	private int getMaxApduLength()
