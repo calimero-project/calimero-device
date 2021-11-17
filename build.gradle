@@ -18,13 +18,17 @@ apply plugin: 'eclipse'
 group = 'com.github.calimero'
 version = '2.6-SNAPSHOT'
 
-sourceCompatibility = 11
-targetCompatibility = 11
+sourceCompatibility = 19
+targetCompatibility = 19
 
 java {
     withSourcesJar()
     withJavadocJar()
 }
+
+tasks.withType(JavaExec) { jvmArgs += "--enable-preview" }
+
+tasks.withType(Test) { jvmArgs += "--enable-preview" }
 
 tasks.withType(Jar) {
 	from("${projectDir}") {
@@ -43,8 +47,8 @@ compileTestJava.options.encoding = 'UTF-8'
 javadoc.options.encoding = 'UTF-8'
 
 compileJava.options*.compilerArgs = [
-	'-Xlint:all',
-	'-Xlint:-options'
+	'-Xlint:all,-serial',
+	'--enable-preview',
 ]
 
 compileTestJava.options*.compilerArgs = [
@@ -60,10 +64,12 @@ test {
 
 tasks.withType(Javadoc) {
     options.addStringOption("Xdoclint:-missing", '-quiet')
+    options.addBooleanOption('-enable-preview', true)
+	options.addStringOption("-release", "${targetCompatibility}")
 }
 
 dependencies {
-	api "com.github.calimero:calimero-core:${version}"
+	api "com.github.calimero:calimero-core-loom:${version}"
 	implementation 'org.slf4j:slf4j-api:1.7.36'
 	
 	testImplementation "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
@@ -78,7 +84,7 @@ publishing {
             artifactId = rootProject.name
             from components.java
             pom {
-                name = 'Calimero KNX Device'
+                name = 'Calimero KNX Device (Loom)'
                 description = 'Communication stack for a Calimero KNX Device'
                 url = 'https://github.com/calimero-project/calimero-device'
                 inceptionYear = '2006'

@@ -70,12 +70,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -111,6 +109,7 @@ import tuwien.auto.calimero.device.ios.PropertyEvent;
 import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
+import tuwien.auto.calimero.internal.Executor;
 import tuwien.auto.calimero.knxnetip.KNXnetIPConnection;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.knxnetip.SecureRouting;
@@ -171,26 +170,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	static final int OUTGOING_EVENTS_THREADED = 2;
 	int threadingPolicy;
 
-	// process & mgmt communication service tasks are processed as follows:
-	//  *) producer / consumer pattern
-	//  *) in-order task processing per producer
-	//  *) sequential task processing per producer
-	private static final ThreadFactory factory = Executors.defaultThreadFactory();
-	// specify a generous corePoolSize, because pool size is only increased if queue is full (our queue is unbounded)
-	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 10, 10, TimeUnit.SECONDS,
-			new LinkedBlockingQueue<Runnable>(), (r) -> {
-				final Thread t = factory.newThread(r);
-				t.setName("Calimero Device Task (" + t.getName() + ")");
-				t.setDaemon(true); // on shutdown, we won't execute any remaining tasks
-				return t;
-			});
-	static {
-		executor.allowCoreThreadTimeOut(true);
-	}
-
 	private boolean taskSubmitted;
 	// local queue if a task is currently submitted to our executor service
 	private final List<Runnable> tasks = new ArrayList<>();
+	private final Lock lock = new ReentrantLock();
 
 	private final String name;
 	private final InterfaceObjectServer ios;
@@ -309,69 +292,87 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 *
 	 * @param address the new device address
 	 */
-	protected final synchronized void setAddress(final IndividualAddress address)
+	protected final void setAddress(final IndividualAddress address)
 	{
 		if (address == null)
 			throw new NullPointerException("device address cannot be null");
 		if (address.getRawAddress() == 0 || getAddress().equals(address))
 			return;
 
-		final KNXNetworkLink link = getDeviceLink();
-		if (link != null) {
-			final KNXMediumSettings settings = link.getKNXMedium();
-			settings.setDeviceAddress(address);
-		}
-
-		DeviceObject.lookup(ios).setDeviceAddress(address);
-
+		lock.lock();
 		try {
-			setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, address.toByteArray());
+			final KNXNetworkLink link = getDeviceLink();
+			if (link != null) {
+				final KNXMediumSettings settings = link.getKNXMedium();
+				settings.setDeviceAddress(address);
+			}
+
+			DeviceObject.lookup(ios).setDeviceAddress(address);
+
+			try {
+				setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, address.toByteArray());
+			}
+			catch (final KnxPropertyException ignore) {
+				// fails if we don't have a KNX IP object
+			}
 		}
-		catch (final KnxPropertyException ignore) {
-			// fails if we don't have a KNX IP object
+		finally {
+			lock.unlock();
 		}
 	}
 
 	@Override
-	public final synchronized IndividualAddress getAddress() {
-		return DeviceObject.lookup(ios).deviceAddress();
+	public final IndividualAddress getAddress() {
+		lock.lock();
+		try {
+			return DeviceObject.lookup(ios).deviceAddress();
+		}
+		finally {
+			lock.unlock();
+		}
 	}
 
 	@Override
-	public final synchronized void setDeviceLink(final KNXNetworkLink link) throws KNXLinkClosedException
+	public final void setDeviceLink(final KNXNetworkLink link) throws KNXLinkClosedException
 	{
-		this.link = link;
-		// ??? necessary
-		if (link == null)
-			return;
+		lock.lock();
+		try {
+			this.link = link;
+			// ??? necessary
+			if (link == null)
+				return;
 
-		final var settings = link.getKNXMedium();
-		final var deviceObject = DeviceObject.lookup(ios);
-		deviceObject.set(PID.MAX_APDULENGTH, fromWord(settings.maxApduLength()));
-		final int medium = settings.getMedium();
-		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, (byte) 0, (byte) medium);
-		if (medium == KNXMediumSettings.MEDIUM_KNXIP)
-			initKnxipProperties();
-		else if (medium == KNXMediumSettings.MEDIUM_RF)
-			initRfProperties();
+			final var settings = link.getKNXMedium();
+			final var deviceObject = DeviceObject.lookup(ios);
+			deviceObject.set(PID.MAX_APDULENGTH, fromWord(settings.maxApduLength()));
+			final int medium = settings.getMedium();
+			ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, (byte) 0, (byte) medium);
+			if (medium == KNXMediumSettings.MEDIUM_KNXIP)
+				initKnxipProperties();
+			else if (medium == KNXMediumSettings.MEDIUM_RF)
+				initRfProperties();
 
-		final IndividualAddress address = settings.getDeviceAddress();
-		if (address.getDevice() != 0)
-			setAddress(address);
-		else if (address.getRawAddress() == 0 && !(link instanceof KNXNetworkLinkUsb))
-			settings.setDeviceAddress(getAddress());
+			final IndividualAddress address = settings.getDeviceAddress();
+			if (address.getDevice() != 0)
+				setAddress(address);
+			else if (address.getRawAddress() == 0 && !(link instanceof KNXNetworkLinkUsb))
+				settings.setDeviceAddress(getAddress());
 
-		if (process instanceof KnxDeviceServiceLogic)
-			((KnxDeviceServiceLogic) process).setDevice(this);
-		else if (mgmt instanceof KnxDeviceServiceLogic)
-			((KnxDeviceServiceLogic) mgmt).setDevice(this);
+			if (process instanceof KnxDeviceServiceLogic)
+				((KnxDeviceServiceLogic) process).setDevice(this);
+			else if (mgmt instanceof KnxDeviceServiceLogic)
+				((KnxDeviceServiceLogic) mgmt).setDevice(this);
 
-		tl = new TransportLayerImpl(link, true);
-		if (sal != null)
-			sal.close();
-		sal = new DeviceSecureApplicationLayer(this);
-		ensureInitializedSeqNumber();
-		resetNotifiers();
+			tl = new TransportLayerImpl(link, true);
+			if (sal != null)
+				sal.close();
+			sal = new DeviceSecureApplicationLayer(this);
+			ensureInitializedSeqNumber();
+			resetNotifiers();
+		}
+		finally {
+			lock.unlock();
+		}
 	}
 
 	private static final int SeqSize = 6;
@@ -409,9 +410,15 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	@Override
-	public final synchronized KNXNetworkLink getDeviceLink()
+	public final KNXNetworkLink getDeviceLink()
 	{
-		return link;
+		lock.lock();
+		try {
+			return link;
+		}
+		finally {
+			lock.unlock();
+		}
 	}
 
 	@Override
@@ -434,7 +441,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 */
 	public ExecutorService taskExecutor()
 	{
-		return executor;
+		return Executor.scheduledExecutor();
 	}
 
 	public final TransportLayer transportLayer() { return tl; }
@@ -965,7 +972,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		return (T) f.get(obj);
 	}
 
-	private synchronized void resetNotifiers() throws KNXLinkClosedException
+	private void resetNotifiers() throws KNXLinkClosedException
 	{
 		if (procNotifier != null)
 			procNotifier.close();
@@ -1154,14 +1161,18 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	private void submitTask(final long taskId, final Runnable task)
 	{
-		synchronized (tasks) {
-			logger.trace("queue task " + taskId);
+		logger.trace("queue task " + taskId);
+		lock.lock();
+		try {
 			if (taskSubmitted)
 				tasks.add(task);
 			else {
 				taskSubmitted = true;
 				taskExecutor().submit(task);
 			}
+		}
+		finally {
+			lock.unlock();
 		}
 	}
 
@@ -1171,11 +1182,15 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (ms > 5000)
 			logger.warn("task {} took suspiciously long ({} ms)", taskId, ms);
 
-		synchronized (tasks) {
+		lock.lock();
+		try {
 			if (tasks.isEmpty())
 				taskSubmitted = false;
 			else
 				taskExecutor().submit(tasks.remove(0));
+		}
+		finally {
+			lock.unlock();
 		}
 	}
 

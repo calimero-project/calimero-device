@@ -3,12 +3,12 @@
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.github.calimero</groupId>
-		<artifactId>calimero-parent</artifactId>
+		<artifactId>calimero-parent-loom</artifactId>
 		<version>2.6-SNAPSHOT</version>
 	</parent>
-	<artifactId>calimero-device</artifactId>
-	<name>Calimero KNX Device</name>
-	<description>Communication stack for a Calimero KNX Device</description>
+	<artifactId>calimero-device-loom</artifactId>
+	<name>Calimero KNX Device (Loom)</name>
+	<description>Communication stack for a Calimero KNX device</description>
 	<scm>
 		<url>https://github.com/calimero-project/calimero-device.git</url>
 	</scm>
@@ -40,7 +40,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>com.github.calimero</groupId>
-			<artifactId>calimero-core</artifactId>
+			<artifactId>calimero-core-loom</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>

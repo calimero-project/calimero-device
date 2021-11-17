@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -282,10 +282,12 @@ public class ProcessCommunicationServiceTest extends TestCase
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 
 		pc.write(dp2, "40");
+		Thread.sleep(20);
 		String s = pc.read(dp2);
 		assertEquals("40 %", s);
 
 		pc.write(dp2, "30.2");
+		Thread.sleep(20);
 		s = pc.read(dp2);
 		assertEquals(String.format("%.1f %%", 30.2d), s);
 
