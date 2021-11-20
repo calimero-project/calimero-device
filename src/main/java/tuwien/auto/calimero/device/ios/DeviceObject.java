@@ -97,7 +97,11 @@ public final class DeviceObject extends InterfaceObject {
 
 	private byte[] get(final int pid) { return getProperty(pid, 1, 1); }
 
-	public void set(final int pid, final byte... data) { setProperty(pid, 1, 1, data, false); }
+	public void set(final int pid, final byte... data) {
+		final boolean changed = setProperty(pid, 1, 1, data, false);
+		if (changed)
+			firePropertyChanged(pid, 1, 1, data);
+	}
 
 	private static long unsigned(final byte[] data) {
 		long l = 0;

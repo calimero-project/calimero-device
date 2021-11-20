@@ -157,6 +157,7 @@ public class InterfaceObject
 	private final Map<PropertyKey, Property> definitions;
 	private volatile int idx;
 
+	volatile InterfaceObjectServer ios;
 
 	/**
 	 * Creates a new interface object of the specified object type.
@@ -169,8 +170,7 @@ public class InterfaceObject
 		this(objectType, Map.of());
 	}
 
-	InterfaceObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions)
-	{
+	InterfaceObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions) {
 		this(objectType, definitions);
 		setIndex(index);
 	}
@@ -574,6 +574,12 @@ public class InterfaceObject
 			ba[1] = (byte) maxElements;
 			values.put(key, ba);
 		}
+	}
+
+	void firePropertyChanged(final int propertyId, final int start, final int elements, final byte[] data) {
+		final var server = ios;
+		if (server != null)
+			server.firePropertyChanged(this, propertyId, start, elements, data);
 	}
 
 	private Property getDefinition(final int pid) {

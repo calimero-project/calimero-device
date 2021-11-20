@@ -225,6 +225,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		// objects list.
 		for (final InterfaceObject io : list) {
 			synchronized (objects) {
+				io.ios = this;
 				final int index = objects.size();
 				io.setIndex(index);
 				objects.add(io);
@@ -323,6 +324,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		synchronized (objects) {
 			index = objects.size();
 			io = newInterfaceObject(objectType, index, client.getDefinitions());
+			io.ios = this;
 			objects.add(io);
 			updateIoList();
 		}
@@ -352,7 +354,9 @@ public class InterfaceObjectServer implements PropertyAccess
 	public void removeInterfaceObject(final InterfaceObject io)
 	{
 		synchronized (objects) {
-			objects.remove(io);
+			if (objects.remove(io)) {
+				io.ios = null;
+			}
 		}
 	}
 
@@ -580,7 +584,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			adapter.createNewDescription(index, PID.OBJECT_INDEX, false);
 	}
 
-	private void firePropertyChanged(final InterfaceObject io, final int propertyId,
+	void firePropertyChanged(final InterfaceObject io, final int propertyId,
 		final int start, final int elements, final byte[] data)
 	{
 		final PropertyEvent pe = new PropertyEvent(this, io, propertyId, start, elements, data);

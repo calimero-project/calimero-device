@@ -121,7 +121,9 @@ public final class SecurityObject extends InterfaceObject {
 
 	public void set(final int pid, final int start, final int elements, final byte... data) {
 		final boolean strictMode = false;
-		setProperty(pid, start, elements, data, strictMode);
+		final boolean changed = setProperty(pid, start, elements, data, strictMode);
+		if (changed)
+			firePropertyChanged(pid, start, elements, data);
 	}
 
 	public void populateWithDefaults() {
