@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2021 B. Malinowsky
+    Copyright (c) 2019, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -86,7 +86,7 @@ public final class AccessPolicies {
 		final int off = Integer.parseInt(accessPolicy.substring(0, slash), 16);
 		final int on = Integer.parseInt(accessPolicy.substring(slash + 1), 16);
 		if (off > 0x3ff || on > 0x3ff)
-			throw new IllegalArgumentException("invalid access policy " + accessPolicy);
+			throw new KNXIllegalArgumentException("invalid access policy " + accessPolicy);
 		return (off << 10) | on;
 	}
 
