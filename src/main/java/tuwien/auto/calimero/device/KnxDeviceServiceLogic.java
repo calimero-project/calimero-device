@@ -40,6 +40,8 @@ import static tuwien.auto.calimero.DataUnitBuilder.toHex;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.GROUP_OBJECT_TABLE_OBJECT;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
@@ -74,6 +76,7 @@ import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.DatapointMap;
 import tuwien.auto.calimero.datapoint.DatapointModel;
 import tuwien.auto.calimero.datapoint.StateDP;
+import tuwien.auto.calimero.device.BaseKnxDevice.RoutingConfig;
 import tuwien.auto.calimero.device.KnxDevice.Memory;
 import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
@@ -82,6 +85,7 @@ import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
+import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
@@ -764,11 +768,51 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final var settings = device.getDeviceLink().getKNXMedium();
 			if (domain.length == 2) {
 				((PLSettings) settings).setDomainAddress(domain);
+				setDomainAddress(domain);
 			}
-			else {
+			else if (domain.length == 6) {
 				((RFSettings) settings).setDomainAddress(domain);
+				setDomainAddress(domain);
 			}
-			setDomainAddress(domain);
+		}
+		if (domain.length == 4) {
+			final var mcGroup = isValidRoutingMulticast(domain);
+			if (mcGroup == null)
+				return;
+			ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, PID.ROUTING_MULTICAST_ADDRESS, 1, 1, domain);
+			((BaseKnxDevice) device).ipRoutingConfigChanged(new RoutingConfig(mcGroup));
+		}
+		else if (domain.length == 21) {
+			final var bb = ByteBuffer.wrap(domain);
+			final var mcast = new byte[4];
+			bb.get(mcast);
+			final var mcGroup = isValidRoutingMulticast(mcast);
+			if (mcGroup == null)
+				return;
+			ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, PID.ROUTING_MULTICAST_ADDRESS, 1, 1, mcast);
+			bb.get(); // skip secure routing version
+			final var backbonekey = new byte[16];
+			bb.get(backbonekey);
+			try {
+				ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, 91, 1, 1, backbonekey);
+				final int ms = (int) unsigned(ios.getProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, 95, 1, 1));
+				final Duration latencyTolerance = Duration.ofMillis(ms);
+				((BaseKnxDevice) device)
+						.ipRoutingConfigChanged(new RoutingConfig(mcGroup, backbonekey, latencyTolerance));
+			}
+			finally {
+				Arrays.fill(backbonekey, (byte) 0);
+			}
+		}
+	}
+
+	private InetAddress isValidRoutingMulticast(final byte[] mcast) {
+		try {
+			final var addr = InetAddress.getByAddress(mcast);
+			return KNXnetIPRouting.isValidRoutingMulticast(addr) ? addr : null;
+		}
+		catch (final UnknownHostException e) {
+			return null;
 		}
 	}
 

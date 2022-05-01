@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -60,6 +60,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -120,6 +121,7 @@ import tuwien.auto.calimero.knxnetip.util.ServiceFamiliesDIB.ServiceFamily;
 import tuwien.auto.calimero.link.AbstractLink;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
+import tuwien.auto.calimero.link.KNXNetworkLinkIP;
 import tuwien.auto.calimero.link.KNXNetworkLinkUsb;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.log.LogService;
@@ -370,6 +372,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		resetNotifiers();
 	}
 
+	private static final int SeqSize = 6;
+
 	private void ensureInitializedSeqNumber() throws KNXLinkClosedException {
 		final var secif = SecurityObject.lookup(getInterfaceObjectServer());
 		if (!secif.isLoaded() || !sal.isSecurityModeEnabled())
@@ -526,7 +530,59 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
 	}
 
-	private static final int SeqSize = 6;
+	protected static final class RoutingConfig {
+		private final InetAddress mcGroup;
+		private final byte[] groupKey;
+		private final Duration latencyTolerance;
+
+		RoutingConfig(final InetAddress mcGroup) {
+			this.mcGroup = mcGroup;
+			groupKey = new byte[0];
+			latencyTolerance = Duration.ZERO;
+		}
+
+		RoutingConfig(final InetAddress mcGroup, final byte[] groupKey, final Duration latencyTolerance) {
+			this.mcGroup = mcGroup;
+			this.groupKey = groupKey;
+			this.latencyTolerance = latencyTolerance;
+		}
+
+		public InetAddress multicastGroup() { return mcGroup; }
+
+		public boolean secureRouting() { return groupKey.length == 16; }
+
+		public byte[] groupKey() { return groupKey.clone(); }
+
+		public Duration latencyTolerance() { return latencyTolerance; }
+
+		@Override
+		public String toString() {
+			final String secure = secureRouting() ? new String(Character.toChars(0x1F512)) + " " : "";
+			return String.format("%smcast %s", secure, mcGroup.getHostAddress());
+		}
+	}
+
+	protected void ipRoutingConfigChanged(final RoutingConfig config) {
+		final var oldLink = getDeviceLink();
+		final var settings = oldLink.getKNXMedium();
+
+		try {
+			final var routing = connectionOfLink();
+			final var netif = routing.networkInterface();
+
+			final KNXNetworkLink newLink;
+			if (config.secureRouting())
+				newLink = KNXNetworkLinkIP.newSecureRoutingLink(netif, config.multicastGroup(), config.groupKey(),
+						config.latencyTolerance(), settings);
+			else
+				newLink = KNXNetworkLinkIP.newRoutingLink(netif, config.multicastGroup(), settings);
+			setDeviceLink(newLink);
+			oldLink.close();
+		}
+		catch (ReflectiveOperationException | KNXException | RuntimeException e) {
+			logger.warn("error setting device routing link ({})", config, e);
+		}
+	}
 
 	private static ByteBuffer sixBytes(final long num) {
 		return ByteBuffer.allocate(6).putShort((short) (num >> 32)).putInt((int) num).flip();

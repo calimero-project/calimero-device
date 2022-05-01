@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2021 B. Malinowsky
+    Copyright (c) 2012, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
 import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
+import tuwien.auto.calimero.knxnetip.util.ServiceFamiliesDIB.ServiceFamily;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
 import tuwien.auto.calimero.link.medium.PLSettings;
@@ -89,6 +90,7 @@ import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.mgmt.TransportListener;
 import tuwien.auto.calimero.secure.SecurityControl;
+import tuwien.auto.calimero.secure.SecurityControl.DataSecurity;
 
 /**
  * Listens to TL notifications, dispatches them to the appropriate management services, and answers back to the sender
@@ -199,6 +201,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			lengthDoA = 2;
 		else if (medium == KNXMediumSettings.MEDIUM_RF)
 			lengthDoA = 6;
+		else if (medium == KNXMediumSettings.MEDIUM_KNXIP)
+			lengthDoA = 4;
 		else
 			lengthDoA = 0;
 
@@ -685,15 +689,69 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	}
 
 	private void onDoASerialNumberWrite(final String name, final Destination respondTo, final byte[] data) {
-		if (!verifyLength(data.length, SerialNumber.Size + lengthDoA, SerialNumber.Size + lengthDoA, name))
+		final int maxLength = lengthDoA == 4 ? 21 : lengthDoA;
+		if (!verifyLength(data.length, SerialNumber.Size + lengthDoA, SerialNumber.Size + maxLength, name))
 			return;
 		final var sno = SerialNumber.from(Arrays.copyOfRange(data, 0, SerialNumber.Size));
 		if (!matchesOurSerialNumber(sno))
 			return;
 
-		final byte[] domain = Arrays.copyOfRange(data, SerialNumber.Size, SerialNumber.Size + lengthDoA);
+		final byte[] domain = Arrays.copyOfRange(data, SerialNumber.Size, data.length);
+		boolean disableSecureRouting = false;
+		boolean enableSecureRouting = false;
+		if (lengthDoA == 4) {
+			if (securityCtrl.systemBroadcast() && securityCtrl.security() == DataSecurity.AuthConf
+					&& (domain.length == 4 || domain.length == 21)) {
+				if (domain.length == 4)
+					disableSecureRouting = true;
+				if (domain.length == 21) {
+					enableSecureRouting = true;
+
+					final int routingSecurityVersion = domain[5] & 0xff;
+					if (routingSecurityVersion != 1)
+						return;
+				}
+			}
+			else if (domain.length != 4 || sal.isSecurityModeEnabled())
+				return;
+		}
+
 		logger.trace("{}->{} {} SN {} DoA 0x{}", respondTo.getAddress(), device.getAddress(), name, sno, toHex(domain, ""));
 		mgmtSvc.writeDomainAddress(domain);
+
+		if (lengthDoA == 4) {
+			Arrays.fill(domain, (byte) 0);
+
+			final int pidSecuredServices = 94;
+			final var ios = device.getInterfaceObjectServer();
+			final int routingBit = 1 << ServiceFamily.Routing.id();
+
+			// if DoA of length 4 and A+C, then routing security version in PID_SECURED_SERVICES shall be set 0, and
+			// no further send/rcv of encrypted routing frames
+			if (disableSecureRouting) {
+				try {
+					final byte[] securedFamilies = ios.getProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
+							pidSecuredServices, 1, 1);
+					securedFamilies[1] &= ~routingBit;
+					ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, pidSecuredServices, 1, 1,
+							securedFamilies);
+				}
+				catch (final KnxPropertyException e) {
+					// ignore non-existing property
+				}
+			}
+			// if DoA of length 21 and A+C, then routing security version in PID_SECURED_SERVICES shall be set, and
+			// device security mode enabled
+			if (enableSecureRouting) {
+				final byte[] securedFamilies = ios.getProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
+						pidSecuredServices, 1, 1);
+				securedFamilies[1] |= routingBit;
+				ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, pidSecuredServices, 1, 1,
+						securedFamilies);
+
+				sal.setSecurityMode(true);
+			}
+		}
 	}
 
 	private void onDoASerialNumberRead(final String name, final Destination respondTo, final byte[] data) {
@@ -723,19 +781,18 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	}
 
 	private boolean matchesOurSerialNumber(final SerialNumber sno) {
-		final var medium = device.getDeviceLink().getKNXMedium();
 		var serialNumber = SerialNumber.Zero;
-		if (medium instanceof RFSettings) {
+		try {
+			serialNumber = DeviceObject.lookup(device.getInterfaceObjectServer()).serialNumber();
+		}
+		catch (final KnxPropertyException e) {}
+
+		final var medium = device.getDeviceLink().getKNXMedium();
+		if (serialNumber.equals(SerialNumber.Zero) && medium instanceof RFSettings) {
 			final var rfSettings = (RFSettings) medium;
 			serialNumber = rfSettings.serialNumber();
-			// serial number might not be set in rf medium settings
 			if (serialNumber.equals(SerialNumber.Zero)) {
-				try {
-					serialNumber = DeviceObject.lookup(device.getInterfaceObjectServer()).serialNumber();
-				}
-				catch (final KnxPropertyException e) {
-					logger.warn("RF device with no serial number", e);
-				}
+				logger.warn("RF device with no serial number");
 			}
 		}
 		return sno.equals(serialNumber);
