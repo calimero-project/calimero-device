@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2021 B. Malinowsky
+    Copyright (c) 2010, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -342,6 +342,8 @@ public class InterfaceObjectServer implements PropertyAccess
 			return new DeviceObject(objectType, index, definitions);
 		if (objectType == InterfaceObject.SECURITY_OBJECT)
 			return new SecurityObject(objectType, index, definitions);
+		if (objectType == InterfaceObject.KNXNETIP_PARAMETER_OBJECT)
+			return new KnxipParameterObject(objectType, index, definitions);
 		return new InterfaceObject(objectType, index, definitions);
 	}
 

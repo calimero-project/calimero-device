@@ -106,6 +106,7 @@ import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
+import tuwien.auto.calimero.device.ios.KnxipParameterObject;
 import tuwien.auto.calimero.device.ios.PropertyEvent;
 import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
@@ -975,14 +976,29 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void initKnxipProperties() {
-		if (!lookup(KNXNETIP_PARAMETER_OBJECT))
+		if (!lookup(KNXNETIP_PARAMETER_OBJECT)) {
 			ios.addInterfaceObject(KNXNETIP_PARAMETER_OBJECT);
 
-		setIpProperty(PID.PROJECT_INSTALLATION_ID, fromWord(0));
+			final var knxipObject = KnxipParameterObject.lookup(ios, objectInstance);
+
+			knxipObject.set(PID.PROJECT_INSTALLATION_ID, fromWord(0));
+			knxipObject.set(PID.CURRENT_IP_ASSIGNMENT_METHOD, (byte) 1);
+			knxipObject.set(PID.IP_ASSIGNMENT_METHOD, (byte) 1);
+			knxipObject.set(PID.IP_CAPABILITIES, (byte) 0);
+
+			// set default ttl
+			knxipObject.set(PID.TTL, (byte) 16);
+
+			// PID.KNXNETIP_DEVICE_CAPABILITIES
+			// Bits LSB to MSB: 0 Device Management, 1 Tunneling, 2 Routing, 3 Remote Logging,
+			// 4 Remote Configuration and Diagnosis, 5 Object Server
+			final int deviceCaps = 4;
+			knxipObject.set(PID.KNXNETIP_DEVICE_CAPABILITIES, fromWord(deviceCaps));
+
+			knxipObject.setFriendlyName(name);
+		}
+
 		setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, getAddress().toByteArray());
-		setIpProperty(PID.CURRENT_IP_ASSIGNMENT_METHOD, (byte) 1);
-		setIpProperty(PID.IP_ASSIGNMENT_METHOD, (byte) 1);
-		setIpProperty(PID.IP_CAPABILITIES, (byte) 0);
 
 		// pull out IP info from KNX IP protocol
 		byte[] ip = new byte[4];
@@ -1037,6 +1053,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			logger.warn("initializing KNX IP properties, {}", e.toString());
 		}
 
+		final var knxipObject = KnxipParameterObject.lookup(ios, objectInstance);
+		knxipObject.populateWithDefaults();
+
 		setIpProperty(PID.CURRENT_IP_ADDRESS, ip);
 		setIpProperty(PID.CURRENT_SUBNET_MASK, mask);
 
@@ -1046,29 +1065,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		setIpProperty(PID.SUBNET_MASK, mask);
 		setIpProperty(PID.DEFAULT_GATEWAY, gw);
 		setIpProperty(PID.MAC_ADDRESS, mac);
-		setIpProperty(PID.SYSTEM_SETUP_MULTICAST_ADDRESS, KNXnetIPRouting.DefaultMulticast.getAddress());
 		if (!Arrays.equals(mcast, new byte[4]))
 			setIpProperty(PID.ROUTING_MULTICAST_ADDRESS, mcast);
-		// set default ttl
-		setIpProperty(PID.TTL, (byte) 16);
-
-		// PID.KNXNETIP_DEVICE_CAPABILITIES
-		// Bits LSB to MSB: 0 Device Management, 1 Tunneling, 2 Routing, 3 Remote Logging,
-		// 4 Remote Configuration and Diagnosis, 5 Object Server
-		final int deviceCaps = 4;
-		setIpProperty(PID.KNXNETIP_DEVICE_CAPABILITIES, fromWord(deviceCaps));
-		setIpProperty(PID.KNXNETIP_DEVICE_STATE, (byte) 0);
-
-		setIpProperty(PID.QUEUE_OVERFLOW_TO_IP, fromWord(0));
-		// reset transmit counter to 0, 4 byte unsigned
-		setIpProperty(PID.MSG_TRANSMIT_TO_IP, new byte[4]);
-
-		// friendly name property entry is an array of 30 characters
-		final byte[] data = Arrays.copyOf(name.getBytes(StandardCharsets.ISO_8859_1), 30);
-		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, PID.FRIENDLY_NAME, 1, data.length, data);
-
-		// 100 ms is the default busy wait time
-		setIpProperty(PID.ROUTING_BUSY_WAIT_TIME, fromWord(100));
 	}
 
 	private void initRfProperties() {
@@ -1103,11 +1101,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final var progmode = deviceObject.programmingMode();
 		final var sno = deviceObject.serialNumber();
 
-		final var ip = InetAddress.getByAddress(ipProperty(PropertyAccess.PID.CURRENT_IP_ADDRESS));
-		final var mcast = InetAddress.getByAddress(ipProperty(PropertyAccess.PID.ROUTING_MULTICAST_ADDRESS));
-		final var deviceName = new String(
-				ios.getProperty(KNXNETIP_PARAMETER_OBJECT, 1, PropertyAccess.PID.FRIENDLY_NAME, 1, 29),
-				StandardCharsets.ISO_8859_1);
+		final var knxipObject = KnxipParameterObject.lookup(ios, 1);
+		final var ip = knxipObject.inetAddress(PropertyAccess.PID.CURRENT_IP_ADDRESS);
+		final var mcast = knxipObject.inetAddress(PropertyAccess.PID.ROUTING_MULTICAST_ADDRESS);
+		final var deviceName = knxipObject.friendlyName();
 		final var projectInstId = (int) unsigned(ipProperty(PropertyAccess.PID.PROJECT_INSTALLATION_ID));
 		final var mac = ipProperty(PropertyAccess.PID.MAC_ADDRESS);
 
