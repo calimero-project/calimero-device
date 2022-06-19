@@ -236,7 +236,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.addServerListener(this::propertyChanged);
 		logger = LogService.getLogger("calimero.device." + name);
 
-		this.iosResource = iosResource;
+		this.iosResource = iosResource != null ? iosResource : URI.create("");
 		iosPwd = iosPassword;
 
 		this.process = process;
@@ -610,7 +610,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void saveIos() {
-		if (iosResource == null || "".equals(iosResource.toString()))
+		if ("".equals(iosResource.toString()))
 			return;
 
 		try {
@@ -738,7 +738,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private boolean loadIosFromResource() {
-		if (iosResource == null || "".equals(iosResource.toString()))
+		if ("".equals(iosResource.toString()))
 			return false;
 		try {
 			ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
@@ -770,7 +770,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private static final int pidDeviceMemory = 201;
 
 	private void loadDeviceMemory() {
-		if (iosResource == null || "".equals(iosResource.toString()))
+		if ("".equals(iosResource.toString()))
 			return;
 
 		try {
@@ -793,7 +793,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void saveDeviceMemory() {
-		if (iosResource == null || "".equals(iosResource.toString()))
+		if ("".equals(iosResource.toString()))
 			return;
 
 		try {
