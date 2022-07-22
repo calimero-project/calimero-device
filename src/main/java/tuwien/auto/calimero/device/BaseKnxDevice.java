@@ -113,6 +113,7 @@ import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.knxnetip.KNXnetIPConnection;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
+import tuwien.auto.calimero.knxnetip.SecureRouting;
 import tuwien.auto.calimero.knxnetip.servicetype.KNXnetIPHeader;
 import tuwien.auto.calimero.knxnetip.servicetype.SearchResponse;
 import tuwien.auto.calimero.knxnetip.util.DeviceDIB;
@@ -1048,6 +1049,23 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			final var callback = lookup.findVarHandle(KNXnetIPRouting.class, "searchRequestCallback",
 					BiFunction.class);
 			callback.setVolatile(conn, (BiFunction<KNXnetIPHeader, ByteBuffer, SearchResponse>) this::ipSearchRequest);
+
+			if (conn instanceof SecureRouting) {
+				final var secRouting = (SecureRouting) conn;
+				// TODO set actual key
+				setIpProperty(KnxipParameterObject.Pid.BackboneKey, new byte[16]);
+
+				final int bits = 1 << ServiceFamily.Routing.id();
+				// function property
+				setIpProperty(KnxipParameterObject.Pid.SecuredServiceFamilies, new byte[] { 0, (byte) bits });
+
+				final long ms = secRouting.latencyTolerance().toMillis();
+				final byte[] msData = new byte[] { (byte) (ms >> 8), (byte) (ms & 0xff)};
+				setIpProperty(KnxipParameterObject.Pid.LatencyTolerance, msData);
+
+				final double frac = secRouting.syncLatencyFraction();
+				setIpProperty(KnxipParameterObject.Pid.SyncLatencyFraction, (byte) (frac * 255));
+			}
 		}
 		catch (ReflectiveOperationException | IOException | RuntimeException e) {
 			logger.warn("initializing KNX IP properties, {}", e.toString());
