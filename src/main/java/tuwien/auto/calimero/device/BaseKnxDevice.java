@@ -1123,8 +1123,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final var ip = knxipObject.inetAddress(PropertyAccess.PID.CURRENT_IP_ADDRESS);
 		final var mcast = knxipObject.inetAddress(PropertyAccess.PID.ROUTING_MULTICAST_ADDRESS);
 		final var deviceName = knxipObject.friendlyName();
-		final var projectInstId = (int) unsigned(ipProperty(PropertyAccess.PID.PROJECT_INSTALLATION_ID));
-		final var mac = ipProperty(PropertyAccess.PID.MAC_ADDRESS);
+		final var projectInstId = (int) unsigned(knxipObject.get(PropertyAccess.PID.PROJECT_INSTALLATION_ID));
+		final var mac = knxipObject.get(PropertyAccess.PID.MAC_ADDRESS);
 
 		final var deviceDib = new DeviceDIB(deviceName, progmode ? 1 : 0, projectInstId,
 				KNXMediumSettings.MEDIUM_KNXIP, deviceAddress, sno, mcast, mac);
@@ -1132,10 +1132,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		final HPAI ctrlEndpoint = new HPAI(ip, KNXnetIPConnection.DEFAULT_PORT);
 		return new SearchResponse(ctrlEndpoint, deviceDib, svcFamilies);
-	}
-
-	private byte[] ipProperty(final int pid) {
-		return ios.getProperty(KNXNETIP_PARAMETER_OBJECT, 1, pid, 1, 1);
 	}
 
 	private void propertyChanged(final PropertyEvent pe) {
