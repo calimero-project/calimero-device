@@ -47,11 +47,26 @@ import java.util.Map;
 
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
+import tuwien.auto.calimero.knxnetip.util.ServiceFamiliesDIB.ServiceFamily;
 import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient.Property;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 
 public final class KnxipParameterObject extends InterfaceObject {
+	public static final class Pid {
+		private Pid() {}
+
+		public static final int TunnelingAddresses = 79;
+
+		public static final int BackboneKey = 91;
+		public static final int DeviceAuth = 92; // PDT generic 16
+		public static final int UserPwdHashes = 93; // PDT generic 16
+		public static final int SecuredServiceFamilies = 94;
+		public static final int LatencyTolerance = 95;
+		public static final int SyncLatencyFraction = 96;
+		public static final int TunnelingUsers = 97;
+	}
+
 
 	public static KnxipParameterObject lookup(final InterfaceObjectServer ios, final int objectInstance) {
 		return ios.lookup(KNXNETIP_PARAMETER_OBJECT, objectInstance);
@@ -63,6 +78,15 @@ public final class KnxipParameterObject extends InterfaceObject {
 	}
 
 	public byte[] get(final int pid) { return get(pid, 1, Integer.MAX_VALUE); }
+
+	public byte[] getOrDefault(final int pid, final byte[] defaultData) {
+		try {
+			return get(pid);
+		}
+		catch (final KnxPropertyException e) {
+			return defaultData;
+		}
+	}
 
 	public byte[] get(final int pid, final int start, final int elements) {
 		return getProperty(pid, start, elements);
@@ -115,6 +139,17 @@ public final class KnxipParameterObject extends InterfaceObject {
 		}
 		catch (final KnxPropertyException e) {}
 		return list;
+	}
+
+	public boolean securedService(final ServiceFamily serviceFamily) {
+		try {
+			final long securedServices = unsigned(get(KnxipParameterObject.Pid.SecuredServiceFamilies));
+			final boolean secured = ((securedServices >> serviceFamily.id()) & 0x01) == 0x01;
+			return secured;
+		}
+		catch (final KnxPropertyException e) {
+			return false;
+		}
 	}
 
 	public void populateWithDefaults() {
