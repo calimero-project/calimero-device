@@ -258,7 +258,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final IndividualAddress sender;
 		final KNXAddress dst;
-		Destination d;
+		final Destination d;
 		final byte[] tpdu = cemi.getPayload();
 
 		if (cemi instanceof CemiTData) {
