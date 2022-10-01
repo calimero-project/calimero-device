@@ -87,7 +87,6 @@ import tuwien.auto.calimero.mgmt.PropertyAccess.PID;
 import tuwien.auto.calimero.mgmt.PropertyClient;
 import tuwien.auto.calimero.mgmt.PropertyClient.PropertyKey;
 import tuwien.auto.calimero.mgmt.TransportLayer;
-import tuwien.auto.calimero.mgmt.TransportLayerImpl;
 import tuwien.auto.calimero.mgmt.TransportListener;
 import tuwien.auto.calimero.secure.SecurityControl;
 import tuwien.auto.calimero.secure.SecurityControl.DataSecurity;
@@ -262,20 +261,17 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		Destination d;
 		final byte[] tpdu = cemi.getPayload();
 
-		final TransportLayerImpl impl = (TransportLayerImpl) tl;
 		if (cemi instanceof CemiTData) {
 			sender = new IndividualAddress(0);
 			dst = new IndividualAddress(0);
-			d = impl.createDestination(sender, false);
+			d = tl.createDestination(sender, false);
 			d.close();
 		}
 		else {
 			final CEMILData ldata = (CEMILData) cemi;
 			sender = ldata.getSource();
-			d = impl.getDestination(sender);
 			// TODO actually this check is for CL mode and should be made in transport layer
-			if (d == null)
-				d = impl.createDestination(sender, false);
+			d = tl.destination(sender).orElseGet(() -> tl.createDestination(sender, false));
 
 			dst = ldata.getDestination();
 			svcPriority = ldata.getPriority();
