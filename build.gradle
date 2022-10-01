@@ -10,7 +10,7 @@ repositories {
 	maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 }
 
-ext.junitJupiterVersion = '5.8.1'
+ext.junitJupiterVersion = '5.9.1'
 
 apply plugin: 'java-library'
 apply plugin: 'eclipse'
@@ -64,7 +64,7 @@ tasks.withType(Javadoc) {
 
 dependencies {
 	api "com.github.calimero:calimero-core:${version}"
-	implementation 'org.slf4j:slf4j-api:1.7.30'
+	implementation 'org.slf4j:slf4j-api:1.7.36'
 	
 	testImplementation "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
