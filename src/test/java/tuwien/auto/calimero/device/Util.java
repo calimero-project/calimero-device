@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2006, 2021 B. Malinowsky
+    Copyright (c) 2006, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,6 +36,8 @@
 
 package tuwien.auto.calimero.device;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -49,8 +51,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Optional;
 
-import org.junit.Assert;
-
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.knxnetip.Discoverer;
@@ -58,9 +58,7 @@ import tuwien.auto.calimero.knxnetip.Discoverer.Result;
 import tuwien.auto.calimero.knxnetip.servicetype.SearchResponse;
 import tuwien.auto.calimero.serial.FT12Connection;
 
-/**
- * @author B. Malinowsky
- */
+
 public final class Util
 {
 	/**
@@ -264,7 +262,7 @@ public final class Util
 		// we try once to find our running test server, on failure subsequent calls will
 		// immediately return to speed up tests
 		if (!testServerRunning)
-			Assert.fail("no KNXnet/IP test-server available!");
+			fail("no KNXnet/IP test-server available!");
 		if (server == null) {
 			testServerRunning = false;
 			final Discoverer d = new Discoverer(null, 0, false, false);
@@ -286,7 +284,7 @@ public final class Util
 			}
 			System.err.println("\nA unit test case requests the KNX test server, but no running instance was found!\n"
 					+ "\t--> Most tests requiring KNXnet/IP will fail.\n");
-			Assert.fail("no KNXnet/IP test-server found!");
+			fail("no KNXnet/IP test-server found!");
 		}
 		return server;
 	}

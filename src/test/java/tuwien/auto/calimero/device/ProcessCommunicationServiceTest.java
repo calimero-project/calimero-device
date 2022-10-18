@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,10 +36,15 @@
 
 package tuwien.auto.calimero.device;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
-import junit.framework.TestCase;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
@@ -59,11 +64,7 @@ import tuwien.auto.calimero.process.ProcessCommunicator;
 import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 import tuwien.auto.calimero.process.ProcessEvent;
 
-/**
- * @author B. Malinowsky
- */
-public class ProcessCommunicationServiceTest extends TestCase
-{
+class ProcessCommunicationServiceTest {
 	private InetSocketAddress remoteHost;
 
 	private static boolean useRouting = true;
@@ -82,13 +83,11 @@ public class ProcessCommunicationServiceTest extends TestCase
 	// test Runnable return in ServiceResult
 	private final ProcessCommunicationService processLogicRunnable = new ProcessCommunicationService() {
 		@Override
-		public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e)
-		{
+		public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e) {
 			if (e.getDestination().equals(dp.getMainAddress()))
 				return new ServiceResult<>() {
 					@Override
-					public void run()
-					{
+					public void run() {
 						try (var responder = new ProcessCommunicationResponder(device1.getDeviceLink(), device1.sal)) {
 							responder.write(dp.getMainAddress(), dpState);
 						}
@@ -104,8 +103,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 
 		@Override
-		public void groupWrite(final ProcessEvent e)
-		{
+		public void groupWrite(final ProcessEvent e) {
 			if (e.getDestination().equals(dp.getMainAddress())) {
 				try {
 					final DPTXlatorBoolean t = new DPTXlatorBoolean(dp.getDPT());
@@ -119,15 +117,13 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 
 		@Override
-		public void groupResponse(final ProcessEvent e)
-		{}
+		public void groupResponse(final ProcessEvent e) {}
 	};
 
 	// test return data byte[] in ServiceResult
 	private final ProcessCommunicationService processLogic = new ProcessCommunicationService() {
 		@Override
-		public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e)
-		{
+		public ServiceResult<byte[]> groupReadRequest(final ProcessEvent e) {
 			if (e.getDestination().equals(dp2.getMainAddress())) {
 				try {
 					final DPTXlator8BitUnsigned x = new DPTXlator8BitUnsigned(dp2.getDPT());
@@ -142,8 +138,7 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 
 		@Override
-		public void groupWrite(final ProcessEvent e)
-		{
+		public void groupWrite(final ProcessEvent e) {
 			if (e.getDestination().equals(dp2.getMainAddress())) {
 				try {
 					final DPTXlator8BitUnsigned t = new DPTXlator8BitUnsigned(dp2.getDPT());
@@ -163,11 +158,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 	private BaseKnxDevice device1;
 	private BaseKnxDevice device2;
 
-	@Override
-	protected void setUp() throws Exception
-	{
-		super.setUp();
-
+	@BeforeEach
+	void init() throws Exception {
 		dpState = true;
 		dp2State = 30;
 
@@ -175,7 +167,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 		final IndividualAddress ia2 = new IndividualAddress("1.1.2");
 		final KNXNetworkLink deviceLink1 = KNXNetworkLinkIP.newRoutingLink((NetworkInterface) null, null,
 				new KnxIPSettings(ia1));
-		device1 = new BaseKnxDevice(ia1.toString(), DeviceDescriptor.DD0.TYPE_5705, deviceLink1, processLogicRunnable, null) {
+		device1 = new BaseKnxDevice(ia1.toString(), DeviceDescriptor.DD0.TYPE_5705, deviceLink1, processLogicRunnable,
+				null) {
 			{
 				threadingPolicy = INCOMING_EVENTS_THREADED;
 			}
@@ -195,25 +188,15 @@ public class ProcessCommunicationServiceTest extends TestCase
 		}
 	}
 
-	@Override
-	protected void tearDown() throws Exception
-	{
+	@AfterEach
+	void tearDown() throws Exception {
 		device1.getDeviceLink().close();
 		device2.getDeviceLink().close();
 		link.close();
-		super.tearDown();
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupReadRequest(ProcessEvent)}
-	 * .
-	 *
-	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException on test failure
-	 */
-	public final void testGroupReadRequestRunnable() throws KNXException, InterruptedException
-	{
+	@Test
+	void groupReadRequestRunnable() throws KNXException, InterruptedException {
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 		String s = pc.read(dp);
 		assertEquals(s, "on");
@@ -227,16 +210,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 		pc.close();
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupReadRequest(ProcessEvent)}
-	 * .
-	 *
-	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException on test failure
-	 */
-	public final void testGroupReadRequest() throws KNXException, InterruptedException
-	{
+	@Test
+	void groupReadRequest() throws KNXException, InterruptedException {
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 
 		String s = pc.read(dp2);
@@ -248,15 +223,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 		pc.close();
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
-	 *
-	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException on test failure
-	 */
-	public final void testGroupWriteRunnable() throws KNXException, InterruptedException
-	{
+	@Test
+	void groupWriteRunnable() throws KNXException, InterruptedException {
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 		pc.write(dp, "on");
 		String s = pc.read(dp);
@@ -270,15 +238,8 @@ public class ProcessCommunicationServiceTest extends TestCase
 		pc.close();
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.ProcessCommunicationService#groupWrite(ProcessEvent)} .
-	 *
-	 * @throws InterruptedException on interrupted thread
-	 * @throws KNXException on test failure
-	 */
-	public final void testGroupWrite() throws KNXException, InterruptedException
-	{
+	@Test
+	void groupWrite() throws KNXException, InterruptedException {
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 
 		pc.write(dp2, "40");

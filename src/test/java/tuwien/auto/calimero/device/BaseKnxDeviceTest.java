@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,9 +36,15 @@
 
 package tuwien.auto.calimero.device;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.time.Duration;
 
-import junit.framework.TestCase;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXAddress;
@@ -57,10 +63,8 @@ import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.process.ProcessEvent;
 
-/**
- * @author B. Malinowsky
- */
-public class BaseKnxDeviceTest extends TestCase
+
+class BaseKnxDeviceTest
 {
 	private KnxDevice dev;
 	private final IndividualAddress addr = new IndividualAddress(1, 1, 1);
@@ -289,27 +293,14 @@ public class BaseKnxDeviceTest extends TestCase
 
 	private static final ManagementService mgmtLogic = new DefaultMgmtLogic();
 
-	@Override
-	protected void setUp() throws Exception
+	@BeforeEach
+	void init() throws Exception
 	{
-		super.setUp();
 		dev = new BaseKnxDevice("test", dd0, link, processLogic, mgmtLogic);
 	}
 
-	@Override
-	protected void tearDown() throws Exception
-	{
-		super.tearDown();
-	}
-
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#BaseKnxDevice(String, IndividualAddress, KNXNetworkLink,
-	 * ProcessCommunicationService, ManagementService)}.
-	 *
-	 * @throws KNXLinkClosedException on closed link
-	 */
-	public final void testKnxDevice() throws KNXLinkClosedException
+	@Test
+	void knxDevice() throws KNXLinkClosedException
 	{
 		try (var dev = new BaseKnxDevice("test", dd0, link, null, mgmtLogic)) {}
 
@@ -330,13 +321,8 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setAddress(tuwien.auto.calimero.IndividualAddress)}.
-	 *
-	 * @throws KNXLinkClosedException on closed link
-	 */
-	public final void testSetAddress() throws KNXLinkClosedException
+	@Test
+	void setAddress() throws KNXLinkClosedException
 	{
 		try (var dev2 = new MyKnxDevice("test", link, processLogic, mgmtLogic)) {
 			final IndividualAddress address = new IndividualAddress(4, 4, 4);
@@ -349,21 +335,14 @@ public class BaseKnxDeviceTest extends TestCase
 		}
 	}
 
-	/**
-	 * Test method for {@link tuwien.auto.calimero.device.BaseKnxDevice#getAddress()}.
-	 */
-	public final void testGetAddress()
+	@Test
+	void getAddress()
 	{
 		assertTrue(dev.getAddress().equals(addr));
 	}
 
-	/**
-	 * Test method for
-	 * {@link tuwien.auto.calimero.device.BaseKnxDevice#setDeviceLink(tuwien.auto.calimero.link.KNXNetworkLink)}.
-	 *
-	 * @throws KNXLinkClosedException on closed link
-	 */
-	public final void testSetNetworkLink() throws KNXLinkClosedException
+	@Test
+	void setNetworkLink() throws KNXLinkClosedException
 	{
 		dev.setDeviceLink(link);
 		assertTrue(dev.getDeviceLink() == link);
