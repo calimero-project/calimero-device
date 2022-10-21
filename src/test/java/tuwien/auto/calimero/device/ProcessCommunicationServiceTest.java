@@ -115,9 +115,6 @@ class ProcessCommunicationServiceTest {
 				}
 			}
 		}
-
-		@Override
-		public void groupResponse(final ProcessEvent e) {}
 	};
 
 	// test return data byte[] in ServiceResult
@@ -150,9 +147,6 @@ class ProcessCommunicationServiceTest {
 				}
 			}
 		}
-
-		@Override
-		public void groupResponse(final ProcessEvent e) {}
 	};
 
 	private BaseKnxDevice device1;

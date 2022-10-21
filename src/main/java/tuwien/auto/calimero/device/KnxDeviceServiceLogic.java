@@ -255,9 +255,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	@Override
-	public void groupResponse(final ProcessEvent e) {}
-
-	@Override
 	public ServiceResult<byte[]> readProperty(final Destination remote, final int objectIndex,
 		final int propertyId, final int startIndex, final int elements)
 	{

@@ -164,12 +164,7 @@ class BaseKnxDeviceTest
 		}
 
 		@Override
-		public void groupWrite(final ProcessEvent e)
-		{}
-
-		@Override
-		public void groupResponse(final ProcessEvent e)
-		{}
+		public void groupWrite(final ProcessEvent e) {}
 	};
 
 	private static class DefaultMgmtLogic implements ManagementService
