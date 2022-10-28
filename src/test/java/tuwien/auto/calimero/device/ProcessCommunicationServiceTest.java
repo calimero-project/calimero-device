@@ -237,10 +237,12 @@ class ProcessCommunicationServiceTest {
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 
 		pc.write(dp2, "40");
+		Thread.sleep(20);
 		String s = pc.read(dp2);
 		assertEquals("40 %", s);
 
 		pc.write(dp2, "30.2");
+		Thread.sleep(20);
 		s = pc.read(dp2);
 		assertEquals(String.format("%.1f %%", 30.2d), s);
 
