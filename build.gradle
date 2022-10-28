@@ -43,8 +43,7 @@ compileTestJava.options.encoding = 'UTF-8'
 javadoc.options.encoding = 'UTF-8'
 
 compileJava.options*.compilerArgs = [
-	'-Xlint:all',
-	'-Xlint:-options'
+	'-Xlint:all,-serial'
 ]
 
 compileTestJava.options*.compilerArgs = [
