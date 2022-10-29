@@ -70,10 +70,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -113,6 +109,7 @@ import tuwien.auto.calimero.device.ios.PropertyEvent;
 import tuwien.auto.calimero.device.ios.SecurityObject;
 import tuwien.auto.calimero.device.ios.SecurityObject.Pid;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
+import tuwien.auto.calimero.internal.Executor;
 import tuwien.auto.calimero.knxnetip.KNXnetIPConnection;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
 import tuwien.auto.calimero.knxnetip.SecureRouting;
@@ -172,23 +169,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	static final int INCOMING_EVENTS_THREADED = 1;
 	static final int OUTGOING_EVENTS_THREADED = 2;
 	int threadingPolicy;
-
-	// process & mgmt communication service tasks are processed as follows:
-	//  *) producer / consumer pattern
-	//  *) in-order task processing per producer
-	//  *) sequential task processing per producer
-	private static final ThreadFactory factory = Executors.defaultThreadFactory();
-	// specify a generous corePoolSize, because pool size is only increased if queue is full (our queue is unbounded)
-	private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 10, 10, TimeUnit.SECONDS,
-			new LinkedBlockingQueue<Runnable>(), (r) -> {
-				final Thread t = factory.newThread(r);
-				t.setName("Calimero Device Task (" + t.getName() + ")");
-				t.setDaemon(true); // on shutdown, we won't execute any remaining tasks
-				return t;
-			});
-	static {
-		executor.allowCoreThreadTimeOut(true);
-	}
 
 	private boolean taskSubmitted;
 	// local queue if a task is currently submitted to our executor service
@@ -461,7 +441,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 */
 	public ExecutorService taskExecutor()
 	{
-		return executor;
+		return Executor.executor();
 	}
 
 	public final TransportLayer transportLayer() { return tl; }
