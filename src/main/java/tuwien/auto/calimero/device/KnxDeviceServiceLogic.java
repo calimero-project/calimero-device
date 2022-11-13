@@ -82,10 +82,12 @@ import tuwien.auto.calimero.device.ios.DeviceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObject;
 import tuwien.auto.calimero.device.ios.InterfaceObjectServer;
 import tuwien.auto.calimero.device.ios.KnxPropertyException;
+import tuwien.auto.calimero.device.ios.KnxipParameterObject;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.dptxlator.PropertyTypes;
 import tuwien.auto.calimero.dptxlator.TranslatorTypes;
 import tuwien.auto.calimero.knxnetip.KNXnetIPRouting;
+import tuwien.auto.calimero.knxnetip.util.ServiceFamiliesDIB.ServiceFamily;
 import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.medium.KNXMediumSettings;
@@ -562,12 +564,29 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult<byte[]> readFunctionPropertyState(final Destination remote, final int objectIndex,
 		final int propertyId, final byte[] functionInput) {
 
+		final int rc = functionInput[0] & 0xff;
 		final int serviceId = functionInput[1] & 0xff;
+		if (rc != 0) {
+			return ServiceResult.of((byte) ReturnCode.DataVoid.code(), (byte) serviceId);
+		}
 		final int objectType = ios.getInterfaceObjects()[objectIndex].getType();
 		if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
 			final int pidGODiagnostics = 66;
 			if (propertyId == pidGODiagnostics)
 				return readGroupObjectDiagnostics(functionInput, serviceId);
+		}
+		else if (objectType == InterfaceObject.KNXNETIP_PARAMETER_OBJECT) {
+			if (propertyId == KnxipParameterObject.Pid.SecuredServiceFamilies) {
+				if (serviceId == 0 && functionInput.length == 3) {
+					final int famId = functionInput[2];
+					if (famId > 2 && famId < 6) {
+						final var serviceFamily = famId == 3 ? ServiceFamily.DeviceManagement
+								: famId == 4 ? ServiceFamily.Tunneling : ServiceFamily.Routing;
+						final boolean secured = KnxipParameterObject.lookup(ios, 1).securedService(serviceFamily);
+						return new ServiceResult<>((byte) 0, (byte) serviceId, (byte) famId, (byte) (secured ? 1 : 0));
+					}
+				}
+			}
 		}
 
 		return ServiceResult.error(ReturnCode.InvalidCommand);
