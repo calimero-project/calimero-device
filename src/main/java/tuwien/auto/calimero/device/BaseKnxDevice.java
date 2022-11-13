@@ -864,6 +864,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final int ver = Integer.parseInt(sver[0]) << 6 | Integer.parseInt(sver[1]);
 		deviceObject.set(PID.VERSION, fromWord(ver));
 
+		final int indAddressWriteEnable = 0x04;
+		deviceObject.set(PID.SERVICE_CONTROL, (byte) 0, (byte) indAddressWriteEnable);
+
 		// Firmware Revision
 		final int firmwareRev = 1;
 		deviceObject.set(PID.FIRMWARE_REVISION, (byte) firmwareRev);
@@ -871,6 +874,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// Serial Number
 		final byte[] sno = new byte[6];
 		deviceObject.set(PID.SERIAL_NUMBER, sno);
+
+		final int verifyModeOn = 0; // 0x04 if on
+		deviceObject.set(PID.DEVICE_CONTROL, (byte) verifyModeOn);
 
 		// device status is not in programming mode
 		deviceObject.set(PID.PROGMODE, (byte) 0);
