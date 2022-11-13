@@ -635,6 +635,18 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 
 		@Override
+		public void callFunctionProperty(final int objectType, final int objectInstance, final int pid,
+				final int serviceId, final byte... serviceInfo) throws KNXException, InterruptedException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public byte[] getFunctionPropertyState(final int objectType, final int objectInstance, final int pid,
+				final int serviceId, final byte... serviceInfo) throws KNXException, InterruptedException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public byte[] getDescription(final int objIndex, final int pid, final int propIndex) throws KnxPropertyException
 		{
 			final var io = getIfObject(objIndex);
