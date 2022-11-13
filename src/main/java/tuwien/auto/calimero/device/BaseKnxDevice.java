@@ -591,6 +591,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		catch (ReflectiveOperationException | KNXException | RuntimeException e) {
 			logger.warn("error setting device routing link ({})", config, e);
 		}
+		catch (final InterruptedException e) {
+			logger.warn("interrupted group sync for new device routing link ({})", config, e);
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private static ByteBuffer sixBytes(final long num) {
