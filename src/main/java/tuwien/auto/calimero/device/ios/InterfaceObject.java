@@ -591,13 +591,4 @@ public class InterfaceObject
 		catch (final KNXException e) {}
 		return Optional.empty();
 	}
-
-	private static int toInt(final byte[] data)
-	{
-		if (data.length == 1)
-			return data[0] & 0xff;
-		if (data.length == 2)
-			return (data[0] & 0xff) << 8 | (data[1] & 0xff);
-		return (data[0] & 0xff) << 24 | (data[1] & 0xff) << 16 | (data[2] & 0xff) << 8 | (data[3] & 0xff);
-	}
 }
