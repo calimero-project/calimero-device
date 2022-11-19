@@ -37,8 +37,6 @@
 module io.calimero.device {
 	requires transitive io.calimero.core;
 
-	requires org.slf4j;
-
 	exports io.calimero.device;
 	exports io.calimero.device.ios;
 }

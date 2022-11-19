@@ -36,6 +36,8 @@
 
 package io.calimero.device;
 
+import static java.lang.System.Logger.Level.ERROR;
+
 import java.util.EventObject;
 
 import io.calimero.DataUnitBuilder;
@@ -95,7 +97,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 				}
 			}
 			catch (final RuntimeException rte) {
-				device.logger().error("on group property indication from {}", ldata.getSource(), rte);
+				device.logger().log(ERROR, "on group property indication from {0}", ldata.getSource(), rte);
 			}
 		}
 
@@ -165,7 +167,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 				res.write(to, sr.result(), sr.compact);
 			}
 			catch (KNXTimeoutException | KNXLinkClosedException e) {
-				device.logger().error("responding to {}: {}", to, DataUnitBuilder.toHex(sr.result(), " "), e);
+				device.logger().log(ERROR, "responding to {0}: {1}", to, DataUnitBuilder.toHex(sr.result(), " "), e);
 			}
 		}
 		else

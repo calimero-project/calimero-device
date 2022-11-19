@@ -36,7 +36,11 @@
 
 package io.calimero.device;
 
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.WARNING;
+
 import java.io.ByteArrayOutputStream;
+import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,8 +50,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntUnaryOperator;
-
-import org.slf4j.Logger;
 
 import io.calimero.GroupAddress;
 import io.calimero.IndividualAddress;
@@ -212,7 +214,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 					conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
 			// if group object security does not match exactly, complete service is ignored
 			if (!securityCtrl.equals(required)) {
-				logger.warn("group object {} security mismatch: requested {} but requires {}, ignore", dst,
+				logger.log(WARNING, "group object {0} security mismatch: requested {1} but requires {2}, ignore", dst,
 						securityCtrl, required);
 				return false;
 			}
@@ -251,7 +253,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	void setSecurityMode(final boolean secure) {
 		securityObject.set(Pid.SecurityMode, (byte) (secure ? 1 : 0));
-		logger.info("security mode {}", secure ? "enabled" : "disabled");
+		logger.log(INFO, "security mode {0}", secure ? "enabled" : "disabled");
 	}
 
 	ServiceResult<byte[]> securityMode(final boolean command, final byte[] functionInput) {

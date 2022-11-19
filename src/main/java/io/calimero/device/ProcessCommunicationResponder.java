@@ -36,7 +36,9 @@
 
 package io.calimero.device;
 
-import org.slf4j.Logger;
+import static java.lang.System.Logger.Level.DEBUG;
+
+import java.lang.System.Logger;
 
 import io.calimero.DataUnitBuilder;
 import io.calimero.DetachEvent;
@@ -234,7 +236,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 			detached = true;
 		}
 		fireDetached();
-		logger.debug("detached from " + lnk.getName());
+		logger.log(DEBUG, "detached from " + lnk.getName());
 		return lnk;
 	}
 

@@ -42,10 +42,16 @@ import static io.calimero.device.ios.InterfaceObject.ASSOCIATIONTABLE_OBJECT;
 import static io.calimero.device.ios.InterfaceObject.DEVICE_OBJECT;
 import static io.calimero.device.ios.InterfaceObject.KNXNETIP_PARAMETER_OBJECT;
 import static io.calimero.knxnetip.servicetype.KNXnetIPHeader.SEARCH_REQ;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.ERROR;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.TRACE;
+import static java.lang.System.Logger.Level.WARNING;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.System.Logger;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.net.Inet4Address;
@@ -85,8 +91,6 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-
-import org.slf4j.Logger;
 
 import io.calimero.DataUnitBuilder;
 import io.calimero.DeviceDescriptor;
@@ -405,7 +409,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			success.orTimeout(6, TimeUnit.SECONDS).join();
 		}
 		catch (final RuntimeException e) {
-			logger.warn("awaiting sync.res for initializing sequence number", e.getCause());
+			logger.log(WARNING, "awaiting sync.res for initializing sequence number", e.getCause());
 		}
 	}
 
@@ -589,10 +593,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			oldLink.close();
 		}
 		catch (ReflectiveOperationException | KNXException | RuntimeException e) {
-			logger.warn("error setting device routing link ({})", config, e);
+			logger.log(WARNING, "error setting device routing link ({0})", config, e);
 		}
 		catch (final InterruptedException e) {
-			logger.warn("interrupted group sync for new device routing link ({})", config, e);
+			logger.log(WARNING, "interrupted group sync for new device routing link ({0})", config, e);
 			Thread.currentThread().interrupt();
 		}
 	}
@@ -626,14 +630,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			return;
 
 		try {
-			logger.debug("saving interface object server to {}", iosResource);
+			logger.log(DEBUG, "saving interface object server to {0}", iosResource);
 			if (iosPwd.length > 0)
 				saveEncryptedIos(iosPwd);
 			else
 				ios.saveInterfaceObjects(iosResource.toString());
 		}
 		catch (GeneralSecurityException | IOException | KNXException | RuntimeException e) {
-			logger.error("saving interface object server", e);
+			logger.log(ERROR, "saving interface object server", e);
 		}
 	}
 
@@ -694,7 +698,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 					Optional.ofNullable(dispatch.get()).ifPresent(sr -> respond.accept(e, sr));
 				}
 				catch (final RuntimeException rte) {
-					logger.error("error executing dispatch/respond task {}", taskId, rte);
+					logger.log(ERROR, "error executing dispatch/respond task {0}", taskId, rte);
 				}
 				finally {
 					taskDone(taskId, start);
@@ -707,7 +711,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 					respond.accept(e, sr);
 				}
 				catch (final RuntimeException rte) {
-					logger.error("error executing respond task {}", taskId, rte);
+					logger.log(ERROR, "error executing respond task {0}", taskId, rte);
 				}
 				finally {
 					taskDone(taskId, start);
@@ -754,7 +758,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			return false;
 		try {
 			ios.removeInterfaceObject(ios.getInterfaceObjects()[0]);
-			logger.debug("loading interface object server from {}", iosResource);
+			logger.log(DEBUG, "loading interface object server from {0}", iosResource);
 			if (iosPwd.length > 0 && Path.of(iosResource).toFile().exists())
 				loadEncryptedIos(iosPwd);
 			else
@@ -764,10 +768,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		catch (final UncheckedIOException e) {
 			final var cause = e.getCause();
 			if (cause instanceof FileNotFoundException)
-				logger.debug("no interface object server resource, create resource on closing device: {}",
+				logger.log(DEBUG, "no interface object server resource, create resource on closing device: {0}",
 						cause.getMessage());
 			else
-				logger.info("could not open {}, create resource on closing device ({})", iosResource,
+				logger.log(INFO, "could not open {0}, create resource on closing device ({1})", iosResource,
 						cause.getMessage());
 			// re-add device object
 			ios.addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
@@ -791,12 +795,12 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				final byte[] bytes = ios.getProperty(objectTypeDeviceMemory, 1, pidDeviceMemory, 1, Integer.MAX_VALUE);
 				ios.removeInterfaceObject(io);
 				if (bytes.length != memory.size())
-					logger.warn("loaded {} bytes from {}, available device memory is {} bytes", bytes.length,
+					logger.log(WARNING, "loaded {0} bytes from {1}, available device memory is {2} bytes", bytes.length,
 							iosResource, memory.size());
 				memory.set(0, bytes);
 			}
 			catch (final KnxPropertyException e) {
-				logger.warn("loading device memory from {}", iosResource, e);
+				logger.log(WARNING, "loading device memory from {0}", iosResource, e);
 			}
 	}
 		catch (final KnxPropertyException e) { // lookup failed, no device memory stored
@@ -809,13 +813,13 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			return;
 
 		try {
-			logger.debug("saving device memory to {}", iosResource);
+			logger.log(DEBUG, "saving device memory to {0}", iosResource);
 			final byte[] bytes = memory.get(0, memory.size());
 			ios.addInterfaceObject(objectTypeDeviceMemory);
 			ios.setProperty(objectTypeDeviceMemory, 1, pidDeviceMemory, 1, bytes.length / 4, bytes);
 		}
 		catch (final KnxPropertyException e) {
-			logger.warn("saving device memory to {}", iosResource, e);
+			logger.log(WARNING, "saving device memory to {0}", iosResource, e);
 		}
 	}
 
@@ -899,7 +903,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// validity check on mask and hardware type octets (AN059v3, AN089v3)
 		final int maskVersion = dd.maskVersion();
 		if ((maskVersion == 0x25 || maskVersion == 0x0705) && hwType[0] != 0) {
-			logger.error("manufacturer-specific device identification of hardware type should be 0 for this mask!");
+			logger.log(ERROR, "manufacturer-specific device identification of hardware type should be 0 for this mask!");
 		}
 
 		// don't confuse this with PID_MAX_APDU_LENGTH of the Router Object (PID = 58!!)
@@ -1085,7 +1089,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			}
 		}
 		catch (ReflectiveOperationException | IOException | RuntimeException e) {
-			logger.warn("initializing KNX IP properties, {}", e.toString());
+			logger.log(WARNING, "initializing KNX IP properties, {0}", e.toString());
 		}
 
 		final var knxipObject = KnxipParameterObject.lookup(ios, objectInstance);
@@ -1164,14 +1168,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			}
 		}
 		catch (ReflectiveOperationException | RuntimeException e) {
-			logger.warn("updating {} PID {} with [{}]: {}", pe.getInterfaceObject(), pe.getPropertyId(),
+			logger.log(WARNING, "updating {0} PID {1} with [{2}]: {3}", pe.getInterfaceObject(), pe.getPropertyId(),
 					DataUnitBuilder.toHex(pe.getNewData(), ""), e.toString());
 		}
 	}
 
 	private void submitTask(final long taskId, final Runnable task)
 	{
-		logger.trace("queue task " + taskId);
+		logger.log(TRACE, "queue task " + taskId);
 		lock.lock();
 		try {
 			if (taskSubmitted)
@@ -1190,7 +1194,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final long total = System.nanoTime() - start;
 		final long ms = total / 1_000_000L;
 		if (ms > 5000)
-			logger.warn("task {} took suspiciously long ({} ms)", taskId, ms);
+			logger.log(WARNING, "task {0} took suspiciously long ({1} ms)", taskId, ms);
 
 		lock.lock();
 		try {
