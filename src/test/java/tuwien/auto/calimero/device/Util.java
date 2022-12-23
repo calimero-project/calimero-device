@@ -56,7 +56,6 @@ import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.knxnetip.Discoverer;
 import tuwien.auto.calimero.knxnetip.Discoverer.Result;
 import tuwien.auto.calimero.knxnetip.servicetype.SearchResponse;
-import tuwien.auto.calimero.serial.FT12Connection;
 
 
 public final class Util
@@ -287,32 +286,6 @@ public final class Util
 			fail("no KNXnet/IP test-server found!");
 		}
 		return server;
-	}
-
-	/**
-	 * Returns the serial port number to use for testing the FT1.2 protocol.
-	 * <p>
-	 * The returned port has to correspond with the port identifier returned by
-	 * {@link #getSerialPortID()}.
-	 *
-	 * @return port number
-	 */
-	public static int getSerialPort()
-	{
-		// on windows platforms, it is port 1 most of the time, linux 0
-		return 0;
-	}
-
-	/**
-	 * Returns the serial port identifier to use for testing the FT1.2 protocol.
-	 * <p>
-	 *
-	 * @return port ID, <code>null</code> if no ID found
-	 */
-	public static String getSerialPortID()
-	{
-		final String[] ids = FT12Connection.getPortIdentifiers();
-		return ids.length > 0 ? ids[0] : null;
 	}
 
 	/**
