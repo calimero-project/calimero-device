@@ -1,7 +1,9 @@
 plugins {
   id "com.github.ben-manes.versions" version "0.44.0"
+  id 'java-library'
   id 'maven-publish'
   id 'signing'
+  id 'eclipse'
 }
 
 repositories {
@@ -11,9 +13,6 @@ repositories {
 }
 
 ext.junitJupiterVersion = '5.9.1'
-
-apply plugin: 'java-library'
-apply plugin: 'eclipse'
 
 group = 'com.github.calimero'
 version = '2.6-SNAPSHOT'
@@ -91,7 +90,7 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:git://github.com:calimero-project/calimero-device.git'
+                    connection = 'scm:git:git://github.com/calimero-project/calimero-device.git'
                     url = 'https://github.com/calimero-project/calimero-device.git'
                 }
             }
