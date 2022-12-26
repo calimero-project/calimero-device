@@ -108,7 +108,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 	private final boolean strictMode;
 
-	private final EventListeners<InterfaceObjectServerListener> listeners = new EventListeners<>(logger);
+	private final EventListeners<InterfaceObjectServerListener> listeners = new EventListeners<>();
 
 	/**
 	 * Creates a new interface object server.

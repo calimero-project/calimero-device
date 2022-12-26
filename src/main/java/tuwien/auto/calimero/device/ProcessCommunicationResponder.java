@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2022 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 
 	private final KNXNetworkLink lnk;
 	private final SecureApplicationLayer sal;
-	private final EventListeners<ProcessListener> listeners;
+	private final EventListeners<ProcessListener> listeners = new EventListeners<>();
 	private volatile Priority priority = Priority.LOW;
 
 	private volatile boolean detached;
@@ -103,7 +103,6 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 		lnk = link;
 		this.sal = sal;
 		logger = LogService.getLogger("calimero.device.communication " + link.getName());
-		listeners = new EventListeners<>(logger);
 	}
 
 	@Override
