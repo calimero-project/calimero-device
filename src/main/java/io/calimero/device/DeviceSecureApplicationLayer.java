@@ -103,7 +103,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		this.securityObject = securityObject;
 
 		final var name = DeviceObject.lookup(ios).description();
-		logger = LogService.getLogger("calimero.device." + secureSymbol + "-AL " + name);
+		logger = LogService.getLogger("io.calimero.device." + secureSymbol + "-AL " + name);
 
 		long toolSeqNo = 0;
 		try {

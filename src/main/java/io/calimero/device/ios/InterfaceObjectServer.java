@@ -96,7 +96,7 @@ import io.calimero.xml.XmlWriter;
  */
 public class InterfaceObjectServer implements PropertyAccess
 {
-	private final Logger logger = LogService.getLogger("calimero.device.Interface Object Server");
+	private final Logger logger = LogService.getLogger("io.calimero.device.Interface Object Server");
 
 	private IosResourceHandler rh;
 

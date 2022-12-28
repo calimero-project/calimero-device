@@ -218,7 +218,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		this.name = name;
 		ios = new InterfaceObjectServer(false);
 		ios.addServerListener(this::propertyChanged);
-		logger = LogService.getLogger("calimero.device." + name);
+		logger = LogService.getLogger("io.calimero.device." + name);
 
 		this.iosResource = iosResource != null ? iosResource : URI.create("");
 		iosPwd = iosPassword;

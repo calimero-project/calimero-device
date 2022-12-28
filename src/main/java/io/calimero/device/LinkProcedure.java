@@ -107,7 +107,7 @@ public final class LinkProcedure implements Runnable
 	// NYI for the Features response from sensor to actuator, a timeout should not abort the procedure
 	private static final long timeout = 3000; // [ms]
 
-	private static final Logger logger = LoggerFactory.getLogger("calimero.device.LinkProcedure");
+	private static final Logger logger = LoggerFactory.getLogger("io.calimero.device.LinkProcedure");
 
 	private final boolean isActuator;
 	// execute reset installation procedure

@@ -88,7 +88,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	/**
 	 * Creates a new process communicator attached to the supplied KNX network link.
 	 * <p>
-	 * The log service used by this process communicator is named "calimero.device.process " +
+	 * The log service used by this process communicator is named "io.calimero.device.process " +
 	 * <code>link.getName()</code>.
 	 *
 	 * @param link network link used for communication with a KNX network
@@ -102,7 +102,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 					"cannot initialize process communication using closed link " + link.getName());
 		lnk = link;
 		this.sal = sal;
-		logger = LogService.getLogger("calimero.device.communication " + link.getName());
+		logger = LogService.getLogger("io.calimero.device.communication " + link.getName());
 	}
 
 	@Override
