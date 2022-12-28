@@ -14,7 +14,7 @@ repositories {
 
 ext.junitJupiterVersion = '5.9.2'
 
-group = 'com.github.calimero'
+group = 'io.calimero'
 version = '2.6-SNAPSHOT'
 
 sourceCompatibility = 11
@@ -61,7 +61,7 @@ tasks.withType(Javadoc).configureEach {
 }
 
 dependencies {
-	api "com.github.calimero:calimero-core:${version}"
+	api "io.calimero:calimero-core:${version}"
 	implementation 'org.slf4j:slf4j-api:1.7.36'
 	
 	testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
