@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2022 B. Malinowsky
+    Copyright (c) 2019, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -110,6 +110,8 @@ public final class AccessPolicies {
 	private static final int Write = 0b10;
 	private static final int ReadWrite = 0b11;
 
+
+	private AccessPolicies() {}
 
 	// service level access policies
 
