@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -49,7 +49,6 @@ import org.junit.jupiter.api.Test;
 import io.calimero.DeviceDescriptor;
 import io.calimero.IndividualAddress;
 import io.calimero.KNXAddress;
-import io.calimero.KNXException;
 import io.calimero.KNXTimeoutException;
 import io.calimero.KnxRuntimeException;
 import io.calimero.ReturnCode;
@@ -83,7 +82,7 @@ class ManagementServiceTest
 	@BeforeEach
 	void init() throws Exception
 	{
-		final KNXNetworkLink link = new AbstractLink<AutoCloseable>("test link",
+		final KNXNetworkLink link = new AbstractLink<>("test link",
 				new TPSettings(new IndividualAddress(0, 0x02, 0xff))) {
 			@Override
 			protected void onSend(final CEMILData msg, final boolean waitForCon) {}
@@ -100,8 +99,7 @@ class ManagementServiceTest
 			}
 
 			@Override
-			public DPTXlator requestDatapointValue(final Datapoint ofDp) throws KNXException
-			{
+			public DPTXlator requestDatapointValue(final Datapoint ofDp) {
 				fail("not under test");
 				return null;
 			}

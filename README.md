@@ -11,7 +11,7 @@ Code examples for using this library are shown in [introduction](https://github.
 
 * [KNX 2-state push-button device](https://github.com/calimero-project/introduction/blob/master/src/main/java/PushButtonDevice.java) 
 * [Quick how-to for interacting](https://github.com/calimero-project/introduction) with the KNX device
-* [Setup a device for subsequent programming (download) via ETS](https://github.com/calimero-project/introduction/blob/master/src/main/java/ProgrammableDevice.java)
+* [Set up a device for subsequent programming (download) via ETS](https://github.com/calimero-project/introduction/blob/master/src/main/java/ProgrammableDevice.java)
 
 
 Supported Features

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2022 B. Malinowsky
+    Copyright (c) 2010, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -273,8 +273,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			throws KnxPropertyException {
 		synchronized (objects) {
 			int inst = 0;
-			for (final Iterator<InterfaceObject> i = objects.iterator(); i.hasNext();) {
-				final InterfaceObject io = i.next();
+			for (final InterfaceObject io : objects) {
 				if (io.getType() == objectType && ++inst == objectInstance)
 					return (T) io;
 			}
@@ -297,7 +296,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	public InterfaceObject[] getInterfaceObjects()
 	{
 		synchronized (objects) {
-			return objects.toArray(new InterfaceObject[objects.size()]);
+			return objects.toArray(new InterfaceObject[0]);
 		}
 	}
 
@@ -575,7 +574,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		if (createDescription)
 			adapter.createNewDescription(index, PID.OBJECT_TYPE, false);
 
-		final byte[] name = io.getTypeName().getBytes(Charset.forName("ISO-8859-1"));
+		final byte[] name = io.getTypeName().getBytes(StandardCharsets.ISO_8859_1);
 		final byte[] value = ByteBuffer.allocate(2 + name.length).put((byte) 0).put((byte) name.length).put(name).array();
 		io.values.put(new PropertyKey(objectType, PID.OBJECT_NAME), value);
 		if (createDescription)
@@ -596,8 +595,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	private InterfaceObject getIfObject(final int objIndex)
 	{
 		synchronized (objects) {
-			for (final Iterator<InterfaceObject> i = objects.iterator(); i.hasNext();) {
-				final InterfaceObject io = i.next();
+			for (final InterfaceObject io : objects) {
 				if (io.getIndex() == objIndex)
 					return io;
 			}
@@ -636,13 +634,13 @@ public class InterfaceObjectServer implements PropertyAccess
 
 		@Override
 		public void callFunctionProperty(final int objectType, final int objectInstance, final int pid,
-				final int serviceId, final byte... serviceInfo) throws KNXException, InterruptedException {
+				final int serviceId, final byte... serviceInfo) {
 			throw new UnsupportedOperationException();
 		}
 
 		@Override
 		public byte[] getFunctionPropertyState(final int objectType, final int objectInstance, final int pid,
-				final int serviceId, final byte... serviceInfo) throws KNXException, InterruptedException {
+				final int serviceId, final byte... serviceInfo) {
 			throw new UnsupportedOperationException();
 		}
 
@@ -963,7 +961,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				w.writeAttribute(ATTR_PID, Integer.toString(d.getPID()));
 				w.writeAttribute(ATTR_PDT, d.getPDT() == -1 ? "<tbd>" : Integer.toString(d.getPDT()));
 				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements()));
-				w.writeAttribute(ATTR_RW, Integer.toString(d.getReadLevel()) + "/" + d.getWriteLevel());
+				w.writeAttribute(ATTR_RW, d.getReadLevel() + "/" + d.getWriteLevel());
 				w.writeAttribute(ATTR_WRITE, d.isWriteEnabled() ? "1" : "0");
 				writeData(data);
 				w.writeEndElement();
@@ -1010,9 +1008,9 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (s != null) {
 				if (s.equals("<tbd>"))
 					return -1;
-				return s.length() == 0 ? 0 : Integer.decode(s).intValue();
+				return s.length() == 0 ? 0 : Integer.decode(s);
 			}
-			throw new NumberFormatException("no integer number: " + s);
+			throw new NumberFormatException("no number");
 		}
 	}
 }

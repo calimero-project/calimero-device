@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2019, 2021 B. Malinowsky
+    Copyright (c) 2019, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -74,7 +74,7 @@ class ManagementServiceNotifierTest {
 	private ManagementServiceNotifier notifier;
 
 	// link stub, does nothing
-	private final KNXNetworkLink linkStub = new AbstractLink<AutoCloseable>("test link",
+	private final KNXNetworkLink linkStub = new AbstractLink<>("test link",
 			new TPSettings(new IndividualAddress(0, 0x02, 0xff))) {
 		@Override
 		protected void onSend(final CEMILData msg, final boolean waitForCon) {}
@@ -131,7 +131,7 @@ class ManagementServiceNotifierTest {
 	}
 
 	@Test
-	void memoryExtendedWriteIllegalLength() throws KNXException, InterruptedException {
+	void memoryExtendedWriteIllegalLength() {
 		final byte[] asdu = { (byte) 254, 1, 2, 3, 0, 0, 0, 0 };
 
 		test = apdu -> assertEquals(ReturnCode.ExceedsMaxApduLength, ReturnCode.of(apdu[2] & 0xff));
@@ -139,7 +139,7 @@ class ManagementServiceNotifierTest {
 	}
 
 	@Test
-	void memoryExtendedReadIllegalLength() throws KNXException, InterruptedException {
+	void memoryExtendedReadIllegalLength() {
 		final byte[] asdu = { (byte) 254, 1, 2, 3 };
 
 		test = apdu -> assertEquals(ReturnCode.ExceedsMaxApduLength, ReturnCode.of(apdu[2] & 0xff));
@@ -147,21 +147,21 @@ class ManagementServiceNotifierTest {
 	}
 
 	@Test
-	void memoryExtendedWriteDataOverflow() throws KNXException, InterruptedException {
+	void memoryExtendedWriteDataOverflow() {
 		final byte[] asdu = { (byte) 2, 0x1, 0x00, 0x0f, 1, 2 };
 		test = apdu -> assertEquals(ReturnCode.MemoryError, ReturnCode.of(apdu[2] & 0xff));
 		assertResponse(ManagementServiceNotifier.MemoryExtendedWrite, asdu);
 	}
 
 	@Test
-	void memoryExtendedWriteNonExistingAddress() throws KNXException, InterruptedException {
+	void memoryExtendedWriteNonExistingAddress() {
 		final byte[] asdu = { (byte) 1, 0x10, 0x00, 0x00, 1 };
 		test = apdu -> assertEquals(ReturnCode.AddressVoid, ReturnCode.of(apdu[2] & 0xff));
 		assertResponse(ManagementServiceNotifier.MemoryExtendedWrite, asdu);
 	}
 
 	@Test
-	void memoryExtendedReadNonExistingAddress() throws KNXException, InterruptedException {
+	void memoryExtendedReadNonExistingAddress() {
 		final byte[] asdu = { (byte) 1, 0x10, 0x00, 0x00 };
 		test = apdu -> assertEquals(ReturnCode.AddressVoid, ReturnCode.of(apdu[2] & 0xff));
 		assertResponse(ManagementServiceNotifier.MemoryExtendedRead, asdu);

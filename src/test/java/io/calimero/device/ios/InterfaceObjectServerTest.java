@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2020 B. Malinowsky
+    Copyright (c) 2010, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,7 +45,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.Collection;
-import java.util.Iterator;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,14 +64,12 @@ class InterfaceObjectServerTest
 	private InterfaceObjectServer ios;
 
 	@BeforeEach
-	void init() throws Exception
-	{
+	void init() {
 		ios = new InterfaceObjectServer(false);
 	}
 
 	@Test
-	void interfaceObjectServer() throws KNXException
-	{
+	void interfaceObjectServer() {
 		new InterfaceObjectServer(false);
 		new InterfaceObjectServer(true);
 	}
@@ -84,42 +81,34 @@ class InterfaceObjectServerTest
 		ios.setResourceHandler(new IosResourceHandler() {
 			@Override
 			public void saveProperties(final String resource, final Collection<Description> descriptions,
-				final Collection<byte[]> values) throws KNXException
-			{}
+				final Collection<byte[]> values) {}
 
 			@Override
-			public void saveProperties(final Collection<Description> descriptions, final Collection<byte[]> values)
-					throws KNXException {
+			public void saveProperties(final Collection<Description> descriptions, final Collection<byte[]> values) {
 			}
 
 			@Override
-			public void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects)
-				throws KNXException
-			{}
+			public void saveInterfaceObjects(final String resource, final Collection<InterfaceObject> ifObjects) {}
 
 			@Override
-			public void saveInterfaceObjects(final OutputStream os, final Collection<InterfaceObject> ifObjects)
-					throws KNXException {
+			public void saveInterfaceObjects(final OutputStream os, final Collection<InterfaceObject> ifObjects) {
 			}
 
 			@Override
 			public void loadProperties(final String resource, final Collection<Description> descriptions,
-				final Collection<byte[]> values) throws KNXException
-			{}
+				final Collection<byte[]> values) {}
 
 			@Override
-			public void loadProperties(final Collection<Description> descriptions, final Collection<byte[]> values)
-				throws KNXException {
+			public void loadProperties(final Collection<Description> descriptions, final Collection<byte[]> values) {
 			}
 
 			@Override
-			public Collection<InterfaceObject> loadInterfaceObjects(final String resource) throws KNXException
-			{
+			public Collection<InterfaceObject> loadInterfaceObjects(final String resource) {
 				return null;
 			}
 
 			@Override
-			public Collection<InterfaceObject> loadInterfaceObjects(final InputStream is) throws KNXException {
+			public Collection<InterfaceObject> loadInterfaceObjects(final InputStream is) {
 				return null;
 			}
 		});
@@ -143,8 +132,7 @@ class InterfaceObjectServerTest
 		for (int i = 0; i < objects.length; i++) {
 			final InterfaceObject interfaceObject = objects[i];
 			assertEquals(i, interfaceObject.getIndex());
-			for (final Iterator<PropertyKey> k = interfaceObject.values.keySet().iterator(); k.hasNext();) {
-				final PropertyKey key = k.next();
+			for (final PropertyKey key : interfaceObject.values.keySet()) {
 				assertNotNull(key);
 				assertNotNull(interfaceObject.values.get(key));
 			}
@@ -237,8 +225,7 @@ class InterfaceObjectServerTest
 	}
 
 	@Test
-	void resetElements() throws KNXException
-	{
+	void resetElements() {
 		final var io = ios.addInterfaceObject(InterfaceObject.KNXNETIP_PARAMETER_OBJECT);
 		final int objIdx = io.getIndex();
 
@@ -246,13 +233,13 @@ class InterfaceObjectServerTest
 				new Description(objIdx, 0, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 0, true, 0, 20, 3, 3),
 				true);
 		Description d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
-		assertTrue(d.getCurrentElements() == 0);
+		assertEquals(0, d.getCurrentElements());
 
 		// set addresses
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
 				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 1, 3, new byte[] { 1, 1, 1, 2, 1, 3 });
 		d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
-		assertTrue(d.getCurrentElements() == 3);
+		assertEquals(3, d.getCurrentElements());
 
 		// try not allowed ways to access current number of elements
 
@@ -287,6 +274,6 @@ class InterfaceObjectServerTest
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
 				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 1, new byte[] { 0, 0, });
 		d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
-		assertTrue(d.getCurrentElements() == 0);
+		assertEquals(0, d.getCurrentElements());
 	}
 }

@@ -122,7 +122,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private final DatapointModel<Datapoint> datapoints = new DatapointMap<>();
 
 	// authentication
-	private static byte[] defaultAuthKey = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
+	private static final byte[] defaultAuthKey = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff };
 	final byte[][] authKeys = new byte[16][4];
 	final WeakHashMap<Destination, Integer> accessLevels = new WeakHashMap<>();
 	int minAccessLevel = 3; // or 15
@@ -266,7 +266,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final Description d = ios.getDescription(objectIndex, propertyId);
 			if (d.getPDT() == PropertyTypes.PDT_FUNCTION)
 				return ServiceResult.error(ReturnCode.DataVoid);
-			final Integer level = accessLevel(remote);
+			final int level = accessLevel(remote);
 			if (level > d.getReadLevel()) {
 				logger.warn("deny {} read access to property {}|{} (access level {}, requires {})", remote.getAddress(),
 						objectIndex, propertyId, level, d.getReadLevel());
@@ -289,7 +289,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		// address of mgmt control
 		private static final int MgmtControl = 0x0104;
 		// address of run control
-		private static final int RunControl = 0x0103;
+//		private static final int RunControl = 0x0103;
 
 		static boolean isMgmtControl(final int startAddress) {
 			return startAddress == MgmtControl;
@@ -325,8 +325,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 
 		// write addresses of run states
-		private static final int RsAppProgram = 0x0101;
-		private static final int RsPeiProgram = 0x0102;
+//		private static final int RsAppProgram = 0x0101;
+//		private static final int RsPeiProgram = 0x0102;
 	}
 
 
@@ -399,7 +399,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			return ServiceResult.of(readProperty(remote, objectIndex, propertyId, startIndex, elements).result());
 		final var loadState = nextLoadState(event);
 		ios.setProperty(objectIndex, propertyId, startIndex, elements, (byte) loadState.ordinal());
-		return new ServiceResult<byte[]>((byte) loadState.ordinal());
+		return new ServiceResult<>((byte) loadState.ordinal());
 	}
 
 	@Override
@@ -429,19 +429,19 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				final int setGroupAddresses = 4;
 
 				if (serviceId == clearRoutingTable)
-					return new ServiceResult<byte[]>((byte) 0, (byte) clearRoutingTable);
+					return new ServiceResult<>((byte) 0, (byte) clearRoutingTable);
 				if (serviceId == setRoutingTable)
-					return new ServiceResult<byte[]>((byte) 0, (byte) setRoutingTable);
+					return new ServiceResult<>((byte) 0, (byte) setRoutingTable);
 				if (serviceId == clearGroupAddresses) {
-					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
-					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
-					return new ServiceResult<byte[]>((byte) 0, (byte) clearGroupAddresses, command[2], command[3],
+//					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+//					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
+					return new ServiceResult<>((byte) 0, (byte) clearGroupAddresses, command[2], command[3],
 							command[4], command[5]);
 				}
 				if (serviceId == setGroupAddresses) {
-					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
-					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
-					return new ServiceResult<byte[]>((byte) 0, (byte) setGroupAddresses, command[2], command[3],
+//					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+//					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
+					return new ServiceResult<>((byte) 0, (byte) setGroupAddresses, command[2], command[3],
 							command[4], command[5]);
 				}
 			}
@@ -471,8 +471,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final var invalidCommandResult = ServiceResult.of(ReturnCode.InvalidCommand, (byte) serviceId);
 
 		if (serviceId == setLocalGOValue) {
-			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
-			final var data = Arrays.copyOfRange(command, 4, command.length);
+//			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+//			final var data = Arrays.copyOfRange(command, 4, command.length);
 			// NYI set value, return E_GD_GO_STATUS_VALUE
 			return invalidCommandResult;
 		}
@@ -508,10 +508,10 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				Thread.currentThread().interrupt();
 			}
 
-			return new ServiceResult<byte[]>((byte) serviceId);
+			return new ServiceResult<>((byte) serviceId);
 		}
 		else if (serviceId == sendLocalGOValueOnBus) {
-			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+//			final int groupObjectNumber = (command[2] & 0xff) << 8 | (command[3] & 0xff);
 			// NYI send local group value, return E_GD_GO_STATUS_VALUE
 			return invalidCommandResult;
 		}
@@ -546,7 +546,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			catch (final InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
-			return new ServiceResult<byte[]>((byte) serviceId);
+			return new ServiceResult<>((byte) serviceId);
 		}
 		return invalidCommandResult;
 	}
@@ -603,12 +603,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		final var invalidCommandResult = ServiceResult.of(ReturnCode.InvalidCommand, (byte) serviceId);
 		if (serviceId == getGOConfig) {
-			final int groupObjectNumber = (functionInput[2] & 0xff) << 8 | (functionInput[3] & 0xff);
+//			final int groupObjectNumber = (functionInput[2] & 0xff) << 8 | (functionInput[3] & 0xff);
 			// NYI return E_GD_CONFIG
 			return invalidCommandResult;
 		}
 		else if (serviceId == getLocalGOValue) {
-			final int groupObjectNumber = (functionInput[2] & 0xff) << 8 | (functionInput[3] & 0xff);
+//			final int groupObjectNumber = (functionInput[2] & 0xff) << 8 | (functionInput[3] & 0xff);
 			// NYI return E_GD_GO_STATUS_VALUE
 			return invalidCommandResult;
 		}
@@ -670,7 +670,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 
 		// ordered by GA
-		final var set = new TreeSet<Datapoint>(Comparator.comparing(Datapoint::getMainAddress));
+		final var set = new TreeSet<>(Comparator.comparing(Datapoint::getMainAddress));
 		set.addAll(c);
 		set.forEach(dp -> bb.put(dp.getMainAddress().toByteArray()));
 		return Arrays.copyOfRange(bb.array(), from, from + bytes);

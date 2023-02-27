@@ -6,7 +6,7 @@ repositories {
 
 apply plugin:'application'
 
-mainClassName = 'io.calimero.TestNetwork'
+mainClassName = 'io.calimero.testnetwork.TestNetwork'
 group = 'io.calimero'
 version = '2.6-SNAPSHOT'
 

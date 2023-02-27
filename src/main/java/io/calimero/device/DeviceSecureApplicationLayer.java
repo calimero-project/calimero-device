@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2021 B. Malinowsky
+    Copyright (c) 2019, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -172,7 +172,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	protected void updateLastValidSequence(final boolean toolAccess, final IndividualAddress remote,
 			final long seqNo) {
 		if (toolAccess) {
-			super.updateLastValidSequence(toolAccess, remote, seqNo);
+			super.updateLastValidSequence(true, remote, seqNo);
 		}
 		else {
 			final byte[] addresses = securityObject.get(Pid.SecurityIndividualAddressTable);
@@ -188,7 +188,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	@Override
 	protected long lastValidSequenceNumber(final boolean toolAccess, final IndividualAddress remote) {
 		if (toolAccess)
-			return super.lastValidSequenceNumber(toolAccess, remote);
+			return super.lastValidSequenceNumber(true, remote);
 
 		final byte[] addresses = securityObject.get(Pid.SecurityIndividualAddressTable);
 		final int entrySize = 2 + SeqSize;
@@ -264,7 +264,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 			if (mode > 1)
 				return ServiceResult.error(ReturnCode.DataVoid);
 			setSecurityMode(mode == 1);
-			return new ServiceResult<byte[]>((byte) serviceId);
+			return new ServiceResult<>((byte) serviceId);
 		}
 		else if (!command && functionInput.length == 2) {
 			return new ServiceResult<>((byte) serviceId, (byte) (isSecurityModeEnabled() ? 1 : 0));
@@ -281,7 +281,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 		if (command) {
 			if (id == 0 && info == 0) {
 				clearFailureLog();
-				return new ServiceResult<byte[]>((byte) id);
+				return new ServiceResult<>((byte) id);
 			}
 		}
 		else {

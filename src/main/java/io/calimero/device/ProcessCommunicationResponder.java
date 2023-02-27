@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2022 B. Malinowsky
+    Copyright (c) 2011, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ import io.calimero.secure.SecureApplicationLayer;
  * <p>
  * This implementation for process communication uses in any case the DPT translators
  * {@link DPTXlatorBoolean}, {@link DPTXlator3BitControlled}, {@link DPTXlator8BitUnsigned},
- * {@link DPTXlator2ByteFloat}, {@link DPTXlator4ByteFloat}, link DPTXlatorString}. Other translator
+ * {@link DPTXlator2ByteFloat}, {@link DPTXlator4ByteFloat}, {@link DPTXlatorString}. Other translator
  * types are loaded using the {@link TranslatorTypes} API.
  *
  * @author B. Malinowsky

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2015, 2019 B. Malinowsky
+    Copyright (c) 2015, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -94,7 +94,7 @@ public final class LinkProcedure implements Runnable
 		QuitConfigMode, // Actuator to all
 		ResetInstallation, // To all, n/a on RF medium
 		Features, // Actuator to sensor, sensor to actuator; KNX RF Multi only, action comes after StartLink
-	};
+	}
 
 	private static final EnumSet<Action> actuator = EnumSet.of(EnterConfigMode, ChannelFunctionActuator,
 			SetChannelParam, BeginConnection, LinkResponse, QuitConfigMode);
