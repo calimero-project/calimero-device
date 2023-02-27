@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2006, 2022 B. Malinowsky
+    Copyright (c) 2006, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,14 +45,12 @@ import java.net.InetSocketAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Optional;
 
 import tuwien.auto.calimero.IndividualAddress;
-import tuwien.auto.calimero.KNXException;
 import tuwien.auto.calimero.knxnetip.Discoverer;
 import tuwien.auto.calimero.knxnetip.Discoverer.Result;
 import tuwien.auto.calimero.knxnetip.servicetype.SearchResponse;
@@ -70,11 +68,11 @@ public final class Util
 	private static IndividualAddress device;
 
 	// KNX test devices, for connection-less and connection-oriented mode
-	private static IndividualAddress testDeviceCL = new IndividualAddress(1, 1, 4);
-	private static IndividualAddress testDeviceCO = new IndividualAddress(1, 1, 5);
+	private static final IndividualAddress testDeviceCL = new IndividualAddress(1, 1, 4);
+	private static final IndividualAddress testDeviceCO = new IndividualAddress(1, 1, 5);
 
-	// make sure its the same subnet as the test device (for tests that set the address)
-	private static IndividualAddress nonExisting = new IndividualAddress(1, 1, 200);
+	// make sure it's the same subnet as the test device (for tests that set the address)
+	private static final IndividualAddress nonExisting = new IndividualAddress(1, 1, 200);
 
 	private Util()
 	{}
@@ -130,10 +128,6 @@ public final class Util
 		buf.append(")");
 		return buf.toString();
 	}
-
-	public static void setupLogging(final String name) {}
-	// marker method where previously logging was torn down
-	public static void tearDownLogging() {}
 
 	/**
 	 * Returns KNXnet/IP router address used for testing.
@@ -206,17 +200,7 @@ public final class Util
 	 */
 	public static NetworkInterface localInterface() throws SocketException
 	{
-		try {
-			return NetworkInterface.getByInetAddress(onSameSubnet(getServer().getAddress()).get());
-		}
-		catch (final KNXException e) {
-			try {
-				return NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
-			}
-			catch (final UnknownHostException uhe) {
-				return null;
-			}
-		}
+		return NetworkInterface.getByInetAddress(onSameSubnet(getServer().getAddress()).get());
 	}
 
 	// finds a local IPv4 address with its network prefix "matching" the remote address
@@ -254,10 +238,8 @@ public final class Util
 	 * Returns the socket address of the KNXnet/IP router to use for testing.
 	 *
 	 * @return socket address
-	 * @throws KNXException if KNXnet/IP discovery failed
 	 */
-	public synchronized static InetSocketAddress getServer() throws KNXException
-	{
+	public synchronized static InetSocketAddress getServer() {
 		// we try once to find our running test server, on failure subsequent calls will
 		// immediately return to speed up tests
 		if (!testServerRunning)
@@ -296,7 +278,7 @@ public final class Util
 		return "test/resources/";
 	}
 
-	private static Path temp;
+	private static final Path temp;
 	static {
 		try {
 			temp = Files.createTempDirectory("calimero-junit-");

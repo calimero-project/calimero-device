@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2022 B. Malinowsky
+    Copyright (c) 2011, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -67,7 +67,7 @@ import tuwien.auto.calimero.process.ProcessEvent;
 class ProcessCommunicationServiceTest {
 	private InetSocketAddress remoteHost;
 
-	private static boolean useRouting = true;
+	private static final boolean useRouting = true;
 
 	// client link to read/write values to a KNX device
 	private KNXNetworkLink link;
@@ -91,10 +91,7 @@ class ProcessCommunicationServiceTest {
 						try (var responder = new ProcessCommunicationResponder(device1.getDeviceLink(), device1.sal)) {
 							responder.write(dp.getMainAddress(), dpState);
 						}
-						catch (final KNXTimeoutException e) {
-							e.printStackTrace();
-						}
-						catch (final KNXLinkClosedException e) {
+						catch (final KNXTimeoutException | KNXLinkClosedException e) {
 							e.printStackTrace();
 						}
 					}
@@ -183,7 +180,7 @@ class ProcessCommunicationServiceTest {
 	}
 
 	@AfterEach
-	void tearDown() throws Exception {
+	void tearDown() {
 		device1.getDeviceLink().close();
 		device2.getDeviceLink().close();
 		link.close();

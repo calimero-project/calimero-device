@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2022 B. Malinowsky
+    Copyright (c) 2011, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -93,7 +93,6 @@ import tuwien.auto.calimero.DeviceDescriptor;
 import tuwien.auto.calimero.DeviceDescriptor.DD0;
 import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.KNXException;
-import tuwien.auto.calimero.KNXFormatException;
 import tuwien.auto.calimero.KNXTimeoutException;
 import tuwien.auto.calimero.KnxRuntimeException;
 import tuwien.auto.calimero.SerialNumber;
@@ -246,7 +245,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * @throws KnxPropertyException on error initializing the device KNX properties
 	 */
 	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic) throws KnxPropertyException {
-		this(name, logic, (URI) null, NoPwd);
+		this(name, logic, null, NoPwd);
 	}
 
 	/**
@@ -800,8 +799,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			}
 	}
 		catch (final KnxPropertyException e) { // lookup failed, no device memory stored
-			return;
-			}
+		}
 	}
 
 	private void saveDeviceMemory() {
@@ -1117,16 +1115,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private SearchResponse ipSearchRequest(final KNXnetIPHeader h, final ByteBuffer data) {
-		try {
-			return searchResponse(h, data);
-		}
-		catch (KNXFormatException | IOException e) {
-			throw new KnxRuntimeException("creating search response", e);
-		}
+		return searchResponse(h, data);
 	}
 
-	private SearchResponse searchResponse(final KNXnetIPHeader h, final ByteBuffer data)
-			throws KNXFormatException, IOException {
+	private SearchResponse searchResponse(final KNXnetIPHeader h, final ByteBuffer data) {
 		final int svc = h.getServiceType();
 		if (svc != SEARCH_REQ)
 			return null;

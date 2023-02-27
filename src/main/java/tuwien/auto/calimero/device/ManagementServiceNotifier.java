@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2022 B. Malinowsky
+    Copyright (c) 2012, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -187,8 +187,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private SecurityControl securityCtrl;
 
 	// pre-condition: device != null, link != null
-	ManagementServiceNotifier(final BaseKnxDevice device, final ManagementService mgmt) throws KNXLinkClosedException
-	{
+	ManagementServiceNotifier(final BaseKnxDevice device, final ManagementService mgmt) {
 		this.device = device;
 		tl = device.transportLayer();
 		sal = (DeviceSecureApplicationLayer) device.secureApplicationLayer();
@@ -311,7 +310,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				return;
 		}
 		// we do everything in respond
-		device.dispatch(e, () -> ServiceResult.empty(), this::respond);
+		device.dispatch(e, ServiceResult::empty, this::respond);
 	}
 
 	private void dispatchToService(final int svc, final byte[] data, final KNXAddress dst, final Destination respondTo,
@@ -546,7 +545,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final IndividualAddress ia = new IndividualAddress(addr);
 		logger.trace("{}->{} {} {} {}", respondTo.getAddress(), device.getAddress(), name, sn, ia);
 		// safety check that reserved area is zeroed out
-		// we don't bail, since its not required by the spec
+		// we don't bail, since it's not required by the spec
 		for (int i = 0; i < reserved.length; i++) {
 			final byte b = reserved[i];
 			if (b != 0) {
@@ -904,8 +903,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[1] = (byte) pid;
 		asdu[2] = (byte) ((elements << 4) | ((start >>> 8) & 0x0f));
 		asdu[3] = (byte) start;
-		for (int i = 0; i < res.length; ++i)
-			asdu[i + 4] = res[i];
+		System.arraycopy(res, 0, asdu, 4, res.length);
 
 		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
@@ -954,8 +952,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[1] = (byte) pid;
 		asdu[2] = (byte) ((elements << 4) | ((start >>> 8) & 0x0f));
 		asdu[3] = (byte) start;
-		for (int i = 0; i < written; ++i)
-			asdu[4 + i] = res[i];
+		System.arraycopy(res, 0, asdu, 4, written);
 
 		send(d, PROPERTY_RESPONSE, asdu, sr.getPriority());
 	}
@@ -971,7 +968,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}|{} pidx {}{}", d.getAddress(), dst, name,
 				objIndex, pid, propIndex, propertyName(objIndex, pid));
 
-		ServiceResult<Description> sr = null;
+		ServiceResult<Description> sr;
 		try {
 			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
 		}
@@ -1042,8 +1039,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[0] = (byte) objIndex;
 		asdu[1] = (byte) pid;
 		asdu[2] = (byte) sr.returnCode().code();
-		for (int i = 0; i < res.length; ++i)
-			asdu[i + 3] = res[i];
+		System.arraycopy(res, 0, asdu, 3, res.length);
 
 		send(respondTo, FunctionPropertyStateResponse, asdu, sr.getPriority());
 	}
@@ -1084,8 +1080,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				asdu[0] = (byte) bytes;
 				asdu[1] = (byte) (address >>> 8);
 				asdu[2] = (byte) address;
-				for (int i = 0; i < bytes; ++i)
-					asdu[3 + i] = written[i];
+				System.arraycopy(written, 0, asdu, 3, bytes);
 
 				final var apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
 				send(d, apdu, sr.getPriority(), decodeAPCI(MEMORY_RESPONSE));
@@ -1184,8 +1179,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[0] = (byte) bytesRead;
 		asdu[1] = (byte) (address >> 8);
 		asdu[2] = (byte) address;
-		for (int i = 0; i < bytesRead; ++i)
-			asdu[3 + i] = res[i];
+		System.arraycopy(res, 0, asdu, 3, bytesRead);
 
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(MEMORY_RESPONSE, asdu);
 		send(d, apdu, sr.getPriority(), decodeAPCI(MEMORY_RESPONSE));
@@ -1225,8 +1219,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[1] = (byte) (address >> 16);
 		asdu[2] = (byte) (address >> 8);
 		asdu[3] = (byte) address;
-		for (int i = 0; i < read.length; ++i)
-			asdu[4 + i] = read[i];
+		System.arraycopy(read, 0, asdu, 4, read.length);
 		send(d, MemoryExtendedReadResponse, asdu, priority);
 	}
 
@@ -1246,7 +1239,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger.trace("{}->{} {} {}({})|{} pidx {}{}", respondTo.getAddress(), dst, name, iot,
 				instance, pid, propIndex, propertyNameByObjectType(iot, pid));
 
-		ServiceResult<Description> sr = ServiceResult.empty();
+		ServiceResult<Description> sr;
 		try {
 			final int objIndex = objectIndex(iot, instance);
 			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
@@ -1364,7 +1357,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				toHex(functionInput, " "));
 
 
-		ServiceResult<byte[]> sr = ServiceResult.error(ReturnCode.Error);
+		ServiceResult<byte[]> sr;
 		try {
 			final int objIndex = objectIndex(iot, oi);
 			final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
@@ -1408,8 +1401,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		asdu[3] = (byte) (((oi & 0xf) << 4) | (pid >> 8));
 		asdu[4] = (byte) pid;
 		asdu[5] = (byte) rc.code();
-		for (int i = 0; i < state.length; ++i)
-			asdu[6 + i] = state[i];
+		System.arraycopy(state, 0, asdu, 6, state.length);
 
 		final var priority = system ? Priority.SYSTEM : Priority.LOW;
 		send(respondTo, FunctionPropertyExtStateResponse, asdu, priority);

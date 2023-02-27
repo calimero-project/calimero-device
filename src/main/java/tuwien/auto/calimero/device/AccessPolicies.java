@@ -202,7 +202,7 @@ public final class AccessPolicies {
 
 	private static int restartAccess(final boolean masterReset, final EraseCode code, final boolean securityMode,
 			final SecurityControl securityCtrl) {
-		if (!masterReset || (masterReset && code == EraseCode.ConfirmedRestart))
+		if (!masterReset || code == EraseCode.ConfirmedRestart)
 			return accessPolicy("2AA/0AA");
 		if (securityMode && (code == EraseCode.ResetIndividualAddress || code == EraseCode.ResetApplicationProgram))
 			throw new KNXIllegalArgumentException("unsupported restart service erase code " + code);

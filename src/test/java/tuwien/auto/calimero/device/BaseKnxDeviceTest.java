@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2022 B. Malinowsky
+    Copyright (c) 2011, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,10 +36,6 @@
 
 package tuwien.auto.calimero.device;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.time.Duration;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +58,8 @@ import tuwien.auto.calimero.mgmt.Destination;
 import tuwien.auto.calimero.mgmt.ManagementClient.EraseCode;
 import tuwien.auto.calimero.mgmt.TransportLayer;
 import tuwien.auto.calimero.process.ProcessEvent;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 
 class BaseKnxDeviceTest
@@ -284,7 +282,7 @@ class BaseKnxDeviceTest
 		{
 			return null;
 		}
-	};
+	}
 
 	private static final ManagementService mgmtLogic = new DefaultMgmtLogic();
 
@@ -333,14 +331,14 @@ class BaseKnxDeviceTest
 	@Test
 	void getAddress()
 	{
-		assertTrue(dev.getAddress().equals(addr));
+		assertEquals(dev.getAddress(), addr);
 	}
 
 	@Test
 	void setNetworkLink() throws KNXLinkClosedException
 	{
 		dev.setDeviceLink(link);
-		assertTrue(dev.getDeviceLink() == link);
+		assertSame(dev.getDeviceLink(), link);
 		dev.setDeviceLink(null);
 		assertNull(dev.getDeviceLink());
 	}

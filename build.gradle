@@ -25,14 +25,14 @@ java {
     withJavadocJar()
 }
 
-tasks.withType(Jar) {
-	from("${projectDir}") {
+tasks.withType(Jar).configureEach {
+    from("${projectDir}") {
         include 'LICENSE'
         into "META-INF"
     }
     if (name.equals('sourcesJar')) {
-    	from("${projectDir}") {
-		    include 'README.md'
+        from("${projectDir}") {
+            include 'README.md'
         }
     }
 }
@@ -56,7 +56,7 @@ test {
 	}
 }
 
-tasks.withType(Javadoc) {
+tasks.withType(Javadoc).configureEach {
     options.addStringOption("Xdoclint:-missing", '-quiet')
 }
 

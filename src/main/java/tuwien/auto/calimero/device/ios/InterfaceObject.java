@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2022 B. Malinowsky
+    Copyright (c) 2010, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -37,11 +37,11 @@
 package tuwien.auto.calimero.device.ios;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import tuwien.auto.calimero.KNXException;
@@ -194,7 +194,7 @@ public class InterfaceObject
 	}
 
 	/**
-	 * Returns a human readable representation of the interface object's type.
+	 * Returns a human-readable representation of the interface object's type.
 	 *
 	 * @return interface object type as string
 	 */
@@ -235,15 +235,14 @@ public class InterfaceObject
 	{
 		// list to save with descriptions, containing no null entries
 		final List<Description> saveDesc = new ArrayList<>(descriptions);
-		saveDesc.removeAll(Arrays.asList(new Object[] { null }));
+		saveDesc.removeIf(Objects::isNull);
 		// list to save with values
 		final List<byte[]> saveVal = new ArrayList<>();
 		// values with no description
 		final Map<PropertyKey, byte[]> remaining = new HashMap<>(values);
 
 		final byte[] empty = new byte[0];
-		for (final Iterator<Description> i = saveDesc.iterator(); i.hasNext();) {
-			final Description d = i.next();
+		for (final Description d : saveDesc) {
 			final PropertyKey key = new PropertyKey(d.getObjectType(), d.getPID());
 			final byte[] data = values.get(key);
 			// descriptions with no values get an empty array assigned
@@ -255,8 +254,7 @@ public class InterfaceObject
 			}
 		}
 		// add values where no description was set, creating a default description
-		for (final Iterator<PropertyKey> i = remaining.keySet().iterator(); i.hasNext();) {
-			final PropertyKey key = i.next();
+		for (final PropertyKey key : remaining.keySet()) {
 			saveDesc.add(new Description(idx, type, key.getPID(), saveVal.size(), 0, true, 0, 0, 0, 0));
 			saveVal.add(remaining.get(key).clone());
 		}
@@ -377,8 +375,7 @@ public class InterfaceObject
 			resize[1] = (byte) size;
 			// copy over existing values, if any
 			if (bytes != null)
-				for (int i = 2; i < bytes.length; ++i)
-					resize[i] = bytes[i];
+				if (bytes.length - 2 >= 0) System.arraycopy(bytes, 2, resize, 2, bytes.length - 2);
 
 			values.put(key, resize);
 			bytes = resize;
@@ -489,7 +486,7 @@ public class InterfaceObject
 
 		// check if we have to remove an existing description (which might be located at
 		// a different index)
-		// Note: existingIdx = 0 refers to a non existing description and an existing
+		// Note: existingIdx = 0 refers to a non-existing description and an existing
 		// description at index 0
 		// But index 0 is a special case because the object-type property description is
 		// fixed to that position; therefore, we never have to remove it, it is always
