@@ -8,7 +8,7 @@ apply plugin:'application'
 
 mainClassName = 'io.calimero.testnetwork.TestNetwork'
 group = 'io.calimero'
-version = '2.6-SNAPSHOT'
+version = '3.0-SNAPSHOT'
 
 run {
 	// for attaching to debugger, start with -Ddebug=true
