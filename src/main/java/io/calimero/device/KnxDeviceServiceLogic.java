@@ -162,7 +162,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	/**
-	 * @return the configured datapoints
+	 * {@return the configured datapoints}
 	 */
 	public final DatapointModel<Datapoint> getDatapointModel()
 	{
@@ -210,7 +210,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	/**
-	 * @return whether the device is in programming mode (<code>true</code>) or not (<code>false</code>)
+	 * {@return whether the device is in programming mode (<code>true</code>) or not (<code>false</code>)}
 	 */
 	public final boolean inProgrammingMode()
 	{
@@ -302,13 +302,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		private static final int LsPeiProgram = 0xb6ed;
 
 		private static int loadStateAddress(final int stateMachineIndex) {
-			switch (stateMachineIndex) {
-			case 1: return LsAddressTable;
-			case 2: return LsAssociationTable;
-			case 3: return LsApplicationTable;
-			case 4: return LsPeiProgram;
-			default: return 0;
-			}
+			return switch (stateMachineIndex) {
+				case 1 -> LsAddressTable;
+				case 2 -> LsAssociationTable;
+				case 3 -> LsApplicationTable;
+				case 4 -> LsPeiProgram;
+				default -> 0;
+			};
 		}
 
 		static void onLoadEvent(final KnxDeviceServiceLogic logic, final byte[] data) {
@@ -379,14 +379,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	private static <T> ServiceResult<T> castResult(final ServiceResult<byte[]> ls) { return (ServiceResult<T>) ls; }
 
 	private static LoadState nextLoadState(final LoadEvent event) {
-		switch (event) {
-		case NoOperation: return LoadState.Error; // ??? return current state
-		case StartLoading: return LoadState.Loading;
-		case LoadCompleted: return LoadState.Loaded;
-		case AdditionalLoadControls: return LoadState.Loading;
-		case Unload: return LoadState.Unloaded;
-		default: throw new IllegalStateException();
-		}
+		return switch (event) {
+			case NoOperation -> LoadState.Error; // ??? return current state
+			case StartLoading -> LoadState.Loading;
+			case LoadCompleted -> LoadState.Loaded;
+			case AdditionalLoadControls -> LoadState.Loading;
+			case Unload -> LoadState.Unloaded;
+		};
 	}
 
 	private ServiceResult<byte[]> changeLoadState(final Destination remote, final int objectIndex, final int propertyId,
@@ -1173,33 +1172,31 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final int bitsize;
 
 		switch (descriptor.length) {
-		case 2:
-			// System B
-			config = descriptor[0] & 0xff;
-			bitsize = valueFieldTypeToBits(descriptor[1] & 0xff);
-			break;
-		case 3:
-			// realization type 1 & 2, most devices
-			config = descriptor[1] & 0xff;
-			bitsize = valueFieldTypeToBits(descriptor[2] & 0xff);
-			break;
-		case 4:
-			// system 7
-			config = descriptor[2] & 0xff;
-			bitsize = valueFieldTypeToBits(descriptor[3] & 0xff);
-			break;
-		case 6:
-			// System 300
-			// config is 2 bytes, but high byte is always 0
-			config = descriptor[1] & 0xff;
-
-			final int mainType = (descriptor[2] & 0xff) << 8 | descriptor[3] & 0xff;
-			final int subType = (descriptor[4] & 0xff) << 8 | descriptor[5] & 0xff;
-			final String dptId = mainType + "." + subType;
-			bitsize = translatorBitSize(dptId);
-			break;
-		default:
-			throw new KnxRuntimeException("unsupported group object descriptor of " + descriptor.length + " bytes");
+			case 2 -> {
+				// System B
+				config = descriptor[0] & 0xff;
+				bitsize = valueFieldTypeToBits(descriptor[1] & 0xff);
+			}
+			case 3 -> {
+				// realization type 1 & 2, most devices
+				config = descriptor[1] & 0xff;
+				bitsize = valueFieldTypeToBits(descriptor[2] & 0xff);
+			}
+			case 4 -> {
+				// system 7
+				config = descriptor[2] & 0xff;
+				bitsize = valueFieldTypeToBits(descriptor[3] & 0xff);
+			}
+			case 6 -> {
+				// System 300
+				// config is 2 bytes, but high byte is always 0
+				config = descriptor[1] & 0xff;
+				final int mainType = (descriptor[2] & 0xff) << 8 | descriptor[3] & 0xff;
+				final int subType = (descriptor[4] & 0xff) << 8 | descriptor[5] & 0xff;
+				final String dptId = mainType + "." + subType;
+				bitsize = translatorBitSize(dptId);
+			}
+			default -> throw new KnxRuntimeException("unsupported group object descriptor of " + descriptor.length + " bytes");
 		}
 
 		final int priority = config & 0x03;
@@ -1258,17 +1255,17 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (bitsize < 9)
 			return bitsize - 1;
 		final int bytes = bitsize / 8;
-		switch (bytes) {
-			case 2: return 8;
-			case 3: return 9;
-			case 4: return 10;
-			case 6: return 11;
-			case 8: return 12;
-			case 10: return 13;
-			case 14: return 14;
-			case 252: return 255;
-		}
-		return bytes + 6;
+		return switch (bytes) {
+			case 2 -> 8;
+			case 3 -> 9;
+			case 4 -> 10;
+			case 6 -> 11;
+			case 8 -> 12;
+			case 10 -> 13;
+			case 14 -> 14;
+			case 252 -> 255;
+			default -> bytes + 6;
+		};
 	}
 
 	private static boolean isSystem7(final InterfaceObjectServer ios) {
