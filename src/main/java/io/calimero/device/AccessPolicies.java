@@ -185,14 +185,13 @@ public final class AccessPolicies {
 		if (service != DoASerialNumberRead && service != DoASerialNumberWrite)
 			throw new KNXIllegalArgumentException("unknown DoA S/N service " + Integer.toHexString(service));
 		final boolean read = service == DoASerialNumberRead;
-		switch (doASize) {
-		case  2: return read ? 0x155155 : 0x2AA008;
-		case  4: return read ? 0x000004 : 0x2AA008;
-		case  6: return read ? 0x155155 : 0x2AA008;
-		case 21: return read ? 0x004004 : 0x008008;
-		default:
-			throw new KNXIllegalArgumentException("unsupported DoA size " + doASize);
-		}
+		return switch (doASize) {
+			case 2 -> read ? 0x155155 : 0x2AA008;
+			case 4 -> read ? 0x000004 : 0x2AA008;
+			case 6 -> read ? 0x155155 : 0x2AA008;
+			case 21 -> read ? 0x004004 : 0x008008;
+			default -> throw new KNXIllegalArgumentException("unsupported DoA size " + doASize);
+		};
 	}
 
 	static boolean checkRestartAccess(final boolean masterReset, final EraseCode code, final boolean securityMode,

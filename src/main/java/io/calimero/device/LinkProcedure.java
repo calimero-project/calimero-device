@@ -347,40 +347,32 @@ public final class LinkProcedure implements Runnable
 
 		int flags = 0;
 		switch (action) {
-		// commented actions are all dealt by default
-//		case EnterConfigMode:
-//		case BeginConnection:
-//		case QuitConfigMode:
-//		case ResetInstallation:
-//			return value;
-		case StartLink:
-			flags = (unidir ? 0x08 : 0) | (paramIndicator ? 0x04 : 0) | subFunction;
-			value[1] = (byte) (mfId >> 8);
-			value[2] = (byte) mfId;
-			value[3] = (byte) groupObjects.size();
-			break;
-		case ChannelFunctionActuator:
-		case ChannelFunctionSensor:
-			value[1] = (byte) (channelCode >> 8);
-			value[2] = (byte) channelCode;
-			break;
-		case SetDeleteLink:
-		case LinkResponse:
-			flags = (action == Action.SetDeleteLink) ? subFunc : linkResponseStatus;
-			final GroupAddress ga = groupObjects.get(activeConnectionCode);
-			final byte[] addr = ga.toByteArray();
-			value[1] = (byte) activeConnectionCode; // or scene number
-			value[2] = addr[0];
-			value[3] = addr[1];
-			logger.info("create {}: connection code {} ==> {}", action, activeConnectionCode, ga);
-			break;
-		case StopLink:
-			flags = (abort ? Error : 0) | (noChannel ? 0x02 : 0) | (timerExpired ? 0x01 : 0);
-			break;
-		case QuitConfigMode:
-			flags = timerExpired ? 1 : noChannel ? 2 : wrongService ? 3 : 0;
-			break;
-		default:
+			case EnterConfigMode, BeginConnection,ResetInstallation -> {
+				// actions are all dealt by default
+			}
+			case StartLink -> {
+				flags = (unidir ? 0x08 : 0) | (paramIndicator ? 0x04 : 0) | subFunction;
+				value[1] = (byte) (mfId >> 8);
+				value[2] = (byte) mfId;
+				value[3] = (byte) groupObjects.size();
+			}
+			case ChannelFunctionActuator, ChannelFunctionSensor -> {
+				value[1] = (byte) (channelCode >> 8);
+				value[2] = (byte) channelCode;
+			}
+			case SetDeleteLink, LinkResponse -> {
+				flags = (action == Action.SetDeleteLink) ? subFunc : linkResponseStatus;
+				final GroupAddress ga = groupObjects.get(activeConnectionCode);
+				final byte[] addr = ga.toByteArray();
+				value[1] = (byte) activeConnectionCode; // or scene number
+				value[2] = addr[0];
+				value[3] = addr[1];
+				logger.info("create {}: connection code {} ==> {}", action, activeConnectionCode, ga);
+			}
+			case StopLink -> flags = (abort ? Error : 0) | (noChannel ? 0x02 : 0) | (timerExpired ? 0x01 : 0);
+			case QuitConfigMode -> flags = timerExpired ? 1 : noChannel ? 2 : wrongService ? 3 : 0;
+			case SetChannelParam, ChannelParamResponse, Features, None -> { // possible at all?
+			}
 		}
 
 		value[0] |= flags;
@@ -431,48 +423,44 @@ public final class LinkProcedure implements Runnable
 		// content of current state in link procedure starts at asdu[3] (command & flags)
 		final int flags = asdu[3] & 0x0f;
 		switch (action) {
-		case StartLink:
-			final int code = (asdu[4] & 0xff) << 8 | (asdu[5] & 0xff);
-			final int objects = asdu[6] & 0xff;
-			final boolean unidirectional = (flags & 0x08) == 0x08;
-			final boolean params = (flags & 0x04) == 0x04;
-			final int subfunc = flags & 0x03;
-			logger.debug("received {}: unidir {}, params {}, subfunc {}, manufacturer code {}, "
-					+ "group objects to link: {}", action, unidirectional, params, subfunc, code, objects);
-			expectedGroupObjects = Math.max(1, objects);
-			break;
-		case ChannelFunctionActuator:
-		case ChannelFunctionSensor:
-			final int channel = (asdu[4] & 0xff) << 8 | (asdu[5] & 0xff);
-			logger.debug("received {}: E-mode channel code {}", action, channel);
-			break;
-		case SetDeleteLink:
-		case LinkResponse:
-			final int cc = asdu[4] & 0xff;
-			final GroupAddress ga = new GroupAddress((asdu[5] & 0xff) << 8 | (asdu[6] & 0xff));
-			groupObjects.put(cc, ga);
-			logger.info("received {}: flags {}, connection code {} ==> {}", action, flags, cc, ga);
-
-			if (action == SetDeleteLink)
-				activeConnectionCode = cc;
-			else {
-				if (activeConnectionCode != cc)
-					logger.error("link response connection code {} does not match {}", cc, activeConnectionCode);
-				if ((flags & Error) == Error) {
-					abort = true;
-					// NYI stop link procedure by notifying run method
-				}
+			case StartLink -> {
+				final int code = (asdu[4] & 0xff) << 8 | (asdu[5] & 0xff);
+				final int objects = asdu[6] & 0xff;
+				final boolean unidirectional = (flags & 0x08) == 0x08;
+				final boolean params = (flags & 0x04) == 0x04;
+				final int subfunc = flags & 0x03;
+				logger.debug("received {}: unidir {}, params {}, subfunc {}, manufacturer code {}, "
+						+ "group objects to link: {}", action, unidirectional, params, subfunc, code, objects);
+				expectedGroupObjects = Math.max(1, objects);
 			}
-//			final Map<Integer, GroupAddress> link = new HashMap<>();
-//			link.put(activeConnectionCode, groupObjects.get(activeConnectionCode));
-			linkResponseStatus = linkFunction.apply(flags, groupObjects);
-			break;
-		case StopLink:
-		case QuitConfigMode:
-			final int status = asdu[3] & 0x07;
-			logger.debug("received {}: status {}", action, status);
-			break;
-		default:
+			case ChannelFunctionActuator, ChannelFunctionSensor -> {
+				final int channel = (asdu[4] & 0xff) << 8 | (asdu[5] & 0xff);
+				logger.debug("received {}: E-mode channel code {}", action, channel);
+			}
+			case SetDeleteLink, LinkResponse -> {
+				final int cc = asdu[4] & 0xff;
+				final GroupAddress ga = new GroupAddress((asdu[5] & 0xff) << 8 | (asdu[6] & 0xff));
+				groupObjects.put(cc, ga);
+				logger.info("received {}: flags {}, connection code {} ==> {}", action, flags, cc, ga);
+				if (action == SetDeleteLink)
+					activeConnectionCode = cc;
+				else {
+					if (activeConnectionCode != cc)
+						logger.error("link response connection code {} does not match {}", cc, activeConnectionCode);
+					if ((flags & Error) == Error) {
+						abort = true;
+						// NYI stop link procedure by notifying run method
+					}
+				}
+//				final Map<Integer, GroupAddress> link = new HashMap<>();
+//				link.put(activeConnectionCode, groupObjects.get(activeConnectionCode));
+				linkResponseStatus = linkFunction.apply(flags, groupObjects);
+			}
+			case StopLink, QuitConfigMode -> {
+				final int status = asdu[3] & 0x07;
+				logger.debug("received {}: status {}", action, status);
+			}
+			default -> {}
 		}
 	}
 

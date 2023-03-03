@@ -435,8 +435,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	public Memory deviceMemory() { return memory; }
 
 	/**
-	 * @return the task executor providing the threads to run the process communication and
-	 *         management services
+	 * {@return the task executor providing the threads to run the process communication and
+	 *         management services}
 	 */
 	public ExecutorService taskExecutor()
 	{
@@ -501,18 +501,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 			final byte[] groupObjectDescriptor;
 			final int groupObjTablePdt = groupObjTablePdt();
-			switch (groupObjTablePdt) {
-			case PropertyTypes.PDT_GENERIC_02:
-				groupObjectDescriptor = KnxDeviceServiceLogic.groupObjectDescriptor(dp.getDPT(), dp.getPriority(),
-						false, update);
-				break;
-			case PropertyTypes.PDT_GENERIC_03:
-				groupObjectDescriptor = KnxDeviceServiceLogic.groupObjectDescriptor3Bytes(dp.getDPT(), dp.getPriority(),
-						false, update);
-				break;
-			default:
-				throw new KnxRuntimeException("group object table: PID Table PDT " + groupObjTablePdt + " not supported");
-			}
+			groupObjectDescriptor = switch (groupObjTablePdt) {
+				case PropertyTypes.PDT_GENERIC_02 ->
+						KnxDeviceServiceLogic.groupObjectDescriptor(dp.getDPT(), dp.getPriority(), false, update);
+				case PropertyTypes.PDT_GENERIC_03 ->
+						KnxDeviceServiceLogic.groupObjectDescriptor3Bytes(dp.getDPT(), dp.getPriority(), false, update);
+				default ->
+						throw new KnxRuntimeException("group object table: PID Table PDT " + groupObjTablePdt + " not supported");
+			};
 			ios.setProperty(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, newGoIdx, 1,
 					groupObjectDescriptor);
 		}
@@ -1065,8 +1061,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 					BiFunction.class);
 			callback.setVolatile(conn, (BiFunction<KNXnetIPHeader, ByteBuffer, SearchResponse>) this::ipSearchRequest);
 
-			if (conn instanceof SecureRouting) {
-				final var secRouting = (SecureRouting) conn;
+			if (conn instanceof final SecureRouting secRouting) {
 				// TODO set actual key
 				setIpProperty(KnxipParameterObject.Pid.BackboneKey, new byte[16]);
 

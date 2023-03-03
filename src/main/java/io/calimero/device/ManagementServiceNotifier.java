@@ -44,7 +44,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.EventObject;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -303,8 +302,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private void dispatchAndRespond(final FrameEvent e)
 	{
 		final var cemi = e.getFrame();
-		if (cemi instanceof CEMILData) {
-			final CEMILData ldata = (CEMILData) cemi;
+		if (cemi instanceof final CEMILData ldata) {
 			final var dst = ldata.getDestination();
 			if (dst instanceof IndividualAddress && !dst.equals(device.getAddress()))
 				return;
@@ -506,8 +504,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(RESTART, asdu);
 		send(respondTo, apdu, sr.getPriority(), name);
 
-		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination())
-				.collect(Collectors.toList());
+		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination()).toList();
 		destinations.forEach(Destination::destroy);
 
 		if (code == EraseCode.FactoryReset || code == EraseCode.FactoryResetWithoutIndividualAddress) {
@@ -783,8 +780,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		catch (final KnxPropertyException e) {}
 
 		final var medium = device.getDeviceLink().getKNXMedium();
-		if (serialNumber.equals(SerialNumber.Zero) && medium instanceof RFSettings) {
-			final var rfSettings = (RFSettings) medium;
+		if (serialNumber.equals(SerialNumber.Zero) && medium instanceof final RFSettings rfSettings) {
 			serialNumber = rfSettings.serialNumber();
 			if (serialNumber.equals(SerialNumber.Zero)) {
 				logger.warn("RF device with no serial number");
