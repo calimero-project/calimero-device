@@ -201,7 +201,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * resource.
 	 * Implementation note: iosResource for an encrypted IOS is currently always interpreted as {@link Path}
 	 *
-	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param name KNX device name, used for human-readable naming or device identification
 	 * @param dd device descriptor
 	 * @param process the device process communication service handler
 	 * @param mgmt the device management service handler
@@ -240,7 +240,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument, the device's communication link (and
 	 * address) has to be subsequently assigned.
 	 *
-	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param name KNX device name, used for human-readable naming or device identification
 	 * @param logic KNX device service logic
 	 * @throws KnxPropertyException on error initializing the device KNX properties
 	 */
@@ -252,7 +252,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * Creates a new KNX device using a {@link KnxDeviceServiceLogic} argument, and a URI locating an interface object
 	 * server resource.
 	 *
-	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param name KNX device name, used for human-readable naming or device identification
 	 * @param logic KNX device service logic
 	 * @param iosResource interface object server resource to load
 	 * @param iosPassword password of encrypted interface object server resource, empty char array if plain text
@@ -270,7 +270,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * The device address is supplied by the link's medium settings, and is only used if the address is not 0.0.0. An
 	 * address should be a subnetwork unique device address or a default individual address.
 	 *
-	 * @param name KNX device name, used for human readable naming or device identification
+	 * @param name KNX device name, used for human-readable naming or device identification
 	 * @param logic KNX device service logic
 	 * @param link the KNX network link this device is attached to
 	 * @throws KNXLinkClosedException on closed network link
