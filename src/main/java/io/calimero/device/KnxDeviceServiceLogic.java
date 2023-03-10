@@ -39,7 +39,13 @@ package io.calimero.device;
 import static io.calimero.DataUnitBuilder.toHex;
 import static io.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
 import static io.calimero.device.ios.InterfaceObject.GROUP_OBJECT_TABLE_OBJECT;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.TRACE;
+import static java.lang.System.Logger.Level.WARNING;
 
+import java.lang.System.Logger;
+import java.lang.invoke.MethodHandles;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -51,9 +57,6 @@ import java.util.Comparator;
 import java.util.Optional;
 import java.util.TreeSet;
 import java.util.WeakHashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.calimero.DataUnitBuilder;
 import io.calimero.DeviceDescriptor;
@@ -93,6 +96,7 @@ import io.calimero.link.KNXNetworkLink;
 import io.calimero.link.medium.KNXMediumSettings;
 import io.calimero.link.medium.PLSettings;
 import io.calimero.link.medium.RFSettings;
+import io.calimero.log.LogService;
 import io.calimero.mgmt.Description;
 import io.calimero.mgmt.Destination;
 import io.calimero.mgmt.ManagementClient.EraseCode;
@@ -140,7 +144,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		this.device = device;
 		ios = device.getInterfaceObjectServer();
 		logger = (device instanceof BaseKnxDevice) ? ((BaseKnxDevice) device).logger()
-				: LoggerFactory.getLogger(KnxDeviceServiceLogic.class);
+				: LogService.getLogger(MethodHandles.lookup().lookupClass());
 
 		final KNXNetworkLink link = device.getDeviceLink();
 		if (link != null) {
@@ -234,7 +238,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					return new ServiceResult<>(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (KNXException | RuntimeException ex) {
-				logger.warn("on group read request {}->{}: {}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "), ex);
+				logger.log(WARNING, "on group read request {0}->{1}: {2}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "), ex);
 			}
 		}
 		return null;
@@ -253,7 +257,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
-			logger.warn("on group write {}->{}: {}, {}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "),
+			logger.log(WARNING, "on group write {0}->{1}: {2}, {3}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "),
 					ex.getMessage());
 		}
 	}
@@ -268,7 +272,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return ServiceResult.error(ReturnCode.DataVoid);
 			final int level = accessLevel(remote);
 			if (level > d.getReadLevel()) {
-				logger.warn("deny {} read access to property {}|{} (access level {}, requires {})", remote.getAddress(),
+				logger.log(WARNING, "deny {0} read access to property {1}|{2} (access level {3}, requires {4})", remote.getAddress(),
 						objectIndex, propertyId, level, d.getReadLevel());
 				return ServiceResult.error(ReturnCode.AccessDenied);
 			}
@@ -319,7 +323,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 			final var event = LoadEvent.values()[stateMachineAndEvent & 0xf];
 			final var state = nextLoadState(event);
-			logic.logger.debug("state machine {} (0x{}) event {} -> load state {}", stateMachine,
+			logic.logger.log(DEBUG, "state machine {0} (0x{1}) event {2} -> load state {3}", stateMachine,
 					Integer.toHexString(addr), event, state);
 			logic.writeMemory(addr, new byte[] { (byte) state.ordinal() });
 		}
@@ -348,12 +352,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 		if (d != null && !inProgrammingMode()) {
 			if (!d.isWriteEnabled()) {
-				logger.warn("property {}|{} is {}", objectIndex, propertyId, CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
+				logger.log(WARNING, "property {0}|{1} is {2}", objectIndex, propertyId, CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
 				return ServiceResult.error(ReturnCode.AccessReadOnly);
 			}
 			final int level = accessLevel(remote);
 			if (level > d.getWriteLevel()) {
-				logger.warn("deny {} write access to property {}|{} (access level {}, requires {})", remote.getAddress(),
+				logger.log(WARNING, "deny {0} write access to property {1}|{2} (access level {3}, requires {4})", remote.getAddress(),
 						objectIndex, propertyId, level, d.getWriteLevel());
 				return ServiceResult.error(ReturnCode.AccessDenied);
 			}
@@ -392,7 +396,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final int startIndex, final int elements, final byte[] data) {
 
 		final var event = LoadEvent.values()[data[0] & 0xff];
-		logger.debug("load state control event for OI {}: {}", objectIndex, event);
+		logger.log(DEBUG, "load state control event for OI {0}: {1}", objectIndex, event);
 
 		if (event == LoadEvent.NoOperation)
 			return ServiceResult.of(readProperty(remote, objectIndex, propertyId, startIndex, elements).result());
@@ -454,7 +458,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private ServiceResult<byte[]> writeGroupObjectDiagnostics(final byte[] command, final int serviceId) {
-		logger.debug("GO diagnostics write service 0x{}", Integer.toHexString(serviceId));
+		logger.log(DEBUG, "GO diagnostics write service 0x{0}", Integer.toHexString(serviceId));
 
 		// write service IDs
 		final int setLocalGOValue = 0;
@@ -494,14 +498,14 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return dataVoidResult;
 
 			final var secCtrl = SecurityControl.of(conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
-			logger.debug("send group value write to {} ({})", ga, secCtrl);
+			logger.log(DEBUG, "send group value write to {0} ({1})", ga, secCtrl);
 			try {
 				final var translator = TranslatorTypes.createTranslator(datapoint.getDPT(), data);
 				updateDatapointValue(datapoint, translator);
 				sendGroupValue(ga, ProcessServiceNotifier.GROUP_WRITE, compactApdu, data, datapoint.getPriority());
 			}
 			catch (final KNXException e) {
-				logger.warn("GO diagnostics sending group value write to {}", ga, e);
+				logger.log(WARNING, "GO diagnostics sending group value write to {0}", ga, e);
 			}
 			catch (final InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -529,7 +533,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				return dataVoidResult;
 
 			final var secCtrl = SecurityControl.of(conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
-			logger.info("send group value read to {} ({})", ga, secCtrl);
+			logger.log(INFO, "send group value read to {0} ({1})", ga, secCtrl);
 			try {
 				sendGroupValue(ga, ProcessServiceNotifier.GROUP_READ, true, new byte[0], datapoint.getPriority());
 				final var translator = requestDatapointValue(datapoint);
@@ -540,7 +544,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				}
 			}
 			catch (final KNXException e) {
-				logger.warn("GO diagnostics sending group value read to {}", ga, e);
+				logger.log(WARNING, "GO diagnostics sending group value read to {0}", ga, e);
 			}
 			catch (final InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -594,7 +598,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private ServiceResult<byte[]> readGroupObjectDiagnostics(final byte[] functionInput, final int serviceId) {
-		logger.debug("GO diagnostics read service 0x{}", Integer.toHexString(serviceId));
+		logger.log(DEBUG, "GO diagnostics read service 0x{0}", Integer.toHexString(serviceId));
 
 		// read service IDs
 		final int getGOConfig = 0;
@@ -731,7 +735,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (device instanceof BaseKnxDevice) {
 			((BaseKnxDevice) device).setAddress(newAddress);
 		}
-		logger.info("set new device address {} (old {})", newAddress, old);
+		logger.log(INFO, "set new device address {0} (old {1})", newAddress, old);
 	}
 
 	@Override
@@ -748,7 +752,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final int start = startAddress.getRawAddress();
 			if (raw >= start && raw <= (start + range)) {
 				final int wait = (raw - start) * device.getDeviceLink().getKNXMedium().timeFactor();
-				logger.trace("read domain address: wait " + wait + " ms before sending response");
+				logger.log(TRACE, "read domain address: wait " + wait + " ms before sending response");
 				try {
 					// NYI iff range < 0xff and we receive a response from another device while waiting, we should
 					// cancel our own response
@@ -756,7 +760,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					return ServiceResult.of(true);
 				}
 				catch (final InterruptedException e) {
-					logger.warn("read domain address got interrupted, response is canceled");
+					logger.log(WARNING, "read domain address got interrupted, response is canceled");
 					Thread.currentThread().interrupt();
 				}
 			}
@@ -838,7 +842,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			DeviceObject.lookup(ios).setDomainAddress(domain);
 		}
 		catch (final KnxPropertyException e) {
-			logger.warn("setting DoA {} in interface object server", toHex(domain, " "), e);
+			logger.log(WARNING, "setting DoA {0} in interface object server", toHex(domain, " "), e);
 		}
 	}
 
@@ -847,7 +851,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			return DeviceObject.lookup(ios).domainAddress(domainType());
 		}
 		catch (final KnxPropertyException e) {
-			logger.warn("reading DoA", e);
+			logger.log(WARNING, "reading DoA", e);
 		}
 		return new byte[0];
 	}
@@ -909,7 +913,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	private boolean randomWait(final String svc, final int maxWaitMillis) {
 		final int wait = (int) (Math.random() * maxWaitMillis);
-		logger.trace("{}: add random wait of {} ms before response", svc, wait);
+		logger.log(TRACE, "{0}: add random wait of {1} ms before response", svc, wait);
 		try {
 			Thread.sleep(wait);
 			return true;
@@ -960,7 +964,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult<Duration> restart(final boolean masterReset, final EraseCode eraseCode, final int channel)
 	{
 		final String type = masterReset ? "master reset (" + eraseCode + ")" : "basic restart";
-		logger.info("received request for {}", type);
+		logger.log(INFO, "received request for {0}", type);
 		setProgrammingMode(false);
 		syncDatapoints();
 		if (masterReset) {
@@ -999,7 +1003,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult<byte[]> management(final int svcType, final byte[] asdu, final KNXAddress dst,
 		final Destination respondTo, final TransportLayer tl)
 	{
-		logger.info("{}->{} {} {}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType), toHex(asdu, " "));
+		logger.log(INFO, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType), toHex(asdu, " "));
 		return null;
 	}
 
@@ -1031,13 +1035,13 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final boolean domainBroadcast = true;
 		final var ldata = CEMILDataEx.newLte(knxip ? CEMILData.MC_LDATA_IND : CEMILData.MC_LDATA_REQ,
 				KNXMediumSettings.BackboneRouter, tag, tpdu, priority, repeat, domainBroadcast, false, 6);
-		logger.debug("send LTE-HEE {} {} IOT {} OI {} PID {} data [{}]",
+		logger.log(DEBUG, "send LTE-HEE {0} {1} IOT {2} OI {3} PID {4} data [{5}]",
 				DataUnitBuilder.decodeAPCI(service), tag, iot, oi, pid, DataUnitBuilder.toHex(data, ""));
 		try {
 			link.send(ldata, true);
 		}
 		catch (KNXTimeoutException | KNXLinkClosedException e) {
-			logger.warn("sending {}", ldata, e);
+			logger.log(WARNING, "sending {0}", ldata, e);
 		}
 	}
 
@@ -1088,7 +1092,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final boolean systemB = isSystemB(dd0);
 		final int lengthSize = systemB ? 2 : 1;
 
-		logger.trace("sync {} from address 0x{}", PropertyClient.getObjectTypeName(objectType), Integer.toHexString(ref));
+		logger.log(TRACE, "sync {0} from address 0x{1}", PropertyClient.getObjectTypeName(objectType), Integer.toHexString(ref));
 
 		final int tableEntries = (int) unsigned(device.deviceMemory().get(ref, lengthSize));
 		if (tableEntries > 0) {
@@ -1280,7 +1284,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	void destinationDisconnected(final Destination remote) {
 		final Integer level = accessLevels.remove(remote);
 		if (level != null)
-			logger.info("endpoint {} disconnected, reset access level {} to {}", remote.getAddress(), level,
+			logger.log(INFO, "endpoint {0} disconnected, reset access level {1} to {2}", remote.getAddress(), level,
 					minAccessLevel);
 	}
 
@@ -1300,7 +1304,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 	private void setAccessLevel(final Destination remote, final int accessLevel) {
 		accessLevels.put(remote, accessLevel);
-		logger.info("authorize {} for access level {}", remote.getAddress(), accessLevel);
+		logger.log(INFO, "authorize {0} for access level {1}", remote.getAddress(), accessLevel);
 	}
 
 	private static long unsigned(final byte[] data) {

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2023 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,6 +35,8 @@
 */
 
 package io.calimero.device;
+
+import static java.lang.System.Logger.Level.ERROR;
 
 import java.util.EventObject;
 
@@ -95,7 +97,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 				}
 			}
 			catch (final RuntimeException rte) {
-				device.logger().error("on group property indication from {}", ldata.getSource(), rte);
+				device.logger().log(ERROR, "on group property indication from {0}", ldata.getSource(), rte);
 			}
 		}
 
@@ -165,7 +167,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 				res.write(to, sr.result(), sr.compact);
 			}
 			catch (KNXTimeoutException | KNXLinkClosedException e) {
-				device.logger().error("responding to {}: {}", to, DataUnitBuilder.toHex(sr.result(), " "), e);
+				device.logger().log(ERROR, "responding to {0}: {1}", to, DataUnitBuilder.toHex(sr.result(), " "), e);
 			}
 		}
 		else

@@ -66,7 +66,6 @@ tasks.withType(Javadoc).configureEach {
 
 dependencies {
 	api "io.calimero:calimero-core:${version}"
-	implementation 'org.slf4j:slf4j-api:1.7.36'
 	
 	testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
 }

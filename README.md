@@ -28,4 +28,3 @@ Library Dependencies
 ----
 
 * [calimero-core](https://github.com/calimero-project/calimero)
-* [slf4j-api](http://www.slf4j.org/)

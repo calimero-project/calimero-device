@@ -49,7 +49,13 @@ import static io.calimero.device.LinkProcedure.Action.SetChannelParam;
 import static io.calimero.device.LinkProcedure.Action.SetDeleteLink;
 import static io.calimero.device.LinkProcedure.Action.StartLink;
 import static io.calimero.device.LinkProcedure.Action.StopLink;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.ERROR;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.TRACE;
 
+import java.lang.System.Logger;
+import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -59,9 +65,6 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.calimero.DataUnitBuilder;
 import io.calimero.FrameEvent;
 import io.calimero.GroupAddress;
@@ -69,6 +72,7 @@ import io.calimero.IndividualAddress;
 import io.calimero.KNXTimeoutException;
 import io.calimero.cemi.CEMILData;
 import io.calimero.link.KNXLinkClosedException;
+import io.calimero.log.LogService;
 import io.calimero.mgmt.Destination;
 import io.calimero.mgmt.ManagementClient;
 import io.calimero.mgmt.ManagementClientImpl;
@@ -107,7 +111,7 @@ public final class LinkProcedure implements Runnable
 	// NYI for the Features response from sensor to actuator, a timeout should not abort the procedure
 	private static final long timeout = 3000; // [ms]
 
-	private static final Logger logger = LoggerFactory.getLogger("io.calimero.device.LinkProcedure");
+	private static final Logger logger = LogService.getLogger(MethodHandles.lookup().lookupClass());
 
 	private final boolean isActuator;
 	// execute reset installation procedure
@@ -295,7 +299,7 @@ public final class LinkProcedure implements Runnable
 				return;
 			}
 
-			logger.info("starting link procedure for {} {}->{}", isActuator ? "actuator" : "sensor", self, remote);
+			logger.log(INFO, "starting link procedure for {0} {1}->{2}", isActuator ? "actuator" : "sensor", self, remote);
 			((ManagementClientImpl) mgmt).addEventListener(onEvent);
 			int groupObject = 0;
 			final Iterator<Integer> connectionCodes = groupObjects.keySet().iterator();
@@ -328,7 +332,7 @@ public final class LinkProcedure implements Runnable
 		}
 		finally {
 			((ManagementClientImpl) mgmt).removeEventListener(onEvent);
-			logger.info("finished link procedure for {} {}->{}", isActuator ? "actuator" : "sensor", self, remote);
+			logger.log(INFO, "finished link procedure for {0} {1}->{2}", isActuator ? "actuator" : "sensor", self, remote);
 		}
 	}
 
@@ -337,7 +341,7 @@ public final class LinkProcedure implements Runnable
 	 */
 	private static void onCommand(final Action action)
 	{
-		logger.debug("on {}", action);
+		logger.log(DEBUG, "on {0}", action);
 	}
 
 	private byte[] create(final Action action)
@@ -367,7 +371,7 @@ public final class LinkProcedure implements Runnable
 				value[1] = (byte) activeConnectionCode; // or scene number
 				value[2] = addr[0];
 				value[3] = addr[1];
-				logger.info("create {}: connection code {} ==> {}", action, activeConnectionCode, ga);
+				logger.log(INFO, "create {0}: connection code {1} ==> {2}", action, activeConnectionCode, ga);
 			}
 			case StopLink -> flags = (abort ? Error : 0) | (noChannel ? 0x02 : 0) | (timerExpired ? 0x01 : 0);
 			case QuitConfigMode -> flags = timerExpired ? 1 : noChannel ? 2 : wrongService ? 3 : 0;
@@ -382,7 +386,7 @@ public final class LinkProcedure implements Runnable
 	private void write(final Action action) throws KNXLinkClosedException, KNXTimeoutException
 	{
 		final byte[] value = create(action);
-		logger.info("send {}", action);
+		logger.log(INFO, "send {0}", action);
 		synchronized (this) {
 			mgmt.writeNetworkParameter(remote, deviceObjectType, pidConfigLink, value);
 			state = action;
@@ -398,13 +402,13 @@ public final class LinkProcedure implements Runnable
 		final int svc = DataUnitBuilder.getAPDUService(apdu);
 		if (svc == NetworkParamWrite) {
 			if (((CEMILData) e.getFrame()).getSource().equals(self)) {
-				logger.debug("received management service sent by us ({}) -- ignore", self);
+				logger.log(DEBUG, "received management service sent by us ({0}) -- ignore", self);
 				return;
 			}
 			final byte[] asdu = DataUnitBuilder.extractASDU(apdu);
 			final int iot = (asdu[0] & 0xff << 8) | (asdu[1] & 0xff);
 			final int pid = asdu[2] & 0xff;
-//			logger.trace("network parameter write IOT {} PID {}", iot, pid);
+//			logger.log(TRACE, "network parameter write IOT {0} PID {1}", iot, pid);
 			if (iot == deviceObjectType && pid == pidConfigLink) {
 				final int command = (asdu[3] & 0xff) >> 4;
 				final Action action = Action.values()[command];
@@ -429,24 +433,24 @@ public final class LinkProcedure implements Runnable
 				final boolean unidirectional = (flags & 0x08) == 0x08;
 				final boolean params = (flags & 0x04) == 0x04;
 				final int subfunc = flags & 0x03;
-				logger.debug("received {}: unidir {}, params {}, subfunc {}, manufacturer code {}, "
+				logger.log(DEBUG, "received {0}: unidir {1}, params {2}, subfunc {3}, manufacturer code {4}, "
 						+ "group objects to link: {}", action, unidirectional, params, subfunc, code, objects);
 				expectedGroupObjects = Math.max(1, objects);
 			}
 			case ChannelFunctionActuator, ChannelFunctionSensor -> {
 				final int channel = (asdu[4] & 0xff) << 8 | (asdu[5] & 0xff);
-				logger.debug("received {}: E-mode channel code {}", action, channel);
+				logger.log(DEBUG, "received {0}: E-mode channel code {1}", action, channel);
 			}
 			case SetDeleteLink, LinkResponse -> {
 				final int cc = asdu[4] & 0xff;
 				final GroupAddress ga = new GroupAddress((asdu[5] & 0xff) << 8 | (asdu[6] & 0xff));
 				groupObjects.put(cc, ga);
-				logger.info("received {}: flags {}, connection code {} ==> {}", action, flags, cc, ga);
+				logger.log(INFO, "received {0}: flags {1}, connection code {2} ==> {3}", action, flags, cc, ga);
 				if (action == SetDeleteLink)
 					activeConnectionCode = cc;
 				else {
 					if (activeConnectionCode != cc)
-						logger.error("link response connection code {} does not match {}", cc, activeConnectionCode);
+						logger.log(ERROR, "link response connection code {0} does not match {1}", cc, activeConnectionCode);
 					if ((flags & Error) == Error) {
 						abort = true;
 						// NYI stop link procedure by notifying run method
@@ -458,7 +462,7 @@ public final class LinkProcedure implements Runnable
 			}
 			case StopLink, QuitConfigMode -> {
 				final int status = asdu[3] & 0x07;
-				logger.debug("received {}: status {}", action, status);
+				logger.log(DEBUG, "received {0}: status {1}", action, status);
 			}
 			default -> {}
 		}
@@ -466,7 +470,7 @@ public final class LinkProcedure implements Runnable
 
 	private void stopLink(final Exception e)
 	{
-		logger.error("stop link procedure with {}", remote, e);
+		logger.log(ERROR, "stop link procedure with {0}", remote, e);
 		try {
 			if (state.ordinal() >= EnterConfigMode.ordinal())
 				write(Action.StopLink);
@@ -476,7 +480,7 @@ public final class LinkProcedure implements Runnable
 
 	private synchronized void waitFor(final Action next) throws InterruptedException, KNXTimeoutException
 	{
-		logger.trace("wait for command {}", next);
+		logger.log(TRACE, "wait for command {0}", next);
 		final long start = System.currentTimeMillis();
 		long remaining = timeout;
 		while (remaining > 0) {
