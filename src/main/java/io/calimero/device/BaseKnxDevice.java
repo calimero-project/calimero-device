@@ -71,6 +71,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EventObject;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -92,7 +93,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import io.calimero.DataUnitBuilder;
 import io.calimero.DeviceDescriptor;
 import io.calimero.DeviceDescriptor.DD0;
 import io.calimero.IndividualAddress;
@@ -1156,7 +1156,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 		catch (ReflectiveOperationException | RuntimeException e) {
 			logger.log(WARNING, "updating {0} PID {1} with [{2}]: {3}", pe.getInterfaceObject(), pe.getPropertyId(),
-					DataUnitBuilder.toHex(pe.getNewData(), ""), e.toString());
+					HexFormat.of().formatHex(pe.getNewData()), e.toString());
 		}
 	}
 

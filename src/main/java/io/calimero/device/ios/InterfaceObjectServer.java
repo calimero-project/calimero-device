@@ -51,6 +51,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HexFormat;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -981,7 +982,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				w.writeEmptyElement(TAG_DATA);
 			else {
 				w.writeStartElement(TAG_DATA);
-				w.writeCharacters(DataUnitBuilder.toHex(data, ""));
+				w.writeCharacters(HexFormat.of().formatHex(data));
 				w.writeEndElement();
 			}
 		}

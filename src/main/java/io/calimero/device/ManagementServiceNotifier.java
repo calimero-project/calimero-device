@@ -36,18 +36,18 @@
 
 package io.calimero.device;
 
+import static io.calimero.DataUnitBuilder.decodeAPCI;
 import static java.lang.System.Logger.Level.ERROR;
 import static java.lang.System.Logger.Level.INFO;
 import static java.lang.System.Logger.Level.TRACE;
 import static java.lang.System.Logger.Level.WARNING;
-import static io.calimero.DataUnitBuilder.decodeAPCI;
-import static io.calimero.DataUnitBuilder.toHex;
 
 import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.EventObject;
+import java.util.HexFormat;
 import java.util.Map;
 
 import io.calimero.CloseEvent;
@@ -292,7 +292,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		}
 		catch (final RuntimeException rte) {
 			logger.log(WARNING, "failed to execute service {0}->{1} {2}: {3}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
-					toHex(asdu, " "), rte);
+					HexFormat.ofDelimiter(" ").formatHex(asdu), rte);
 		}
 	}
 
@@ -406,7 +406,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final String propertyName = propertyNameByObjectType(objectType, pid);
 		logger.log(TRACE, "{0}->{1} {2} {3}(1)|{4}{5} info {6}", respondTo.getAddress(), GroupAddress.Broadcast, name,
-				objectType, pid, propertyName, toHex(info, " "));
+				objectType, pid, propertyName, HexFormat.ofDelimiter(" ").formatHex(info));
 
 		final ServiceResult<byte[]> sr = mgmtSvc.readParameter(objectType, pid, info);
 		if (ignoreOrSchedule(sr))
@@ -451,7 +451,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final var info = new byte[buffer.remaining()];
 		buffer.get(info);
 		logger.log(TRACE, "{0}->{1} {2} {3}(1)|{4}{5} info {6}", respondTo.getAddress(), "[]", name,
-				objectType, pid, propertyNameByObjectType(objectType, pid), toHex(info, " "));
+				objectType, pid, propertyNameByObjectType(objectType, pid), HexFormat.ofDelimiter(" ").formatHex(info));
 
 		mgmtSvc.writeParameter(objectType, pid, info);
 	}
@@ -524,7 +524,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			return;
 		final int level = data[0] & 0xff;
 		final byte[] key = Arrays.copyOfRange(data, 1, 5);
-		logger.log(TRACE, "{0}->{1} {2} level {3} key 0x{4}", respondTo.getAddress(), device.getAddress(), name, level, toHex(key, ""));
+		logger.log(TRACE, "{0}->{1} {2} level {3} key 0x{4}", respondTo.getAddress(), device.getAddress(), name, level,
+				HexFormat.of().formatHex(key));
 
 		final ServiceResult<Integer> sr = mgmtSvc.writeAuthKey(respondTo, level, key);
 		if (ignoreOrSchedule(sr))
@@ -639,8 +640,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			// Type 1 - six byte DoA
 			final byte[] start = Arrays.copyOfRange(data, 1, 1 + 6);
 			final byte[] end = Arrays.copyOfRange(data, 1 + 6, 1 + 6 + 6);
-			logger.log(TRACE, "{0}->{1} {2} {3} - {4}", respondTo.getAddress(), device.getAddress(), name, toHex(start, ""),
-					toHex(end, ""));
+			logger.log(TRACE, "{0}->{1} {2} {3} - {4}", respondTo.getAddress(), device.getAddress(), name, HexFormat.of().formatHex(start),
+					HexFormat.of().formatHex(end));
 			final ServiceResult<Boolean> sr = mgmtSvc.readDomainAddress(start, end);
 			sendDoAresponse(respondTo, sr);
 		}
@@ -679,7 +680,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		if (!verifyLength(data.length, lengthDoA, lengthDoA, name))
 			return;
 		final byte[] domain = Arrays.copyOfRange(data, 0, lengthDoA);
-		logger.log(TRACE, "{0}->{1} {2} 0x{3}", respondTo.getAddress(), device.getAddress(), name, toHex(domain, ""));
+		logger.log(TRACE, "{0}->{1} {2} 0x{3}", respondTo.getAddress(), device.getAddress(), name, HexFormat.of().formatHex(domain));
 		mgmtSvc.writeDomainAddress(domain);
 	}
 
@@ -711,7 +712,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				return;
 		}
 
-		logger.log(TRACE, "{0}->{1} {2} SN {3} DoA 0x{4}", respondTo.getAddress(), device.getAddress(), name, sno, toHex(domain, ""));
+		logger.log(TRACE, "{0}->{1} {2} SN {3} DoA 0x{4}", respondTo.getAddress(), device.getAddress(), name, sno, HexFormat.of().formatHex(domain));
 		mgmtSvc.writeDomainAddress(domain);
 
 		if (lengthDoA == 4) {
@@ -806,7 +807,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			return;
 		}
 		final byte[] key = Arrays.copyOfRange(data, 1, 5);
-		logger.log(TRACE, "{0}->{1} {2} key 0x{3}", respondTo.getAddress(), device.getAddress(), name, toHex(key, ""));
+		logger.log(TRACE, "{0}->{1} {2} key 0x{3}", respondTo.getAddress(), device.getAddress(), name, HexFormat.of().formatHex(key));
 		final ServiceResult<Integer> sr = mgmtSvc.authorize(respondTo, key);
 		if (ignoreOrSchedule(sr))
 			return;
@@ -919,7 +920,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] propertyData = Arrays.copyOfRange(data, 4, data.length);
 
 		logger.log(TRACE, "{0}->{1} {2} {3}|{4}{5} {6}..{7}: {8}", d.getAddress(), dst, name,
-				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, ""));
+				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, HexFormat.of().formatHex(propertyData));
 
 		ServiceResult<Void> sr = ServiceResult.empty();
 		if (checkPropertyAccess(objIndex, pid, true)) {
@@ -1009,7 +1010,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] functionInput = Arrays.copyOfRange(data, 2, data.length);
 
 		logger.log(TRACE, "{0}->{1} {2} {3}|{4}{5} {6}", respondTo.getAddress(), dst, name, objIndex,
-				pid, propertyName(objIndex, pid), toHex(functionInput, " "));
+				pid, propertyName(objIndex, pid), HexFormat.ofDelimiter(" ").formatHex(functionInput));
 
 
 		ServiceResult<byte[]> sr = ServiceResult.error(ReturnCode.AccessDenied);
@@ -1064,7 +1065,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			logger.log(WARNING, "ill-formed {0}: number field = {1} but memory length = {2}", name, bytes, memory);
 		else {
 			logger.log(TRACE, "{0}->{1} {2}: start address 0x{3}, {4} bytes: {5}", d.getAddress(), device.getAddress(), name,
-					Integer.toHexString(address), bytes, toHex(memory, " "));
+					Integer.toHexString(address), bytes, HexFormat.ofDelimiter(" ").formatHex(memory));
 			final ServiceResult<Void> sr = mgmtSvc.writeMemory(address, memory);
 			if (ignoreOrSchedule(sr))
 				return;
@@ -1109,7 +1110,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			}
 			else {
 				logger.log(TRACE, "{0}->{1} {2}: start address 0x{3}, {4} bytes: {5}", d.getAddress(), device.getAddress(), name,
-						Integer.toHexString(address), bytes, toHex(memory, " "));
+						Integer.toHexString(address), bytes, HexFormat.ofDelimiter(" ").formatHex(memory));
 				final ServiceResult<Void> sr = mgmtSvc.writeMemory(address, memory);
 				if (ignoreOrSchedule(sr))
 					return;
@@ -1319,7 +1320,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] propertyData = Arrays.copyOfRange(data, 8, data.length);
 
 		logger.log(TRACE, "{0}->{1} {2} {3}({4})|{5}{6} {7}..{8}: {9}", respondTo.getAddress(), dst, name, iot,
-				instance, pid, propertyNameByObjectType(iot, pid), start, start + elements - 1, toHex(propertyData, " "));
+				instance, pid, propertyNameByObjectType(iot, pid), start, start + elements - 1,
+				HexFormat.ofDelimiter(" ").formatHex(propertyData));
 
 		ServiceResult<Void> sr = ServiceResult.error(ReturnCode.AccessDenied);
 		try {
@@ -1353,7 +1355,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] functionInput = Arrays.copyOfRange(data, 5, data.length);
 
 		logger.log(TRACE, "{0}->{1} {2} IOT {3} OI {4} PID {5} {6}", respondTo.getAddress(), dst, name, iot, oi, pid,
-				toHex(functionInput, " "));
+				HexFormat.ofDelimiter(" ").formatHex(functionInput));
 
 
 		ServiceResult<byte[]> sr;
@@ -1437,7 +1439,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private void sendBroadcast(final boolean system, final byte[] apdu, final Priority p, final String service)
 	{
 		final String type = system ? "system" : "domain";
-		logger.log(TRACE, "{0}->[{1} broadcast] {2} {3}", device.getAddress(), type, service, toHex(apdu, " "));
+		logger.log(TRACE, "{0}->[{1} broadcast] {2} {3}", device.getAddress(), type, service, HexFormat.ofDelimiter(" ").formatHex(apdu));
 		try {
 			final var tsdu = sal.secureData(device.getAddress(), GroupAddress.Broadcast, apdu, securityCtrl).orElse(apdu);
 			tl.broadcast(system, p, tsdu);
@@ -1446,7 +1448,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			Thread.currentThread().interrupt();
 		}
 		catch (KNXLinkClosedException | KNXTimeoutException e) {
-			logger.log(WARNING, "{0}->[{1} broadcast] {2} {3}: {4}", device.getAddress(), type, service, toHex(apdu, " "),
+			logger.log(WARNING, "{0}->[{1} broadcast] {2} {3}: {4}", device.getAddress(), type, service, HexFormat.ofDelimiter(" ").formatHex(apdu),
 					e.getMessage());
 		}
 	}
@@ -1465,7 +1467,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			return;
 		}
 		final IndividualAddress dst = respondTo.getAddress();
-		logger.log(TRACE, "{0}->{1} {2} {3}", device.getAddress(), dst, service, toHex(apdu, " "));
+		logger.log(TRACE, "{0}->{1} {2} {3}", device.getAddress(), dst, service, HexFormat.ofDelimiter(" ").formatHex(apdu));
 		try {
 			final byte[] tsdu = sal.secureData(device.getAddress(), respondTo.getAddress(), apdu, securityCtrl).orElse(apdu);
 			if (respondTo.isConnectionOriented())
@@ -1477,7 +1479,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			Thread.currentThread().interrupt();
 		}
 		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException e) {
-			logger.log(WARNING, "{0}->{1} {2} {3}: {4}, {5}", device.getAddress(), dst, service, toHex(apdu, " "), e.getMessage(),
+			logger.log(WARNING, "{0}->{1} {2} {3}: {4}, {5}", device.getAddress(), dst, service, HexFormat.ofDelimiter(" ").formatHex(apdu), e.getMessage(),
 					respondTo);
 		}
 	}

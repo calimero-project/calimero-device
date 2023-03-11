@@ -39,6 +39,7 @@ package io.calimero.device;
 import static java.lang.System.Logger.Level.ERROR;
 
 import java.util.EventObject;
+import java.util.HexFormat;
 
 import io.calimero.DataUnitBuilder;
 import io.calimero.DetachEvent;
@@ -167,7 +168,7 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 				res.write(to, sr.result(), sr.compact);
 			}
 			catch (KNXTimeoutException | KNXLinkClosedException e) {
-				device.logger().log(ERROR, "responding to {0}: {1}", to, DataUnitBuilder.toHex(sr.result(), " "), e);
+				device.logger().log(ERROR, "responding to {0}: {1}", to, HexFormat.ofDelimiter(" ").formatHex(sr.result()), e);
 			}
 		}
 		else

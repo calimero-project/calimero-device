@@ -36,7 +36,6 @@
 
 package io.calimero.device;
 
-import static io.calimero.DataUnitBuilder.toHex;
 import static io.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
 import static io.calimero.device.ios.InterfaceObject.GROUP_OBJECT_TABLE_OBJECT;
 import static java.lang.System.Logger.Level.DEBUG;
@@ -54,6 +53,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.Optional;
 import java.util.TreeSet;
 import java.util.WeakHashMap;
@@ -238,7 +238,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					return new ServiceResult<>(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (KNXException | RuntimeException ex) {
-				logger.log(WARNING, "on group read request {0}->{1}: {2}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "), ex);
+				logger.log(WARNING, "on group read request {0}->{1}: {2}", e.getSourceAddr(), dst,
+						HexFormat.ofDelimiter(" ").formatHex(e.getASDU()), ex);
 			}
 		}
 		return null;
@@ -257,8 +258,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
-			logger.log(WARNING, "on group write {0}->{1}: {2}, {3}", e.getSourceAddr(), dst, toHex(e.getASDU(), " "),
-					ex.getMessage());
+			logger.log(WARNING, "on group write {0}->{1}: {2}, {3}", e.getSourceAddr(), dst,
+					HexFormat.ofDelimiter(" ").formatHex(e.getASDU()), ex.getMessage());
 		}
 	}
 
@@ -842,7 +843,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			DeviceObject.lookup(ios).setDomainAddress(domain);
 		}
 		catch (final KnxPropertyException e) {
-			logger.log(WARNING, "setting DoA {0} in interface object server", toHex(domain, " "), e);
+			logger.log(WARNING, "setting DoA {0} in interface object server", HexFormat.ofDelimiter(" ").formatHex(domain), e);
 		}
 	}
 
@@ -1003,7 +1004,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult<byte[]> management(final int svcType, final byte[] asdu, final KNXAddress dst,
 		final Destination respondTo, final TransportLayer tl)
 	{
-		logger.log(INFO, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType), toHex(asdu, " "));
+		logger.log(INFO, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType), 
+				HexFormat.ofDelimiter(" ").formatHex(asdu));
 		return null;
 	}
 
@@ -1036,7 +1038,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final var ldata = CEMILDataEx.newLte(knxip ? CEMILData.MC_LDATA_IND : CEMILData.MC_LDATA_REQ,
 				KNXMediumSettings.BackboneRouter, tag, tpdu, priority, repeat, domainBroadcast, false, 6);
 		logger.log(DEBUG, "send LTE-HEE {0} {1} IOT {2} OI {3} PID {4} data [{5}]",
-				DataUnitBuilder.decodeAPCI(service), tag, iot, oi, pid, DataUnitBuilder.toHex(data, ""));
+				DataUnitBuilder.decodeAPCI(service), tag, iot, oi, pid, HexFormat.of().formatHex(data));
 		try {
 			link.send(ldata, true);
 		}
