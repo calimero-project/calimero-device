@@ -6,9 +6,9 @@ repositories {
 
 apply plugin:'application'
 
-mainClassName = 'tuwien.auto.calimero.TestNetwork'
-group = 'com.github.calimero'
-version = '2.6-SNAPSHOT'
+mainClassName = 'io.calimero.testnetwork.TestNetwork'
+group = 'io.calimero'
+version = '3.0-SNAPSHOT'
 
 run {
 	// for attaching to debugger, start with -Ddebug=true

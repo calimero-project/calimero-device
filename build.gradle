@@ -1,22 +1,21 @@
 plugins {
-  id "com.github.ben-manes.versions" version "0.42.0"
+  id "com.github.ben-manes.versions" version "0.46.0"
+  id 'java-library'
   id 'maven-publish'
   id 'signing'
+  id 'eclipse'
 }
 
 repositories {
 	mavenLocal()
 	mavenCentral()
-	maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+	maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' }
 }
 
-ext.junitJupiterVersion = '5.9.1'
+ext.junitJupiterVersion = '5.9.2'
 
-apply plugin: 'java-library'
-apply plugin: 'eclipse'
-
-group = 'com.github.calimero'
-version = '2.6-SNAPSHOT'
+group = 'io.calimero'
+version = '3.0-SNAPSHOT'
 
 sourceCompatibility = 19
 targetCompatibility = 19
@@ -26,18 +25,14 @@ java {
     withJavadocJar()
 }
 
-tasks.withType(JavaExec) { jvmArgs += "--enable-preview" }
-
-tasks.withType(Test) { jvmArgs += "--enable-preview" }
-
-tasks.withType(Jar) {
-	from("${projectDir}") {
+tasks.withType(Jar).configureEach {
+    from("${projectDir}") {
         include 'LICENSE'
         into "META-INF"
     }
-    if (name.equals('sourcesJar')) {
-    	from("${projectDir}") {
-		    include 'README.md'
+    if (name == 'sourcesJar') {
+        from("${projectDir}") {
+            include 'README.md'
         }
     }
 }
@@ -47,8 +42,7 @@ compileTestJava.options.encoding = 'UTF-8'
 javadoc.options.encoding = 'UTF-8'
 
 compileJava.options*.compilerArgs = [
-	'-Xlint:all,-serial',
-	'--enable-preview',
+	'-Xlint:all,-serial'
 ]
 
 compileTestJava.options*.compilerArgs = [
@@ -56,26 +50,26 @@ compileTestJava.options*.compilerArgs = [
 	'-Xlint:-try',
 ]
 
+tasks.named('compileJava') {
+    options.javaModuleVersion = provider { project.version }
+}
+
 test {
 	useJUnitPlatform() {
 		excludeTags 'knxnetip'
 	}
 }
 
-tasks.withType(Javadoc) {
+tasks.withType(Javadoc).configureEach {
     options.addStringOption("Xdoclint:-missing", '-quiet')
     options.addBooleanOption('-enable-preview', true)
 	options.addStringOption("-release", "${targetCompatibility}")
 }
 
 dependencies {
-	api "com.github.calimero:calimero-core-loom:${version}"
-	implementation 'org.slf4j:slf4j-api:1.7.36'
+	api "io.calimero:calimero-core:${version}"
 	
-	testImplementation "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
-	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
-	testCompileOnly 'junit:junit:4.13.2'
-	testRuntimeOnly "org.junit.vintage:junit-vintage-engine:${junitJupiterVersion}"
+	testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
 }
 
 publishing {
@@ -101,7 +95,7 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:git://github.com:calimero-project/calimero-device.git'
+                    connection = 'scm:git:git://github.com/calimero-project/calimero-device.git'
                     url = 'https://github.com/calimero-project/calimero-device.git'
                 }
             }
@@ -110,8 +104,8 @@ publishing {
     repositories {
         maven {
             name 'maven'
-            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
+            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots"
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
             credentials(PasswordCredentials)
         }
