@@ -17,10 +17,10 @@ ext.junitJupiterVersion = '5.9.2'
 group = 'io.calimero'
 version = '3.0-SNAPSHOT'
 
-sourceCompatibility = 19
-targetCompatibility = 19
-
 java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
     withSourcesJar()
     withJavadocJar()
 }
@@ -62,12 +62,11 @@ test {
 
 tasks.withType(Javadoc).configureEach {
     options.addStringOption("Xdoclint:-missing", '-quiet')
-    options.addBooleanOption('-enable-preview', true)
-	options.addStringOption("-release", "${targetCompatibility}")
+	options.addStringOption("-release", "${java.targetCompatibility}")
 }
 
 dependencies {
-	api "io.calimero:calimero-core:${version}"
+	api "io.calimero:calimero-core-loom:${version}"
 	
 	testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
 }
