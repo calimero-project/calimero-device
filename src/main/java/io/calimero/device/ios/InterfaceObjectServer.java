@@ -36,12 +36,11 @@
 
 package io.calimero.device.ios;
 
-import static java.lang.System.Logger.Level.INFO;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -150,13 +149,17 @@ public class InterfaceObjectServer implements PropertyAccess
 
 		try {
 			final String propertyDefinitions = "/properties.xml";
-			final URL resource = getClass().getResource(propertyDefinitions);
+			final URL resource = Settings.class.getResource(propertyDefinitions);
 			if (resource != null)
 				loadDefinitions(resource.toString());
+			else
+				logger.log(Level.WARNING, "calimero-core is missing the KNX property definitions resource");
+
 		}
 		catch (KNXException | KNXMLException | UncheckedIOException e) {
 			// using the default resource ID, we cannot expect to always find the resource
-			logger.log(INFO, "could not load the Interface Object Server KNX property definitions ({0})", e.getMessage());
+			logger.log(Level.WARNING, "could not load the Interface Object Server KNX property definitions ({0})",
+					e.getMessage());
 		}
 
 		// AN033 3.2.6: minimum required interface objects for a cEMI server
