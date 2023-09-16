@@ -151,12 +151,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final KNXMediumSettings settings = link.getKNXMedium();
 			if (settings.getMedium() == KNXMediumSettings.MEDIUM_PL110) {
 				final byte[] domainAddress = ((PLSettings) settings).getDomainAddress();
-				if (!Arrays.equals(domainAddress, new byte[2]) || domainAddress().length == 0)
+				if (!Arrays.equals(domainAddress, new byte[2]) || domainAddress(false).length == 0)
 					setDomainAddress(domainAddress);
 			}
 			else if (settings.getMedium() == KNXMediumSettings.MEDIUM_RF) {
 				final byte[] domainAddress = ((RFSettings) settings).getDomainAddress();
-				if (!Arrays.equals(domainAddress, new byte[6]) || domainAddress().length == 0)
+				if (!Arrays.equals(domainAddress, new byte[6]) || domainAddress(false).length == 0)
 					setDomainAddress(domainAddress);
 			}
 		}
@@ -848,11 +848,16 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private byte[] domainAddress() {
+		return domainAddress(true);
+	}
+
+	private byte[] domainAddress(final boolean logError) {
 		try {
 			return DeviceObject.lookup(ios).domainAddress(domainType());
 		}
 		catch (final KnxPropertyException e) {
-			logger.log(WARNING, "reading DoA", e);
+			if (logError)
+				logger.log(WARNING, "error reading DoA property", e);
 		}
 		return new byte[0];
 	}
@@ -1004,7 +1009,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult<byte[]> management(final int svcType, final byte[] asdu, final KNXAddress dst,
 		final Destination respondTo, final TransportLayer tl)
 	{
-		logger.log(INFO, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType), 
+		logger.log(INFO, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
 				HexFormat.ofDelimiter(" ").formatHex(asdu));
 		return null;
 	}
