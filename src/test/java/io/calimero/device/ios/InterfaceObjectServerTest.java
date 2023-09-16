@@ -50,6 +50,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.calimero.KNXException;
+import io.calimero.Settings;
 import io.calimero.device.ios.InterfaceObjectServer.IosResourceHandler;
 import io.calimero.mgmt.Description;
 import io.calimero.mgmt.PropertyAccess;
@@ -117,7 +118,7 @@ class InterfaceObjectServerTest
 	@Test
 	void loadDefinitions() throws KNXException
 	{
-		final URL resource = getClass().getResource(propertiesFile);
+		final URL resource = Settings.class.getResource(propertiesFile);
 		ios.loadDefinitions(resource.toString());
 	}
 
