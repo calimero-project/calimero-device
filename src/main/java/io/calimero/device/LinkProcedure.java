@@ -434,7 +434,7 @@ public final class LinkProcedure implements Runnable
 				final boolean params = (flags & 0x04) == 0x04;
 				final int subfunc = flags & 0x03;
 				logger.log(DEBUG, "received {0}: unidir {1}, params {2}, subfunc {3}, manufacturer code {4}, "
-						+ "group objects to link: {}", action, unidirectional, params, subfunc, code, objects);
+						+ "group objects to link: {5}", action, unidirectional, params, subfunc, code, objects);
 				expectedGroupObjects = Math.max(1, objects);
 			}
 			case ChannelFunctionActuator, ChannelFunctionSensor -> {
