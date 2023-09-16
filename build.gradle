@@ -68,6 +68,8 @@ dependencies {
 	api "io.calimero:calimero-core:${version}"
 	
 	testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+	testRuntimeOnly 'org.slf4j:slf4j-jdk-platform-logging:2.0.9'
+	testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.9'
 }
 
 publishing {
