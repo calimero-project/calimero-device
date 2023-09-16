@@ -93,7 +93,6 @@ import io.calimero.DeviceDescriptor;
 import io.calimero.DeviceDescriptor.DD0;
 import io.calimero.IndividualAddress;
 import io.calimero.KNXException;
-import io.calimero.KNXFormatException;
 import io.calimero.KNXTimeoutException;
 import io.calimero.KnxRuntimeException;
 import io.calimero.SerialNumber;
@@ -551,13 +550,19 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	protected void ipRoutingConfigChanged(final RoutingConfig config) {
+		try {
+			connectionOfLink().ifPresent(routing -> setupRoutingLink(routing.networkInterface(), config));
+		}
+		catch (ReflectiveOperationException | RuntimeException e) {
+			logger.warn("error setting device routing link ({})", config, e);
+		}
+	}
+
+	private void setupRoutingLink(final NetworkInterface netif, final RoutingConfig config) {
 		final var oldLink = getDeviceLink();
 		final var settings = oldLink.getKNXMedium();
 
 		try {
-			final var routing = connectionOfLink();
-			final var netif = routing.networkInterface();
-
 			final KNXNetworkLink newLink;
 			if (config.secureRouting())
 				newLink = KNXNetworkLinkIP.newSecureRoutingLink(netif, config.multicastGroup(), config.groupKey(),
@@ -567,7 +572,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			setDeviceLink(newLink);
 			oldLink.close();
 		}
-		catch (ReflectiveOperationException | KNXException | RuntimeException e) {
+		catch (final KNXException e) {
 			logger.warn("error setting device routing link ({})", config, e);
 		}
 		catch (final InterruptedException e) {
@@ -940,11 +945,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, propertyId, 1, 1, data);
 	}
 
-	private KNXnetIPRouting connectionOfLink() throws ReflectiveOperationException {
-		final KNXnetIPRouting conn = accessField(AbstractLink.class, "conn", link);
-		if (conn == null)
-			throw new KnxRuntimeException("no KNX IP routing connection found in link " + link.getName(), null);
-		return conn;
+	private Optional<KNXnetIPRouting> connectionOfLink() throws ReflectiveOperationException {
+		return Optional.ofNullable(accessField(AbstractLink.class, "conn", link));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1002,64 +1004,68 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		byte[] mac = new byte[6];
 		byte[] mcast = new byte[4];
 		try {
-			final KNXnetIPRouting conn = connectionOfLink();
-			mcast = conn.getRemoteAddress().getAddress().getAddress();
+			final var connOpt = connectionOfLink();
+			if (connOpt.isPresent()) {
+				final var conn = connOpt.get();
+				mcast = conn.getRemoteAddress().getAddress().getAddress();
 
-			NetworkInterface netif = conn.networkInterface();
-			Optional<InterfaceAddress> addr = Optional.empty();
+				NetworkInterface netif = conn.networkInterface();
+				Optional<InterfaceAddress> addr = Optional.empty();
 
-			// workaround to verify that interface is actually configured
-			if (NetworkInterface.getByName(netif.getName()) != null) {
-				final var addresses = netif.getInterfaceAddresses();
-				addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
-			}
-			else {
-				// best-effort lookup of default interface
-				for (final var nif : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-					try {
-						if (nif.isUp() && nif.supportsMulticast() && !nif.isLoopback() && !nif.isPointToPoint()) {
-							final var addresses = nif.getInterfaceAddresses();
-							addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
-							if (addr.isPresent()) {
-								netif = nif;
-								break;
+				// workaround to verify that interface is actually configured
+				if (NetworkInterface.getByName(netif.getName()) != null) {
+					final var addresses = netif.getInterfaceAddresses();
+					addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address).findFirst();
+				}
+				else {
+					// best-effort lookup of default interface
+					for (final var nif : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+						try {
+							if (nif.isUp() && nif.supportsMulticast() && !nif.isLoopback() && !nif.isPointToPoint()) {
+								final var addresses = nif.getInterfaceAddresses();
+								addr = addresses.stream().filter(a -> a.getAddress() instanceof Inet4Address)
+										.findFirst();
+								if (addr.isPresent()) {
+									netif = nif;
+									break;
+								}
 							}
 						}
+						catch (final SocketException ignore) {}
 					}
-					catch (final SocketException e) {}
+				}
+
+				if (addr.isPresent()) {
+					ip = addr.get().getAddress().getAddress();
+					final int prefixLength = addr.get().getNetworkPrefixLength();
+					final long defMask = 0xffffffffL;
+					final long intMask = defMask ^ (defMask >> prefixLength);
+					ByteBuffer.wrap(mask).putInt((int) intMask);
+				}
+				mac = Optional.ofNullable(netif.getHardwareAddress()).orElse(mac);
+
+				final var lookup = MethodHandles.privateLookupIn(KNXnetIPRouting.class, MethodHandles.lookup());
+				final var callback = lookup.findVarHandle(KNXnetIPRouting.class, "searchRequestCallback",
+						BiFunction.class);
+				callback.setVolatile(conn, (BiFunction<KNXnetIPHeader, ByteBuffer, SearchResponse>) this::ipSearchRequest);
+
+				if (conn instanceof final SecureRouting secRouting) {
+					// TODO set actual key
+					setIpProperty(KnxipParameterObject.Pid.BackboneKey, new byte[16]);
+
+					final int bits = 1 << ServiceFamily.Routing.id();
+					// function property
+					setIpProperty(KnxipParameterObject.Pid.SecuredServiceFamilies, new byte[] { 0, (byte) bits });
+
+					final long ms = secRouting.latencyTolerance().toMillis();
+					final byte[] msData = new byte[] { (byte) (ms >> 8), (byte) (ms & 0xff)};
+					setIpProperty(KnxipParameterObject.Pid.LatencyTolerance, msData);
+
+					final double frac = secRouting.syncLatencyFraction();
+					setIpProperty(KnxipParameterObject.Pid.SyncLatencyFraction, (byte) (frac * 255));
 				}
 			}
 
-			if (addr.isPresent()) {
-				ip = addr.get().getAddress().getAddress();
-				final int prefixLength = addr.get().getNetworkPrefixLength();
-				final long defMask = 0xffffffffL;
-				final long intMask = defMask ^ (defMask >> prefixLength);
-				ByteBuffer.wrap(mask).putInt((int) intMask);
-			}
-
-			mac = Optional.ofNullable(netif.getHardwareAddress()).orElse(mac);
-
-			final var lookup = MethodHandles.privateLookupIn(KNXnetIPRouting.class, MethodHandles.lookup());
-			final var callback = lookup.findVarHandle(KNXnetIPRouting.class, "searchRequestCallback",
-					BiFunction.class);
-			callback.setVolatile(conn, (BiFunction<KNXnetIPHeader, ByteBuffer, SearchResponse>) this::ipSearchRequest);
-
-			if (conn instanceof final SecureRouting secRouting) {
-				// TODO set actual key
-				setIpProperty(KnxipParameterObject.Pid.BackboneKey, new byte[16]);
-
-				final int bits = 1 << ServiceFamily.Routing.id();
-				// function property
-				setIpProperty(KnxipParameterObject.Pid.SecuredServiceFamilies, new byte[] { 0, (byte) bits });
-
-				final long ms = secRouting.latencyTolerance().toMillis();
-				final byte[] msData = new byte[] { (byte) (ms >> 8), (byte) (ms & 0xff)};
-				setIpProperty(KnxipParameterObject.Pid.LatencyTolerance, msData);
-
-				final double frac = secRouting.syncLatencyFraction();
-				setIpProperty(KnxipParameterObject.Pid.SyncLatencyFraction, (byte) (frac * 255));
-			}
 		}
 		catch (ReflectiveOperationException | IOException | RuntimeException e) {
 			logger.warn("initializing KNX IP properties, {}", e.toString());
@@ -1126,10 +1132,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		try {
 			if (pe.getInterfaceObject().getType() == InterfaceObject.KNXNETIP_PARAMETER_OBJECT) {
 				final int pid = pe.getPropertyId();
-				if (pid == PID.TTL) {
-					final KNXnetIPRouting conn = connectionOfLink();
-					conn.setHopCount(pe.getNewData()[0]);
-				}
+				if (pid == PID.TTL)
+					connectionOfLink().ifPresent(conn -> conn.setHopCount(pe.getNewData()[0]));
 				else if (pid == PID.KNX_INDIVIDUAL_ADDRESS)
 					setAddress(new IndividualAddress(pe.getNewData()));
 			}
