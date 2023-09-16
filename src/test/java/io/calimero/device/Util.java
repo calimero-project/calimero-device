@@ -142,7 +142,7 @@ public final class Util
 			try {
 				d = new Discoverer(getLocalHost().getAddress(), getLocalHost().getPort(), false, false);
 				d.startSearch(2, true);
-				if (d.getSearchResponses().size() == 0)
+				if (d.getSearchResponses().isEmpty())
 					return null;
 				device = d.getSearchResponses().get(0).getResponse().getDevice().getAddress();
 			}

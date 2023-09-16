@@ -1014,7 +1014,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			if (s != null) {
 				if (s.equals("<tbd>"))
 					return -1;
-				return s.length() == 0 ? 0 : Integer.decode(s);
+				return s.isEmpty() ? 0 : Integer.decode(s);
 			}
 			throw new NumberFormatException("no number");
 		}
