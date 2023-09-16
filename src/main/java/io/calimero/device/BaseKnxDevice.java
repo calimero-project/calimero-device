@@ -535,35 +535,18 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
 	}
 
-	protected static final class RoutingConfig {
-		private final InetAddress mcGroup;
-		private final byte[] groupKey;
-		private final Duration latencyTolerance;
+	protected record RoutingConfig(InetAddress multicastGroup, byte[] groupKey, Duration latencyTolerance) {
 
-		RoutingConfig(final InetAddress mcGroup) {
-			this.mcGroup = mcGroup;
-			groupKey = new byte[0];
-			latencyTolerance = Duration.ZERO;
-		}
-
-		RoutingConfig(final InetAddress mcGroup, final byte[] groupKey, final Duration latencyTolerance) {
-			this.mcGroup = mcGroup;
-			this.groupKey = groupKey;
-			this.latencyTolerance = latencyTolerance;
-		}
-
-		public InetAddress multicastGroup() { return mcGroup; }
+		RoutingConfig(final InetAddress mcGroup) { this(mcGroup, new byte[0], Duration.ZERO); }
 
 		public boolean secureRouting() { return groupKey.length == 16; }
 
 		public byte[] groupKey() { return groupKey.clone(); }
 
-		public Duration latencyTolerance() { return latencyTolerance; }
-
 		@Override
 		public String toString() {
 			final String secure = secureRouting() ? new String(Character.toChars(0x1F512)) + " " : "";
-			return String.format("%smcast %s", secure, mcGroup.getHostAddress());
+			return String.format("%smcast %s", secure, multicastGroup.getHostAddress());
 		}
 	}
 
