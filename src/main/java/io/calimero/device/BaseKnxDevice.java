@@ -357,10 +357,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			else if (address.getRawAddress() == 0 && !(link instanceof KNXNetworkLinkUsb))
 				settings.setDeviceAddress(getAddress());
 
-			if (process instanceof KnxDeviceServiceLogic)
-				((KnxDeviceServiceLogic) process).setDevice(this);
-			else if (mgmt instanceof KnxDeviceServiceLogic)
-				((KnxDeviceServiceLogic) mgmt).setDevice(this);
+			if (process instanceof KnxDeviceServiceLogic logic)
+				logic.setDevice(this);
+			else if (mgmt instanceof KnxDeviceServiceLogic logic)
+				logic.setDevice(this);
 
 			tl = new TransportLayerImpl(link, true);
 			if (sal != null)

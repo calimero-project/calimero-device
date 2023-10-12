@@ -139,7 +139,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		this.device = device;
 		ios = device.getInterfaceObjectServer();
-		logger = (device instanceof BaseKnxDevice) ? ((BaseKnxDevice) device).logger()
+		logger = (device instanceof final BaseKnxDevice baseDevice) ? baseDevice.logger()
 				: LoggerFactory.getLogger(KnxDeviceServiceLogic.class);
 
 		final KNXNetworkLink link = device.getDeviceLink();
@@ -728,8 +728,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final IndividualAddress old = device.getAddress();
 		final KNXMediumSettings settings = device.getDeviceLink().getKNXMedium();
 		settings.setDeviceAddress(newAddress);
-		if (device instanceof BaseKnxDevice) {
-			((BaseKnxDevice) device).setAddress(newAddress);
+		if (device instanceof final BaseKnxDevice baseDevice) {
+			baseDevice.setAddress(newAddress);
 		}
 		logger.info("set new device address {} (old {})", newAddress, old);
 	}

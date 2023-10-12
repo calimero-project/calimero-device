@@ -121,6 +121,7 @@ class ManagementServiceNotifierTest {
 				new Description(groupObjectTableIndex, 0, 66, 0, PropertyTypes.PDT_FUNCTION, true, 1, 1, 3, 3), true);
 
 		notifier = new ManagementServiceNotifier(device, mgmtServices) {
+			@Override
 			void send(final io.calimero.mgmt.Destination respondTo, final byte[] apdu, final Priority p,
 				final String service) {
 				test.accept(apdu);
