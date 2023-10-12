@@ -129,8 +129,8 @@ public class ServiceResult<T> implements Runnable
 	 */
 	public byte[] getResult()
 	{
-		if (data instanceof byte[])
-			return (byte[]) data;
+		if (data instanceof byte[] bytes)
+			return bytes;
 		return null;
 	}
 
