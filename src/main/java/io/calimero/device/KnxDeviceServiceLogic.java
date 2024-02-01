@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2023 B. Malinowsky
+    Copyright (c) 2012, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -264,12 +264,12 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	{
 		try {
 			final Description d = ios.getDescription(objectIndex, propertyId);
-			if (d.getPDT() == PropertyTypes.PDT_FUNCTION)
+			if (d.pdt() == PropertyTypes.PDT_FUNCTION)
 				return ServiceResult.error(ReturnCode.DataVoid);
 			final int level = accessLevel(remote);
-			if (level > d.getReadLevel()) {
+			if (level > d.readLevel()) {
 				logger.warn("deny {} read access to property {}|{} (access level {}, requires {})", remote.getAddress(),
-						objectIndex, propertyId, level, d.getReadLevel());
+						objectIndex, propertyId, level, d.readLevel());
 				return ServiceResult.error(ReturnCode.AccessDenied);
 			}
 		}
@@ -343,18 +343,18 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final int objType = ios.getInterfaceObjects()[objectIndex].getType();
 			final Property p = ios.propertyDefinitions().get(new PropertyKey(objType, propertyId));
 			if (p != null)
-				d = new Description(objectIndex, objType, propertyId, 0, p.getPDT(), !p.readOnly(), 0, 1, p.readLevel(),
+				d = new Description(objectIndex, objType, propertyId, 0, p.pdt(), !p.readOnly(), 0, 1, p.readLevel(),
 						p.writeLevel());
 		}
 		if (d != null && !inProgrammingMode()) {
-			if (!d.isWriteEnabled()) {
+			if (!d.writeEnabled()) {
 				logger.warn("property {}|{} is {}", objectIndex, propertyId, CEMIDevMgmt.getErrorMessage(ErrorCodes.READ_ONLY));
 				return ServiceResult.error(ReturnCode.AccessReadOnly);
 			}
 			final int level = accessLevel(remote);
-			if (level > d.getWriteLevel()) {
+			if (level > d.writeLevel()) {
 				logger.warn("deny {} write access to property {}|{} (access level {}, requires {})", remote.getAddress(),
-						objectIndex, propertyId, level, d.getWriteLevel());
+						objectIndex, propertyId, level, d.writeLevel());
 				return ServiceResult.error(ReturnCode.AccessDenied);
 			}
 		}
@@ -1108,7 +1108,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 			final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
 			final var description = ios.getDescription(idx, PID.TABLE);
-			int pdt = description.getPDT();
+			int pdt = description.pdt();
 			// system 7 group object table contains RAM flags table pointer
 			int flagsTablePtrOffset = 0;
 			if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
@@ -1158,7 +1158,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 		final int idx = (int) unsigned(ios.getProperty(InterfaceObject.ASSOCIATIONTABLE_OBJECT, 1, PID.OBJECT_INDEX, 1, 1));
 		final var description = ios.getDescription(idx, PID.TABLE);
-		final boolean bigAssocTable = description.getPDT() == PropertyTypes.PDT_GENERIC_04;
+		final boolean bigAssocTable = description.pdt() == PropertyTypes.PDT_GENERIC_04;
 
 		final boolean system7 = isSystem7(ios);
 

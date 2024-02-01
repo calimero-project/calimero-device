@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2023 B. Malinowsky
+    Copyright (c) 2012, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -985,12 +985,12 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final Description desc = sr.result();
 		// read back pid, because it is 0 when the propIndex was used
-		pid = desc.getPID();
-		final int index = desc.getPropIndex();
-		int type = desc.isWriteEnabled() ? 0x80 : 0;
-		type |= desc.getPDT();
-		final int max = desc.getMaxElements();
-		final int access = desc.getReadLevel() << 4 | desc.getWriteLevel();
+		pid = desc.pid();
+		final int index = desc.propIndex();
+		int type = desc.writeEnabled() ? 0x80 : 0;
+		type |= desc.pdt();
+		final int max = desc.maxElements();
+		final int access = desc.readLevel() << 4 | desc.writeLevel();
 		final byte[] asdu = new byte[/*7*/] { (byte) objIndex, (byte) pid, (byte) index, (byte) type,
 			(byte) (max >>> 8), (byte) max, (byte) access };
 
@@ -1013,7 +1013,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		if (checkPropertyAccess(objIndex, pid, !isCommand)) {
 			try {
 				final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
-				if (description.getPDT() == PropertyTypes.PDT_FUNCTION)
+				if (description.pdt() == PropertyTypes.PDT_FUNCTION)
 					sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
 							: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
 				else
@@ -1255,12 +1255,12 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final Description desc = sr.result();
 		// read back pid, because it is 0 when the propIndex was used
-		final int pidResponse = desc.getPID();
-		final int index = desc.getPropIndex();
-		int type = desc.isWriteEnabled() ? 0x80 : 0;
-		type |= desc.getPDT();
-		final int max = desc.getMaxElements();
-		final int access = desc.getReadLevel() << 4 | desc.getWriteLevel();
+		final int pidResponse = desc.pid();
+		final int index = desc.propIndex();
+		int type = desc.writeEnabled() ? 0x80 : 0;
+		type |= desc.pdt();
+		final int max = desc.maxElements();
+		final int access = desc.readLevel() << 4 | desc.writeLevel();
 		final byte[] asdu = new byte[/*7*/] { (byte) instance, (byte) pidResponse, (byte) index, (byte) type,
 			(byte) (max >>> 8), (byte) max, (byte) access };
 
@@ -1361,11 +1361,11 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 			if (!checkPropertyAccess(objIndex, pid, !isCommand))
 				sr = ServiceResult.error(ReturnCode.AccessDenied);
-			else if (description.getPDT() == PropertyTypes.PDT_FUNCTION && reserved != 0)
+			else if (description.pdt() == PropertyTypes.PDT_FUNCTION && reserved != 0)
 				sr = ServiceResult.error(ReturnCode.DataVoid);
 			else if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityObject.Pid.SecurityMode)
 				sr = sal.securityMode(isCommand, functionInput);
-			else if (description.getPDT() == PropertyTypes.PDT_FUNCTION || description.getPDT() == PropertyTypes.PDT_CONTROL) {
+			else if (description.pdt() == PropertyTypes.PDT_FUNCTION || description.pdt() == PropertyTypes.PDT_CONTROL) {
 				if (iot == InterfaceObject.SECURITY_OBJECT && oi == 1 && pid == SecurityObject.Pid.SecurityFailuresLog)
 					sr = sal.securityFailuresLog(isCommand, functionInput);
 				else
@@ -1507,7 +1507,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			key = new PropertyKey(iot, pid);
 		final var property = ios.propertyDefinitions().get(key);
 		if (property != null)
-			return " (" + property.getName() + ")";
+			return " (" + property.propertyName() + ")";
 		return "";
 	}
 
