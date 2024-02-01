@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2023 B. Malinowsky
+    Copyright (c) 2010, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -227,7 +227,7 @@ public class InterfaceObject
 			final byte[] v = k.next();
 
 			setDescription(d);
-			values.put(new PropertyKey(d.getObjectType(), d.getPID()), v);
+			values.put(new PropertyKey(d.objectType(), d.pid()), v);
 		}
 	}
 
@@ -243,7 +243,7 @@ public class InterfaceObject
 
 		final byte[] empty = new byte[0];
 		for (final Description d : saveDesc) {
-			final PropertyKey key = new PropertyKey(d.getObjectType(), d.getPID());
+			final PropertyKey key = new PropertyKey(d.objectType(), d.pid());
 			final byte[] data = values.get(key);
 			// descriptions with no values get an empty array assigned
 			if (data == null)
@@ -255,7 +255,7 @@ public class InterfaceObject
 		}
 		// add values where no description was set, creating a default description
 		for (final PropertyKey key : remaining.keySet()) {
-			saveDesc.add(new Description(idx, type, key.getPID(), saveVal.size(), 0, true, 0, 0, 0, 0));
+			saveDesc.add(new Description(idx, type, key.pid(), saveVal.size(), 0, true, 0, 0, 0, 0));
 			saveVal.add(remaining.get(key).clone());
 		}
 		// save them
@@ -291,7 +291,7 @@ public class InterfaceObject
 		if (currElems < size)
 			throw new KnxPropertyException(err(pid, "requested elements [" + start + ".." + size + "] exceed past last property value"),
 					ErrorCodes.PROP_INDEX_RANGE_ERROR);
-		final int typeSize = PropertyTypes.bitSize(desc.getPDT()).map(bits -> Math.max(bits, 8) / 8)
+		final int typeSize = PropertyTypes.bitSize(desc.pdt()).map(bits -> Math.max(bits, 8) / 8)
 				.orElseGet(() -> (bytes.length - 2) / currElems);
 		final byte[] data = new byte[actualElements * typeSize];
 		int d = 0;
@@ -302,7 +302,7 @@ public class InterfaceObject
 
 	private String err(final int propertyId, final String msg) {
 		final var p = getDefinition(propertyId);
-		final String s = p != null ? " (" + p.getName() + ")" : "";
+		final String s = p != null ? " (" + p.propertyName() + ")" : "";
 		return String.format("%d|%d%s %s", getIndex(), propertyId, s, msg);
 	}
 
@@ -332,8 +332,8 @@ public class InterfaceObject
 		Description d = null;
 		boolean createDescription = false;
 		try {
-			d = new Description(getType(), getDescription(pid, 0));
-			pdt = d.getPDT();
+			d = Description.from(getType(), getDescription(pid, 0));
+			pdt = d.pdt();
 		}
 		catch (final KnxPropertyException e) {
 			if (strictMode)
@@ -342,7 +342,7 @@ public class InterfaceObject
 			createDescription = true;
 			final Property p = getDefinition(pid);
 			if (p != null) {
-				pdt = p.getPDT();
+				pdt = p.pdt();
 				dptId = p.dpt();
 			}
 		}
@@ -365,7 +365,7 @@ public class InterfaceObject
 		// correspondingly.
 		final int size = start + elements - 1;
 		if (bytes == null || size > (bytes.length - 2) / typeSize) {
-			final int maxElements = d == null ? elements : d.getMaxElements();
+			final int maxElements = d == null ? elements : d.maxElements();
 			if (size > maxElements)
 				throw new KnxPropertyException("property values index range [" + start + "..." + size + "] exceeds "
 						+ maxElements + " maximum elements", ErrorCodes.PROP_INDEX_RANGE_ERROR);
@@ -402,8 +402,8 @@ public class InterfaceObject
 			d = descriptions.get(propIndex);
 
 		if (d != null) {
-			return new Description(getIndex(), d.getObjectType(), d.getPID(), d.getPropIndex(), d.getPDT(),
-					d.isWriteEnabled(), 0, d.getMaxElements(), d.getReadLevel(), d.getWriteLevel()).toByteArray();
+			return new Description(getIndex(), d.objectType(), d.pid(), d.propIndex(), d.pdt(),
+					d.writeEnabled(), 0, d.maxElements(), d.readLevel(), d.writeLevel()).toByteArray();
 		}
 
 		var typeName = getTypeName();
@@ -429,7 +429,7 @@ public class InterfaceObject
 		// tells us whether we have to create a corrected description before inserting
 		boolean adjust = false;
 
-		if (d.getObjectType() != type) {
+		if (d.objectType() != type) {
 			if (!allowCorrections)
 				throw new KNXIllegalArgumentException("interface object type differs");
 			adjust = true;
@@ -439,50 +439,50 @@ public class InterfaceObject
 		int existingIdx = 0;
 		int pdt = 0;
 		// check if a description already exists
-		final Description chk = findByPid(d.getPID());
+		final Description chk = findByPid(d.pid());
 		if (chk != null) {
-			existingIdx = chk.getPropIndex();
+			existingIdx = chk.propIndex();
 			idx = existingIdx;
-			pdt = chk.getPDT();
+			pdt = chk.pdt();
 		}
 		else {
 			// no existing description, find an empty position index
 			idx = findFreeSlot();
 		}
 		// ensure object type property is on first position
-		if (d.getPID() == PID.OBJECT_TYPE) {
-			if (d.getPropIndex() != 0) {
+		if (d.pid() == PID.OBJECT_TYPE) {
+			if (d.propIndex() != 0) {
 				if (!allowCorrections)
 					throw new KNXIllegalArgumentException("property 'object type' (PID 1) only allowed at index 0");
 				adjust = true;
 				idx = 0;
 			}
 		}
-		else if (d.getPropIndex() == 0) {
+		else if (d.propIndex() == 0) {
 			if (!allowCorrections)
 				throw new KNXIllegalArgumentException("only property 'object type' (PID 1) allowed at index 0");
 			adjust = true;
 		}
 		else
-			idx = d.getPropIndex();
+			idx = d.propIndex();
 
-		if (d.getMaxElements() < d.getCurrentElements()) {
+		if (d.maxElements() < d.currentElements()) {
 			if (!allowCorrections)
 				throw new KNXIllegalArgumentException("maximum elements less than current elements");
 		}
 
-		if (d.getPDT() == 0 && allowCorrections) {
+		if (d.pdt() == 0 && allowCorrections) {
 			// if no existing description or no pdt was set
 			if (pdt == 0) {
-				final Property p = getDefinition(d.getPID());
+				final Property p = getDefinition(d.pid());
 				if (p != null)
-					pdt = p.getPDT();
+					pdt = p.pdt();
 			}
 			if (pdt != 0)
 				adjust = true;
 		}
 		else
-			pdt = d.getPDT();
+			pdt = d.pdt();
 
 		// check if we have to remove an existing description (which might be located at
 		// a different index)
@@ -495,8 +495,8 @@ public class InterfaceObject
 			removeDescription(existingIdx);
 
 		// NB: the current elements field used here is meaningless
-		final var set = adjust ? new Description(d.getObjectIndex(), type, d.getPID(), idx, pdt, d.isWriteEnabled(),
-				d.getCurrentElements(), d.getMaxElements(), d.getReadLevel(), d.getWriteLevel()) : d;
+		final var set = adjust ? new Description(d.objectIndex(), type, d.pid(), idx, pdt, d.writeEnabled(),
+				d.currentElements(), d.maxElements(), d.readLevel(), d.writeLevel()) : d;
 		setDescription(set);
 	}
 
@@ -504,13 +504,13 @@ public class InterfaceObject
 	void setDescription(final Description d)
 	{
 		// increase array size until we can insert at requested index
-		final int index = d.getPropIndex();
+		final int index = d.propIndex();
 		while (index >= descriptions.size())
 			descriptions.add(null);
 		descriptions.set(index, d);
 		// truncate property elements based on max. allowed elements
-		truncateValueArray(d.getPID(), d.getMaxElements());
-		pidToDescription.put(d.getPID(), d);
+		truncateValueArray(d.pid(), d.maxElements());
+		pidToDescription.put(d.pid(), d);
 	}
 
 	void createNewDescription(final int pid, final boolean writeEnabled) {
@@ -521,7 +521,7 @@ public class InterfaceObject
 		int pdt = -1;
 		final Property p = getDefinition(pid);
 		if (p != null)
-			pdt = p.getPDT();
+			pdt = p.pdt();
 		if (pdt == -1 && elems > 0) {
 			final int size = (data.length - 2) / elems;
 			pdt = PropertyTypes.PDT_GENERIC_01 + size - 1;

@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2023 B. Malinowsky
+    Copyright (c) 2010, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ class InterfaceObjectServerTest
 				assertNotNull(interfaceObject.values.get(key));
 			}
 		}
-		assertEquals(4, d.getPDT());
+		assertEquals(4, d.pdt());
 	}
 
 	@Test
@@ -234,13 +234,13 @@ class InterfaceObjectServerTest
 				new Description(objIdx, 0, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 0, true, 0, 20, 3, 3),
 				true);
 		Description d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
-		assertEquals(0, d.getCurrentElements());
+		assertEquals(0, d.currentElements());
 
 		// set addresses
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
 				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 1, 3, new byte[] { 1, 1, 1, 2, 1, 3 });
 		d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
-		assertEquals(3, d.getCurrentElements());
+		assertEquals(3, d.currentElements());
 
 		// try not allowed ways to access current number of elements
 
@@ -275,6 +275,6 @@ class InterfaceObjectServerTest
 		ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
 				PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 1, new byte[] { 0, 0, });
 		d = ios.getDescription(objIdx, PropertyAccess.PID.ADDITIONAL_INDIVIDUAL_ADDRESSES);
-		assertEquals(0, d.getCurrentElements());
+		assertEquals(0, d.currentElements());
 	}
 }

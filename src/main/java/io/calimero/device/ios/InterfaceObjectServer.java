@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2023 B. Malinowsky
+    Copyright (c) 2010, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -511,7 +511,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 */
 	public void setDescription(final Description d, final boolean allowCorrections)
 	{
-		final InterfaceObject io = getIfObject(d.getObjectIndex());
+		final InterfaceObject io = getIfObject(d.objectIndex());
 		io.setDescription(d, allowCorrections);
 	}
 
@@ -964,11 +964,11 @@ public class InterfaceObjectServer implements PropertyAccess
 			for (final var d : descriptions) {
 				final byte[] data = k.next();
 				w.writeStartElement(TAG_PROPERTY);
-				w.writeAttribute(ATTR_PID, Integer.toString(d.getPID()));
-				w.writeAttribute(ATTR_PDT, d.getPDT() == -1 ? "<tbd>" : Integer.toString(d.getPDT()));
-				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.getMaxElements()));
-				w.writeAttribute(ATTR_RW, d.getReadLevel() + "/" + d.getWriteLevel());
-				w.writeAttribute(ATTR_WRITE, d.isWriteEnabled() ? "1" : "0");
+				w.writeAttribute(ATTR_PID, Integer.toString(d.pid()));
+				w.writeAttribute(ATTR_PDT, d.pdt() == -1 ? "<tbd>" : Integer.toString(d.pdt()));
+				w.writeAttribute(ATTR_MAXELEMS, Integer.toString(d.maxElements()));
+				w.writeAttribute(ATTR_RW, d.readLevel() + "/" + d.writeLevel());
+				w.writeAttribute(ATTR_WRITE, d.writeEnabled() ? "1" : "0");
 				writeData(data);
 				w.writeEndElement();
 			}
