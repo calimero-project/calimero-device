@@ -218,7 +218,7 @@ public class InterfaceObjectServer implements PropertyAccess
 				setResourceHandler(new XmlSerializer(logger, client.getDefinitions()));
 			h = rh;
 		}
-		final var list = o instanceof String s ? h.loadInterfaceObjects(s)
+		final var list = o instanceof final String s ? h.loadInterfaceObjects(s)
 											 : h.loadInterfaceObjects((InputStream) o);
 		// we insert the objects in iteration order, but correcting the loaded interface
 		// object to match the insertion index. this is to avoid null entries in the
@@ -330,7 +330,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		initIoProperties(io, true);
 		if (objectType == InterfaceObject.DEVICE_OBJECT)
 			adapter.createNewDescription(0, PID.IO_LIST, false);
-		if (io instanceof SecurityObject securityObject)
+		if (io instanceof final SecurityObject securityObject)
 			securityObject.populateWithDefaults();
 		return io;
 	}

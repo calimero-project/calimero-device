@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2023 B. Malinowsky
+    Copyright (c) 2011, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -357,9 +357,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			else if (address.getRawAddress() == 0 && !(link instanceof KNXNetworkLinkUsb))
 				settings.setDeviceAddress(getAddress());
 
-			if (process instanceof KnxDeviceServiceLogic logic)
+			if (process instanceof final KnxDeviceServiceLogic logic)
 				logic.setDevice(this);
-			else if (mgmt instanceof KnxDeviceServiceLogic logic)
+			else if (mgmt instanceof final KnxDeviceServiceLogic logic)
 				logic.setDevice(this);
 
 			tl = new TransportLayerImpl(link, true);
