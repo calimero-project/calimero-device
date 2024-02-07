@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2022 B. Malinowsky
+    Copyright (c) 2019, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -73,8 +73,8 @@ public final class KnxipParameterObject extends InterfaceObject {
 	}
 
 
-	KnxipParameterObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions) {
-		super(objectType, index, definitions);
+	KnxipParameterObject(final int index, final Map<PropertyKey, Property> definitions) {
+		super(KNXNETIP_PARAMETER_OBJECT, index, definitions);
 	}
 
 	public byte[] get(final int pid) { return get(pid, 1, Integer.MAX_VALUE); }

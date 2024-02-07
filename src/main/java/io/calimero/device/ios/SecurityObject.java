@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2023 B. Malinowsky
+    Copyright (c) 2019, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -98,8 +98,8 @@ public final class SecurityObject extends InterfaceObject {
 		return ios.lookup(SECURITY_OBJECT, 1);
 	}
 
-	SecurityObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions) {
-		super(objectType, index, definitions);
+	SecurityObject(final int index, final Map<PropertyKey, Property> definitions) {
+		super(SECURITY_OBJECT, index, definitions);
 	}
 
 	public boolean isLoaded() {

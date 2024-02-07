@@ -343,13 +343,12 @@ public class InterfaceObjectServer implements PropertyAccess
 
 	private static InterfaceObject newInterfaceObject(final int objectType, final int index,
 			final Map<PropertyKey, Property> definitions) {
-		if (objectType == InterfaceObject.DEVICE_OBJECT)
-			return new DeviceObject(objectType, index, definitions);
-		if (objectType == InterfaceObject.SECURITY_OBJECT)
-			return new SecurityObject(objectType, index, definitions);
-		if (objectType == InterfaceObject.KNXNETIP_PARAMETER_OBJECT)
-			return new KnxipParameterObject(objectType, index, definitions);
-		return new InterfaceObject(objectType, index, definitions);
+		return switch (objectType) {
+			case InterfaceObject.DEVICE_OBJECT -> new DeviceObject(index, definitions);
+			case InterfaceObject.SECURITY_OBJECT -> new SecurityObject(index, definitions);
+			case InterfaceObject.KNXNETIP_PARAMETER_OBJECT -> new KnxipParameterObject(index, definitions);
+			default -> new InterfaceObject(objectType, index, definitions);
+		};
 	}
 
 	/**

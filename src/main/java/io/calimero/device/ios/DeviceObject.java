@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2021, 2021 B. Malinowsky
+    Copyright (c) 2021, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -56,8 +56,8 @@ public final class DeviceObject extends InterfaceObject {
 
 	public static DeviceObject lookup(final InterfaceObjectServer ios) { return ios.lookup(DEVICE_OBJECT, 1); }
 
-	DeviceObject(final int objectType, final int index, final Map<PropertyKey, Property> definitions) {
-		super(objectType, index, definitions);
+	DeviceObject(final int index, final Map<PropertyKey, Property> definitions) {
+		super(DEVICE_OBJECT, index, definitions);
 	}
 
 	public DeviceDescriptor.DD0 deviceDescriptor() { return DD0.from(get(PID.DEVICE_DESCRIPTOR)); }
