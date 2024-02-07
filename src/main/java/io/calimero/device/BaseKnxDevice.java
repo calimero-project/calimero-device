@@ -534,9 +534,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
 	}
 
-	protected record RoutingConfig(InetAddress multicastGroup, byte[] groupKey, Duration latencyTolerance) {
+	protected record IpRoutingConfig(InetAddress multicastGroup, byte[] groupKey, Duration latencyTolerance) {
 
-		RoutingConfig(final InetAddress mcGroup) { this(mcGroup, new byte[0], Duration.ZERO); }
+		IpRoutingConfig(final InetAddress mcGroup) { this(mcGroup, new byte[0], Duration.ZERO); }
 
 		public boolean secureRouting() { return groupKey.length == 16; }
 
@@ -549,7 +549,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 	}
 
-	protected void ipRoutingConfigChanged(final RoutingConfig config) {
+	protected void ipRoutingConfigChanged(final IpRoutingConfig config) {
 		try {
 			connectionOfLink().ifPresent(routing -> setupRoutingLink(routing.networkInterface(), config));
 		}
@@ -558,7 +558,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		}
 	}
 
-	private void setupRoutingLink(final NetworkInterface netif, final RoutingConfig config) {
+	private void setupRoutingLink(final NetworkInterface netif, final IpRoutingConfig config) {
 		final var oldLink = getDeviceLink();
 		final var settings = oldLink.getKNXMedium();
 

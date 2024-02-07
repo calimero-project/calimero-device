@@ -76,7 +76,7 @@ import io.calimero.datapoint.Datapoint;
 import io.calimero.datapoint.DatapointMap;
 import io.calimero.datapoint.DatapointModel;
 import io.calimero.datapoint.StateDP;
-import io.calimero.device.BaseKnxDevice.RoutingConfig;
+import io.calimero.device.BaseKnxDevice.IpRoutingConfig;
 import io.calimero.device.KnxDevice.Memory;
 import io.calimero.device.ios.DeviceObject;
 import io.calimero.device.ios.InterfaceObject;
@@ -797,7 +797,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (mcGroup == null)
 				return;
 			ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, PID.ROUTING_MULTICAST_ADDRESS, 1, 1, domain);
-			((BaseKnxDevice) device).ipRoutingConfigChanged(new RoutingConfig(mcGroup));
+			((BaseKnxDevice) device).ipRoutingConfigChanged(new IpRoutingConfig(mcGroup));
 		}
 		else if (domain.length == 21) {
 			final var bb = ByteBuffer.wrap(domain);
@@ -815,7 +815,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				final int ms = (int) unsigned(ios.getProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, 95, 1, 1));
 				final Duration latencyTolerance = Duration.ofMillis(ms);
 				((BaseKnxDevice) device)
-						.ipRoutingConfigChanged(new RoutingConfig(mcGroup, backbonekey, latencyTolerance));
+						.ipRoutingConfigChanged(new IpRoutingConfig(mcGroup, backbonekey, latencyTolerance));
 			}
 			finally {
 				Arrays.fill(backbonekey, (byte) 0);
