@@ -90,6 +90,12 @@ public final class RouterObject extends InterfaceObject {
 		return (value & 0x08) == 0;
 	}
 
+	public byte[] get(final int pid) { return get(pid, 1, Integer.MAX_VALUE); }
+
+	public byte[] get(final int pid, final int start, final int elements) {
+		return getProperty(pid, start, elements);
+	}
+
 	public void set(final int pid, final byte... data) { set(pid, 1, 1, data); }
 
 	public void set(final int pid, final int start, final int elements, final byte... data) {
