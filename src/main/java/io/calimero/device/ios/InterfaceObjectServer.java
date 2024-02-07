@@ -339,6 +339,7 @@ public class InterfaceObjectServer implements PropertyAccess
 			final Map<PropertyKey, Property> definitions) {
 		return switch (objectType) {
 			case InterfaceObject.DEVICE_OBJECT -> new DeviceObject(index, definitions);
+			case InterfaceObject.ROUTER_OBJECT -> new RouterObject(index, definitions);
 			case InterfaceObject.SECURITY_OBJECT -> new SecurityObject(index, definitions);
 			case InterfaceObject.KNXNETIP_PARAMETER_OBJECT -> new KnxipParameterObject(index, definitions);
 			default -> new InterfaceObject(objectType, index, definitions);
