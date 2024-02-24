@@ -248,6 +248,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private volatile Priority svcPriority;
 
+	@SuppressWarnings("resource") // for lambda () -> tl.createDestination
 	public void respond(final EventObject e, final ServiceResult<?>sr)
 	{
 		// since our service code is not split up in request/response, just do everything here
@@ -504,6 +505,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(RESTART, asdu);
 		send(respondTo, apdu, sr.getPriority(), name);
 
+		@SuppressWarnings("resource")
 		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination()).toList();
 		destinations.forEach(Destination::destroy);
 
