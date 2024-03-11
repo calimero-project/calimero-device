@@ -6,8 +6,8 @@ repositories {
 
 apply plugin:'application'
 
-mainClassName = 'io.calimero.TestNetwork'
-group = 'io.calimero'
+mainClassName = 'tuwien.auto.calimero.TestNetwork'
+group = 'com.github.calimero'
 version = '2.6-SNAPSHOT'
 
 run {
