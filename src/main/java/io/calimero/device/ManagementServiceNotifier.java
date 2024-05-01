@@ -41,9 +41,11 @@ import static java.lang.System.Logger.Level.ERROR;
 import static java.lang.System.Logger.Level.INFO;
 import static java.lang.System.Logger.Level.TRACE;
 import static java.lang.System.Logger.Level.WARNING;
+import static java.text.MessageFormat.format;
 
 import java.lang.System.Logger;
 import java.nio.ByteBuffer;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.EventObject;
@@ -292,8 +294,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			dispatchToService(svc, asdu, dst, d, fe.security().orElse(SecurityControl.Plain));
 		}
 		catch (final RuntimeException rte) {
-			logger.log(WARNING, "failed to execute service {0}->{1} {2}: {3}", sender, dst, DataUnitBuilder.decode(tpdu, dst),
-					HexFormat.ofDelimiter(" ").formatHex(asdu), rte);
+			logger.log(WARNING, MessageFormat.format("failed to execute service {0}->{1} {2}: {3}", sender, dst,
+					DataUnitBuilder.decode(tpdu, dst), HexFormat.ofDelimiter(" ").formatHex(asdu)), rte);
 		}
 	}
 
@@ -1383,7 +1385,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				sr = ServiceResult.error(ReturnCode.DataTypeConflict);
 		}
 		catch (final KnxPropertyException e) {
-			logger.log(WARNING, "{0}->{1} {2} {3}({4})|{5}", respondTo.getAddress(), dst, name, iot, oi, pid, e);
+			logger.log(WARNING, format("{0}->{1} {2} {3}({4})|{5}", respondTo.getAddress(), dst, name, iot, oi, pid), e);
 			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 

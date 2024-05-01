@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2015, 2023 B. Malinowsky
+    Copyright (c) 2015, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -470,7 +470,7 @@ public final class LinkProcedure implements Runnable
 
 	private void stopLink(final Exception e)
 	{
-		logger.log(ERROR, "stop link procedure with {0}", remote, e);
+		logger.log(ERROR, "stop link procedure with " + remote, e);
 		try {
 			if (state.ordinal() >= EnterConfigMode.ordinal())
 				write(Action.StopLink);

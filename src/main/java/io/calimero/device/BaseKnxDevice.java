@@ -47,6 +47,7 @@ import static java.lang.System.Logger.Level.ERROR;
 import static java.lang.System.Logger.Level.INFO;
 import static java.lang.System.Logger.Level.TRACE;
 import static java.lang.System.Logger.Level.WARNING;
+import static java.text.MessageFormat.format;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -66,6 +67,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -558,7 +560,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			connectionOfLink().ifPresent(routing -> setupRoutingLink(routing.networkInterface(), config));
 		}
 		catch (ReflectiveOperationException | RuntimeException e) {
-			logger.log(WARNING, "error setting device routing link ({0})", config, e);
+			logger.log(WARNING, format("error setting device routing link ({0})", config), e);
 		}
 	}
 
@@ -577,10 +579,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			oldLink.close();
 		}
 		catch (final KNXException e) {
-			logger.log(WARNING, "error setting device routing link ({0})", config, e);
+			logger.log(WARNING, format("error setting device routing link ({0})", config), e);
 		}
 		catch (final InterruptedException e) {
-			logger.log(WARNING, "interrupted group sync for new device routing link ({0})", config, e);
+			logger.log(WARNING, format("interrupted group sync for new device routing link ({0})", config), e);
 			Thread.currentThread().interrupt();
 		}
 	}
@@ -784,7 +786,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				memory.set(0, bytes);
 			}
 			catch (final KnxPropertyException e) {
-				logger.log(WARNING, "loading device memory from {0}", iosResource, e);
+				logger.log(WARNING, "loading device memory from " + iosResource, e);
 			}
 	}
 		catch (final KnxPropertyException e) { // lookup failed, no device memory stored
@@ -802,7 +804,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			ios.setProperty(objectTypeDeviceMemory, 1, pidDeviceMemory, 1, bytes.length / 4, bytes);
 		}
 		catch (final KnxPropertyException e) {
-			logger.log(WARNING, "saving device memory to {0}", iosResource, e);
+			logger.log(WARNING, "saving device memory to " + iosResource, e);
 		}
 	}
 

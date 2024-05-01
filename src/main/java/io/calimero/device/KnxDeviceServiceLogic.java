@@ -506,7 +506,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				sendGroupValue(ga, ProcessServiceNotifier.GROUP_WRITE, compactApdu, data, datapoint.getPriority());
 			}
 			catch (final KNXException e) {
-				logger.log(WARNING, "GO diagnostics sending group value write to {0}", ga, e);
+				logger.log(WARNING, "GO diagnostics sending group value write to " + ga, e);
 			}
 			catch (final InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -545,7 +545,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				}
 			}
 			catch (final KNXException e) {
-				logger.log(WARNING, "GO diagnostics sending group value read to {0}", ga, e);
+				logger.log(WARNING, "GO diagnostics sending group value read to " + ga, e);
 			}
 			catch (final InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -1048,7 +1048,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			link.send(ldata, true);
 		}
 		catch (KNXTimeoutException | KNXLinkClosedException e) {
-			logger.log(WARNING, "sending {0}", ldata, e);
+			logger.log(WARNING, "sending " + ldata, e);
 		}
 	}
 
