@@ -44,6 +44,7 @@ import static java.lang.System.Logger.Level.WARNING;
 import static java.text.MessageFormat.format;
 
 import java.lang.System.Logger;
+import java.lang.reflect.InaccessibleObjectException;
 import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 import java.time.Duration;
@@ -1482,9 +1483,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
-		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException e) {
-			logger.log(WARNING, "{0}->{1} {2} {3}: {4}, {5}", device.getAddress(), dst, service, HexFormat.ofDelimiter(" ").formatHex(apdu), e.getMessage(),
-					respondTo);
+		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException | KNXIllegalArgumentException e) {
+			logger.log(WARNING, "{0}->{1} {2} {3}: {4}, {5}", device.getAddress(), dst, service,
+					HexFormat.ofDelimiter(" ").formatHex(apdu), e.getMessage(), respondTo);
 		}
 	}
 
@@ -1551,10 +1552,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			final var map = (Map<IndividualAddress, AggregatorProxy>) field.get(tl);
 			return map;
 		}
-		catch (NoSuchFieldException | IllegalAccessException e) {
+		catch (NoSuchFieldException | IllegalAccessException | InaccessibleObjectException e) {
 			e.printStackTrace();
 		}
-		return null;
+		return Map.of();
 	}
 
 	// for a max of (2^31)-1
