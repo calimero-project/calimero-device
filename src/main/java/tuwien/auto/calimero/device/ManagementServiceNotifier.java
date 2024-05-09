@@ -39,6 +39,7 @@ package tuwien.auto.calimero.device;
 import static tuwien.auto.calimero.DataUnitBuilder.decodeAPCI;
 import static tuwien.auto.calimero.DataUnitBuilder.toHex;
 
+import java.lang.reflect.InaccessibleObjectException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Arrays;
@@ -1475,7 +1476,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
-		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException e) {
+		catch (KNXDisconnectException | KNXLinkClosedException | KNXTimeoutException | KNXIllegalArgumentException e) {
 			logger.warn("{}->{} {} {}: {}, {}", device.getAddress(), dst, service, toHex(apdu, " "), e.getMessage(),
 					respondTo);
 		}
@@ -1544,10 +1545,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			final var map = (Map<IndividualAddress, AggregatorProxy>) field.get(tl);
 			return map;
 		}
-		catch (NoSuchFieldException | IllegalAccessException e) {
+		catch (NoSuchFieldException | IllegalAccessException | InaccessibleObjectException e) {
 			e.printStackTrace();
 		}
-		return null;
+		return Map.of();
 	}
 
 	// for a max of (2^31)-1
