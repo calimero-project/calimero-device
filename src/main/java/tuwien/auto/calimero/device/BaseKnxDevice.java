@@ -847,7 +847,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final byte[] desc = name.getBytes(StandardCharsets.ISO_8859_1);
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, desc.length, desc);
 
-		final String[] sver = Settings.getLibraryVersion().split("\\.| |-", 0);
+		final String[] sver = Settings.getLibraryVersion().split("[. \\-]", 0);
 		final int ver = Integer.parseInt(sver[0]) << 6 | Integer.parseInt(sver[1]);
 		deviceObject.set(PID.VERSION, fromWord(ver));
 
