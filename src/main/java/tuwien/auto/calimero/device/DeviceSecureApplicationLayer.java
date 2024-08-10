@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2023 B. Malinowsky
+    Copyright (c) 2019, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -161,11 +161,10 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 				return p2pKey(indAddressIndex);
 			return null;
 		}
-		else {
-			final int addressIndex = groupAddressIndex((GroupAddress) addr)
-					.orElseThrow(() -> new KnxSecureException("no group key for " + addr));
-			return groupKey(addressIndex);
-		}
+		// group address
+		final int addressIndex = groupAddressIndex((GroupAddress) addr)
+				.orElseThrow(() -> new KnxSecureException("no group key for " + addr));
+		return groupKey(addressIndex);
 	}
 
 	@Override
