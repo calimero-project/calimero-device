@@ -828,7 +828,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 	}
 
-	private InetAddress isValidRoutingMulticast(final byte[] mcast) {
+	private static InetAddress isValidRoutingMulticast(final byte[] mcast) {
 		try {
 			final var addr = InetAddress.getByAddress(mcast);
 			return KNXnetIPRouting.isValidRoutingMulticast(addr) ? addr : null;

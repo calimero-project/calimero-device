@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2023 B. Malinowsky
+    Copyright (c) 2019, 2024 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -166,12 +166,12 @@ public final class AccessPolicies {
 	private static final int DoASerialNumberRead = 0b1111101100;
 	private static final int DoASerialNumberWrite = 0b1111101110;
 
-	boolean readDomainAddressSerial(final int service, final int domainSize, final boolean securityMode,
+	static boolean readDomainAddressSerial(final int service, final int domainSize, final boolean securityMode,
 			final SecurityControl securityCtrl) {
 		return (doASerialAccessLevel(service, domainSize, securityMode, securityCtrl) & Read) == Read;
 	}
 
-	boolean writeDomainAddressSerial(final int service, final int domainSize, final boolean securityMode,
+	static boolean writeDomainAddressSerial(final int service, final int domainSize, final boolean securityMode,
 			final SecurityControl securityCtrl) {
 		return (doASerialAccessLevel(service, domainSize, securityMode, securityCtrl) & Write) == Write;
 	}
