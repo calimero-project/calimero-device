@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2024 B. Malinowsky
+    Copyright (c) 2011, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -509,8 +509,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				default ->
 						throw new KnxRuntimeException("group object table: PID Table PDT " + groupObjTablePdt + " not supported");
 			};
-			ios.setProperty(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, newGoIdx, 1,
-					groupObjectDescriptor);
+			ios.setProperty(InterfaceObject.GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, newGoIdx, 1, groupObjectDescriptor);
 		}
 	}
 
