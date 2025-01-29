@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2012, 2024 B. Malinowsky
+    Copyright (c) 2012, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -883,15 +883,15 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 
 		ServiceResult<byte[]> sr = ServiceResult.empty();
-		if (checkPropertyAccess(objIndex, pid, true)) {
-			try {
+		try {
+			if (checkPropertyAccess(objIndex, pid, true)) {
 				sr = mgmtSvc.readProperty(d, objIndex, pid, start, elements);
 				if (ignoreOrSchedule(sr))
 					return;
 			}
-			catch (KNXIllegalArgumentException | KnxPropertyException e) {
-				logger.warn("{}", e.getMessage());
-			}
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("{}", e.getMessage());
 		}
 
 		final byte[] res = sr.result();
@@ -922,16 +922,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				objIndex, pid, propertyName(objIndex, pid), start, start + elements - 1, toHex(propertyData, ""));
 
 		ServiceResult<Void> sr = ServiceResult.empty();
-		if (checkPropertyAccess(objIndex, pid, true)) {
-			try {
+		try {
+			if (checkPropertyAccess(objIndex, pid, true)) {
 				sr = mgmtSvc.writeProperty(d, objIndex, pid, start, elements, propertyData);
 				if (ignoreOrSchedule(sr))
 					return;
 			}
-			catch (KNXIllegalArgumentException | KnxPropertyException e) {
-				logger.warn("{}->{} {} {}|{}{} {}", d.getAddress(), dst, name, objIndex, pid,
-						propertyName(objIndex, pid), e.getMessage());
-			}
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("{}->{} {} {}|{}{} {}", d.getAddress(), dst, name, objIndex, pid,
+					propertyName(objIndex, pid), e.getMessage());
 		}
 
 		// special case of load/run control which uses PDT_CONTROL and returns byte array
@@ -1013,8 +1013,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 
 		ServiceResult<byte[]> sr = ServiceResult.error(ReturnCode.AccessDenied);
-		if (checkPropertyAccess(objIndex, pid, !isCommand)) {
-			try {
+		try {
+			if (checkPropertyAccess(objIndex, pid, !isCommand)) {
 				final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
 				if (description.pdt() == PropertyTypes.PDT_FUNCTION)
 					sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
@@ -1025,10 +1025,10 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				if (ignoreOrSchedule(sr))
 					return;
 			}
-			catch (KNXIllegalArgumentException | KnxPropertyException e) {
-				logger.warn("{}", e.getMessage());
-				sr = ServiceResult.error(ReturnCode.AddressVoid);
-			}
+		}
+		catch (KNXIllegalArgumentException | KnxPropertyException e) {
+			logger.warn("{}", e.getMessage());
+			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
 		// if the property is not a function (PDT_FUNCTION), the response shall not contain a return code and no data
