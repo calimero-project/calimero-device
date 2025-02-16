@@ -54,10 +54,6 @@ tasks.withType<JavaCompile>().configureEach {
 	options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-try"))
 }
 
-tasks.named<JavaCompile>("compileJava") {
-	options.javaModuleVersion = project.version.toString()
-}
-
 tasks.named<Test>("test") {
 	useJUnitPlatform {
 		excludeTags("knxnetip")
