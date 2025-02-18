@@ -891,7 +891,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			}
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("{}", e.getMessage());
+			logger.info("{}", e.getMessage());
 		}
 
 		final byte[] res = sr.result();
@@ -972,7 +972,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("{}: {}", name, e.getMessage());
+			logger.info("{}: {}", name, e.getMessage());
 
 			// answer with non-existent property description on no result
 			final byte[] asdu = new byte[7];
@@ -1246,7 +1246,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				return;
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("read property description: {}", e.getMessage());
+			logger.info("read property description: {}", e.getMessage());
 			// answer with non-existent property description
 			final byte[] asdu = new byte[7];
 			asdu[0] = (byte) instance;
@@ -1289,7 +1289,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				sr = mgmtSvc.readProperty(respondTo, objIndex, pid, start, elements);
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.warn("reading property data: {}", e.getMessage());
+			logger.info("reading property data: {}", e.getMessage());
 			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
