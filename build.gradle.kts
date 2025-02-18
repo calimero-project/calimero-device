@@ -15,7 +15,7 @@ repositories {
 val junitJupiterVersion = "5.11.4"
 
 group = "com.github.calimero"
-version = "2.6-rc1"
+version = "2.6-rc2"
 
 java {
 	toolchain {
