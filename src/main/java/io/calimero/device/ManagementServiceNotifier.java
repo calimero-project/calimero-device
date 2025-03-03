@@ -897,7 +897,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			}
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.log(WARNING, "{0}", e.getMessage());
+			logger.log(INFO, "{0}", e.getMessage());
 		}
 
 		final byte[] res = sr.result();
@@ -978,7 +978,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			sr = mgmtSvc.readPropertyDescription(objIndex, pid, propIndex);
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.log(WARNING, "{0}: {1}", name, e.getMessage());
+			logger.log(INFO, "{0}: {1}", name, e.getMessage());
 
 			// answer with non-existent property description on no result
 			final byte[] asdu = new byte[7];
@@ -1236,7 +1236,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int pid = (data[3] & 0xf) << 8 | data[4] & 0xff;
 		final int pdt = (data[5] & 0xff) >> 4; // reserved, always zero
 		if (pdt != 0) {
-			logger.log(WARNING, "{0} PDT is reserved, but set to {1}, ignore service", name, pdt);
+			logger.log(INFO, "{0} PDT is reserved, but set to {1}, ignore service", name, pdt);
 			return;
 		}
 		final int propIndex = (data[5] & 0xf) << 8 | data[6] & 0xff;
@@ -1252,7 +1252,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				return;
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.log(WARNING, "read property description: {0}", e.getMessage());
+			logger.log(INFO, "read property description: {0}", e.getMessage());
 			// answer with non-existent property description
 			final byte[] asdu = new byte[7];
 			asdu[0] = (byte) instance;
@@ -1295,7 +1295,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				sr = mgmtSvc.readProperty(respondTo, objIndex, pid, start, elements);
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.log(WARNING, "reading property data: {0}", e.getMessage());
+			logger.log(INFO, "reading property data: {0}", e.getMessage());
 			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
