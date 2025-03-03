@@ -7,12 +7,12 @@ plugins {
 }
 
 repositories {
-	mavenLocal()
 	mavenCentral()
+	mavenLocal()
 	maven("https://s01.oss.sonatype.org/content/repositories/snapshots")
 }
 
-val junitJupiterVersion = "5.11.4"
+val junitJupiterVersion by rootProject.extra { "5.12.0" }
 
 group = "io.calimero"
 version = "3.0-SNAPSHOT"
@@ -58,16 +58,28 @@ tasks.named<JavaCompile>("compileJava") {
 	options.javaModuleVersion = project.version.toString()
 }
 
-tasks.named<Test>("test") {
-	useJUnitPlatform {
-		excludeTags("knxnetip")
+testing {
+	suites {
+		val test by getting(JvmTestSuite::class) {
+			useJUnitJupiter("${rootProject.extra.get("junitJupiterVersion")}")
+
+			targets {
+				all {
+					testTask.configure {
+						options {
+							val options = this as JUnitPlatformOptions
+							options.excludeTags("knxnetip")
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
 dependencies {
 	api("io.calimero:calimero-core:$version")
 
-	testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
 	testRuntimeOnly("org.slf4j:slf4j-jdk-platform-logging:2.0.16")
 	testRuntimeOnly("org.slf4j:slf4j-simple:2.0.16")
 }
