@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2023 B. Malinowsky
+    Copyright (c) 2011, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -91,8 +91,7 @@ class BaseKnxDeviceTest
 		 * @param nsdu
 		 */
 		@Override
-		public void sendRequestWait(final KNXAddress dst, final Priority p, final byte[] nsdu)
-		{}
+		public void sendRequestWait(final KNXAddress dst, final Priority p, final byte... nsdu) {}
 
 		/**
 		 * @param dst
@@ -100,8 +99,7 @@ class BaseKnxDeviceTest
 		 * @param nsdu
 		 */
 		@Override
-		public void sendRequest(final KNXAddress dst, final Priority p, final byte[] nsdu)
-		{}
+		public void sendRequest(final KNXAddress dst, final Priority p, final byte... nsdu) {}
 
 		/**
 		 * @param msg
