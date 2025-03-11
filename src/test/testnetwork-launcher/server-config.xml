@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <knxServer name="test-server" friendlyName="calimero-core knx test-server">
 	<discovery activate="true" listenNetIf="all" outgoingNetIf="all"/>
-	<serviceContainer activate="true" routing="true" listenNetIf="any"
+	<serviceContainer activate="true" routing="false" listenNetIf="any"
 		networkMonitoring="false" udpPort="3671" reuseCtrlEP="false">
 		<knxAddress type="individual">1.1.1</knxAddress>
 		<knxSubnet type="virtual" medium="tp1">KnxTestNetwork</knxSubnet>
@@ -27,4 +27,4 @@
 			<knxAddress type="individual">1.1.19</knxAddress>
 		</additionalAddresses>
 	</serviceContainer>
-</knxServer>        
+</knxServer>
