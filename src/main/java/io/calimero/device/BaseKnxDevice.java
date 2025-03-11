@@ -1104,10 +1104,10 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private SearchResponse ipSearchRequest(final KNXnetIPHeader h, final ByteBuffer data) {
-		return searchResponse(h, data);
+		return searchResponse(h);
 	}
 
-	private SearchResponse searchResponse(final KNXnetIPHeader h, final ByteBuffer data) {
+	private SearchResponse searchResponse(final KNXnetIPHeader h) {
 		final int svc = h.getServiceType();
 		if (svc != SEARCH_REQ)
 			return null;
