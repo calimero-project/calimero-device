@@ -621,7 +621,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				ios.saveInterfaceObjects(iosResource.toString());
 		}
 		catch (GeneralSecurityException | IOException | KNXException | RuntimeException e) {
-			logger.log(ERROR, "saving interface object server", e);
+			logger.log(WARNING, "saving interface object server", e);
+		}
+		finally {
+			try {
+				// remove the temporary device memory object from the IOS again (if there is one)
+				ios.removeInterfaceObject(ios.lookup(objectTypeDeviceMemory, 1));
+			}
+			catch (final KnxPropertyException ignore) {}
 		}
 	}
 
@@ -786,7 +793,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			catch (final KnxPropertyException e) {
 				logger.log(WARNING, "loading device memory from " + iosResource, e);
 			}
-	}
+		}
 		catch (final KnxPropertyException e) { // lookup failed, no device memory stored
 		}
 	}
