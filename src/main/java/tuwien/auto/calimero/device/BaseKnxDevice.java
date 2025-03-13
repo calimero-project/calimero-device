@@ -36,6 +36,7 @@
 
 package tuwien.auto.calimero.device;
 
+import static java.lang.System.Logger.Level.WARNING;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.APPLICATIONPROGRAM_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ASSOCIATIONTABLE_OBJECT;
@@ -616,7 +617,14 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				ios.saveInterfaceObjects(iosResource.toString());
 		}
 		catch (GeneralSecurityException | IOException | KNXException | RuntimeException e) {
-			logger.error("saving interface object server", e);
+			logger.warn("saving interface object server", e);
+		}
+		finally {
+			try {
+				// remove the temporary device memory object from the IOS again (if there is one)
+				ios.removeInterfaceObject(ios.lookup(objectTypeDeviceMemory, 1));
+			}
+			catch (final KnxPropertyException ignore) {}
 		}
 	}
 
@@ -781,7 +789,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			catch (final KnxPropertyException e) {
 				logger.warn("loading device memory from {}", iosResource, e);
 			}
-	}
+		}
 		catch (final KnxPropertyException e) { // lookup failed, no device memory stored
 		}
 	}
