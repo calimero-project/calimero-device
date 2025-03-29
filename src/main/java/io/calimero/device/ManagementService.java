@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2021 B. Malinowsky
+    Copyright (c) 2011, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -162,10 +162,6 @@ public interface ManagementService
 	 */
 	ServiceResult<Boolean> readAddressSerial(SerialNumber serialNo);
 
-	default ServiceResult<Boolean> readAddressSerial(final byte[] serialNo) {
-		return readAddressSerial(SerialNumber.from(serialNo));
-	}
-
 	/**
 	 * Assigns a new individual address to a device with matching serial number; this device shall only set its address
 	 * on matching serial number.
@@ -174,10 +170,6 @@ public interface ManagementService
 	 * @param newAddress new device address
 	 */
 	void writeAddressSerial(SerialNumber serialNo, IndividualAddress newAddress);
-
-	default void writeAddressSerial(final byte[] serialNo, final IndividualAddress newAddress) {
-		writeAddressSerial(SerialNumber.from(serialNo), newAddress);
-	}
 
 	/**
 	 * Reads the domain address of this device, if this device is in programming mode.
