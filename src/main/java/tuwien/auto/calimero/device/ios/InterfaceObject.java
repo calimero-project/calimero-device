@@ -214,6 +214,8 @@ public class InterfaceObject
 		return idx;
 	}
 
+	public boolean contains(int pid) { return findByPid(pid) != null; }
+
 	void load(final IosResourceHandler rh) throws KNXException
 	{
 		final List<Description> loadDescriptions = new ArrayList<>();
