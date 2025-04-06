@@ -935,7 +935,7 @@ public class InterfaceObjectServer implements PropertyAccess
 							String s = r.getElementText();
 							if (s.length() % 2 != 0)
 								s = "0" + s;
-							final byte[] data = DataUnitBuilder.fromHex(s);
+							final byte[] data = HexFormat.of().parseHex(s);
 							values.add(data.length == 0 ? new byte[2] : data);
 							valueExpected = false;
 						}
