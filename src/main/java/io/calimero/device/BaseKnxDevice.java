@@ -931,8 +931,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// Application Program Object settings
 
 		// Required PEI Type
-		final int requiredPeiType = 0; // unsigned char
-		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.PEI_TYPE, 1, 1, fromByte(requiredPeiType));
+		final byte requiredPeiType = 0; // unsigned char
+		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.PEI_TYPE, 1, 1, requiredPeiType);
 
 		final int[] runStateEnum = {
 			0, // Halted or not loaded
@@ -1193,10 +1193,5 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private static byte[] fromWord(final int word)
 	{
 		return new byte[] { (byte) (word >> 8), (byte) word };
-	}
-
-	private static byte[] fromByte(final int uchar)
-	{
-		return new byte[] { (byte) uchar };
 	}
 }
