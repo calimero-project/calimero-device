@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2011, 2023 B. Malinowsky
+    Copyright (c) 2011, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ public class ServiceResult<T> implements Runnable
 
 	public static ServiceResult<byte[]> of(final byte... data) { return new ServiceResult<>(data); }
 
-	static ServiceResult<byte[]> of(final ReturnCode returnCode, final byte... result) {
+	public static ServiceResult<byte[]> of(final ReturnCode returnCode, final byte... result) {
 		return new ServiceResult<>(returnCode, result);
 	}
 
@@ -129,7 +129,7 @@ public class ServiceResult<T> implements Runnable
 	 */
 	public byte[] getResult()
 	{
-		if (data instanceof byte[] bytes)
+		if (data instanceof final byte[] bytes)
 			return bytes;
 		return null;
 	}
