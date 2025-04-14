@@ -1019,15 +1019,17 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 
 		ServiceResult<byte[]> sr = ServiceResult.error(ReturnCode.AccessDenied);
+		boolean isFunctionProperty = true;
 		try {
 			if (checkPropertyAccess(objIndex, pid, !isCommand)) {
 				final var description = device.getInterfaceObjectServer().getDescription(objIndex, pid);
 				if (description.pdt() == PropertyTypes.PDT_FUNCTION)
 					sr = isCommand ? mgmtSvc.functionPropertyCommand(respondTo, objIndex, pid, functionInput)
 							: mgmtSvc.readFunctionPropertyState(respondTo, objIndex, pid, functionInput);
-				else
+				else {
+					isFunctionProperty = false;
 					logger.log(WARNING, "property {0}|{1} is not a function property", objIndex, pid);
-
+				}
 				if (ignoreOrSchedule(sr))
 					return;
 			}
@@ -1037,14 +1039,15 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
-		// if the property is not a function (PDT_FUNCTION), the response shall not contain a return code and no data
-		// in that case, using the Empty result here is fine
 		final byte[] res = sr.result();
-		final byte[] asdu = new byte[3 + res.length];
+		// if the property is not a function (PDT_FUNCTION), the response shall not contain a return code and no data
+		final byte[] asdu = new byte[isFunctionProperty ? 3 + res.length : 2];
 		asdu[0] = (byte) objIndex;
 		asdu[1] = (byte) pid;
-		asdu[2] = (byte) sr.returnCode().code();
-		System.arraycopy(res, 0, asdu, 3, res.length);
+		if (isFunctionProperty) {
+			asdu[2] = (byte) sr.returnCode().code();
+			System.arraycopy(res, 0, asdu, 3, res.length);
+		}
 
 		send(respondTo, FunctionPropertyStateResponse, asdu, sr.getPriority());
 	}
