@@ -111,12 +111,12 @@ public interface ManagementService
 	ServiceResult<Description> readPropertyDescription(int objectIndex, int propertyId, int propertyIndex);
 
 	default ServiceResult<byte[]> functionPropertyCommand(final Destination remote, final int objectIndex, final int propertyId,
-		final byte[] command) {
+			final byte[] command) {
 		return ServiceResult.empty();
 	}
 
 	default ServiceResult<byte[]> readFunctionPropertyState(final Destination remote, final int objectIndex, final int propertyId,
-		final byte[] functionInput) {
+			final byte[] functionInput) {
 		return ServiceResult.empty();
 	}
 
