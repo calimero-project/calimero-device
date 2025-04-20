@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2024 B. Malinowsky
+    Copyright (c) 2010, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@ import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.internal.EventListeners;
 import tuwien.auto.calimero.log.LogService;
 import tuwien.auto.calimero.mgmt.Description;
+import tuwien.auto.calimero.mgmt.FuncPropResponse;
 import tuwien.auto.calimero.mgmt.PropertyAccess;
 import tuwien.auto.calimero.mgmt.PropertyAdapter;
 import tuwien.auto.calimero.mgmt.PropertyClient;
@@ -634,13 +635,13 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 
 		@Override
-		public void callFunctionProperty(final int objectType, final int objectInstance, final int pid,
+		public FuncPropResponse callFunctionProperty(final int objectType, final int objectInstance, final int pid,
 				final int serviceId, final byte... serviceInfo) {
 			throw new UnsupportedOperationException();
 		}
 
 		@Override
-		public byte[] getFunctionPropertyState(final int objectType, final int objectInstance, final int pid,
+		public FuncPropResponse getFunctionPropertyState(final int objectType, final int objectInstance, final int pid,
 				final int serviceId, final byte... serviceInfo) {
 			throw new UnsupportedOperationException();
 		}
