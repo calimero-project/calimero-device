@@ -55,7 +55,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import io.calimero.DataUnitBuilder;
 import io.calimero.KNXException;
 import io.calimero.KNXFormatException;
 import io.calimero.KNXIllegalArgumentException;
@@ -64,6 +63,7 @@ import io.calimero.dptxlator.DPTXlator;
 import io.calimero.internal.EventListeners;
 import io.calimero.log.LogService;
 import io.calimero.mgmt.Description;
+import io.calimero.mgmt.FuncPropResponse;
 import io.calimero.mgmt.PropertyAccess;
 import io.calimero.mgmt.PropertyAdapter;
 import io.calimero.mgmt.PropertyClient;
@@ -639,13 +639,13 @@ public class InterfaceObjectServer implements PropertyAccess
 		}
 
 		@Override
-		public void callFunctionProperty(final int objectType, final int objectInstance, final int pid,
+		public FuncPropResponse callFunctionProperty(final int objectType, final int objectInstance, final int pid,
 				final int serviceId, final byte... serviceInfo) {
 			throw new UnsupportedOperationException();
 		}
 
 		@Override
-		public byte[] getFunctionPropertyState(final int objectType, final int objectInstance, final int pid,
+		public FuncPropResponse getFunctionPropertyState(final int objectType, final int objectInstance, final int pid,
 				final int serviceId, final byte... serviceInfo) {
 			throw new UnsupportedOperationException();
 		}
