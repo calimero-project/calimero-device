@@ -1257,26 +1257,30 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
 			logger.log(INFO, "read property description: {0}", e.getMessage());
 			// answer with non-existent property description
-			final byte[] asdu = new byte[7];
-			asdu[0] = (byte) instance;
-			asdu[1] = (byte) pid;
-			asdu[2] = (byte) propIndex;
-			send(respondTo, PropertyExtDescriptionResponse, asdu, Priority.LOW);
+			byte[] apdu = DataUnitBuilder.apdu(PropertyExtDescriptionResponse).putShort(iot)
+					.putShort(instance << 4 | pid >> 8).put(pid)
+					.putShort(propIndex).putShort(0).putShort(0).put(0).putShort(0).put(0).build();
+			send(respondTo, apdu, Priority.LOW, decodeAPCI(PropertyExtDescriptionResponse));
 			return;
 		}
 
 		final Description desc = sr.result();
 		// read back pid, because it is 0 when the propIndex was used
-		final int pidResponse = desc.pid();
-		final int index = desc.propIndex();
+		final int realPid = desc.pid();
+		final int realPropIndex = desc.propIndex();
 		int type = desc.writeEnabled() ? 0x80 : 0;
 		type |= desc.pdt();
+		var dpt = desc.dpt().orElse("0.0");
+		var split = dpt.split("\\.");
+		int dptMain = Integer.parseUnsignedInt(split[0]);
+		int dptSub = Integer.parseUnsignedInt(split[1]);
 		final int max = desc.maxElements();
 		final int access = desc.readLevel() << 4 | desc.writeLevel();
-		final byte[] asdu = new byte[/*7*/] { (byte) instance, (byte) pidResponse, (byte) index, (byte) type,
-			(byte) (max >>> 8), (byte) max, (byte) access };
+		byte[] apdu = DataUnitBuilder.apdu(PropertyExtDescriptionResponse).putShort(iot)
+				.putShort(instance << 4 | realPid >> 8).put(realPid)
+				.putShort(realPropIndex).putShort(dptMain).putShort(dptSub).put(type).putShort(max).put(access).build();
 
-		send(respondTo, PropertyExtDescriptionResponse, asdu, sr.getPriority());
+		send(respondTo, apdu, sr.getPriority(), decodeAPCI(PropertyExtDescriptionResponse));
 	}
 
 	private void onPropertyExtRead(final String name, final KNXAddress dst, final Destination respondTo, final byte[] data) {
