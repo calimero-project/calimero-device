@@ -922,7 +922,13 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final int pidDownloadCounter = 30;
 		deviceObject.set(pidDownloadCounter, (byte) 0, (byte) 0);
 
-		// cEMI server object setttings
+		final int pidFeaturesSupported = 89;
+		final var featureBits = new byte[10];
+		featureBits[9] = (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 6);
+		featureBits[8] = (1 << 0) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 6);
+		deviceObject.set(pidFeaturesSupported, featureBits);
+
+		// cEMI server object settings
 
 		// set default medium to TP1 (Bit 1 set)
 		ios.setProperty(InterfaceObject.CEMI_SERVER_OBJECT, objectInstance, PID.MEDIUM_TYPE, 1, 1, new byte[] { 0, 2 });
