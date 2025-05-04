@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2012, 2024 B. Malinowsky
+    Copyright (c) 2012, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -281,7 +281,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		catch (final KnxPropertyException ignore) {
 			// getProperty will fail and provide a more accurate error
 		}
-		final byte[] res = ios.getProperty(objectIndex, propertyId, startIndex, elements);
+		int elems = startIndex == 0 && elements > 1 ? 1 : elements;
+		final byte[] res = ios.getProperty(objectIndex, propertyId, startIndex, elems);
 		return ServiceResult.of(res);
 	}
 
