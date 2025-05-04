@@ -1,6 +1,6 @@
 /*
     Calimero 2 - A library for KNX network access
-    Copyright (c) 2010, 2024 B. Malinowsky
+    Copyright (c) 2010, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -277,8 +277,8 @@ public class InterfaceObject
 
 		final byte[] bytes = values.get(new PropertyKey(getType(), pid));
 		if (start == 0) {
-			if (elements > 1)
-				throw new KnxPropertyException("current number of elements consists of only 1 element",
+			if (elements != 1)
+				throw new KnxPropertyException("current number of elements consists of 1 element",
 						ErrorCodes.UNSPECIFIED_ERROR);
 
 			return new byte[] { bytes[0], bytes[1] };

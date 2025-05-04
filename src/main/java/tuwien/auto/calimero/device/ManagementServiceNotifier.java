@@ -898,6 +898,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final byte[] asdu = new byte[4 + res.length];
 		if (res.length == 0)
 			elements = 0;
+		else if (start == 0 && elements > 1)
+			elements = 1;
 		asdu[0] = (byte) objIndex;
 		asdu[1] = (byte) pid;
 		asdu[2] = (byte) ((elements << 4) | ((start >>> 8) & 0x0f));
@@ -1303,12 +1305,15 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int length = Math.max(1, sr.result().length);
 		final byte[] asdu = Arrays.copyOfRange(data, 0, 8 + length);
 		final var returnCode = sr.returnCode();
-		asdu[8] = (byte) sr.returnCode().code();
-
-		if (returnCode != ReturnCode.Success)
-			asdu[5] = 0;
-		else
+		if (returnCode != ReturnCode.Success) {
+			asdu[5] = 0; // elements = 0
+			asdu[8] = (byte) returnCode.code();
+		}
+		else {
+			if (start == 0) // if reading current number of elements, elements is always 1
+				asdu[5] = 1;
 			System.arraycopy(sr.result(), 0, asdu, 8, length);
+		}
 
 		send(respondTo, PropertyExtResponse, asdu, sr.getPriority());
 	}
