@@ -859,7 +859,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.DESCRIPTION, 1, desc.length, desc);
 
 		final String[] sver = Settings.getLibraryVersion().split("[. \\-]", 0);
-		final int ver = Integer.parseInt(sver[0]) << 6 | Integer.parseInt(sver[1]);
+		final int ver = Integer.parseUnsignedInt(sver[0]) << 6 | Integer.parseUnsignedInt(sver[1]);
 		deviceObject.set(PID.VERSION, fromWord(ver));
 
 		final int indAddressWriteEnable = 0x04;
