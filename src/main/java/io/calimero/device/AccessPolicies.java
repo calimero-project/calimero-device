@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2024 B. Malinowsky
+    Copyright (c) 2019, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -142,22 +142,20 @@ public final class AccessPolicies {
 
 	// data level access policies
 
+	private static final int defaultPropertyAccessPolicy = accessPolicy("3FF/0CC");
+
 	public static boolean checkPropertyAccess(final int objType, final int pid, final boolean read,
 			final boolean securityMode, final SecurityControl securityCtrl) {
 		final var key = pid <= 50 ? new PropertyKey(pid) : new PropertyKey(objType, pid);
 		final var property = definitions.get(key);
-		if (property == null) {
-			if (objType == InterfaceObject.SECURITY_OBJECT)
-				return false;
-			return true;
-		}
 
-		final int policy = objType == InterfaceObject.SECURITY_OBJECT && pid == PID.LOAD_STATE_CONTROL
-				? accessPolicy("00C/00C") : property.accessPolicy();
-		if (policy == 0 && objType == InterfaceObject.SECURITY_OBJECT)
-			return false;
-		if (policy == 0)
-			return true;
+		int policy = property != null && property.accessPolicy() != 0 ? property.accessPolicy() : defaultPropertyAccessPolicy;
+		if (objType == InterfaceObject.SECURITY_OBJECT) {
+			if (pid == PID.LOAD_STATE_CONTROL)
+				policy = accessPolicy("00C/00C");
+			else if (property == null)
+				return false;
+		}
 
 		final int rw = read ? Read : Write;
 		return (readWrite(policy, securityMode, securityCtrl) & rw) == rw;
