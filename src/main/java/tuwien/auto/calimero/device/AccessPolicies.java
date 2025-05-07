@@ -83,8 +83,8 @@ public final class AccessPolicies {
 
 	private static int accessPolicy(final String accessPolicy) {
 		final int slash = accessPolicy.indexOf('/');
-		final int off = Integer.parseInt(accessPolicy.substring(0, slash), 16);
-		final int on = Integer.parseInt(accessPolicy.substring(slash + 1), 16);
+		final int off = Integer.parseUnsignedInt(accessPolicy.substring(0, slash), 16);
+		final int on = Integer.parseUnsignedInt(accessPolicy.substring(slash + 1), 16);
 		if (off > 0x3ff || on > 0x3ff)
 			throw new KNXIllegalArgumentException("invalid access policy " + accessPolicy);
 		return (off << 10) | on;
