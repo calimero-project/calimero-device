@@ -1,4 +1,4 @@
-repositories {		
+repositories {
 	mavenCentral()
 	mavenLocal()
 	maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
@@ -8,7 +8,7 @@ apply plugin:'application'
 
 mainClassName = 'tuwien.auto.calimero.TestNetwork'
 group = 'com.github.calimero'
-version = '2.6-rc2'
+version = '2.6'
 
 run {
 	// for attaching to debugger, start with -Ddebug=true
