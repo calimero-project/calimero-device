@@ -36,7 +36,6 @@
 
 package tuwien.auto.calimero.device;
 
-import static java.lang.System.Logger.Level.WARNING;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ADDRESSTABLE_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.APPLICATIONPROGRAM_OBJECT;
 import static tuwien.auto.calimero.device.ios.InterfaceObject.ASSOCIATIONTABLE_OBJECT;
