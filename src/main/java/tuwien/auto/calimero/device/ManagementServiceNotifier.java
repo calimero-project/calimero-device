@@ -1103,7 +1103,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final ReturnCode rc;
 		Priority priority = Priority.LOW;
 		if (bytes > getMaxApduLength() - 4) {
-			logger.warn("memory-write of length {} > max. {} bytes - ignore", bytes, getMaxApduLength() - 4);
+			logger.warn("{} of length {} > max. {} bytes - ignore", name, bytes, getMaxApduLength() - 4);
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
@@ -1199,7 +1199,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		byte[] read = {};
 		Priority priority = Priority.LOW;
 		if (length > getMaxApduLength() - 4) {
-			logger.warn("memory-read request of length {} > max. {} bytes - ignored", length, getMaxApduLength() - 4);
+			logger.warn("{} of length {} > max. {} bytes - ignored", name, length, getMaxApduLength() - 4);
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
