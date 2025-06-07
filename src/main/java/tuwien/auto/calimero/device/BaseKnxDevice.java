@@ -778,12 +778,13 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		try {
 			final var io = ios.lookup(objectTypeDeviceMemory, 1);
 			try {
+				final Memory mem = deviceMemory();
 				final byte[] bytes = ios.getProperty(objectTypeDeviceMemory, 1, pidDeviceMemory, 1, Integer.MAX_VALUE);
 				ios.removeInterfaceObject(io);
-				if (bytes.length != memory.size())
+				if (bytes.length != mem.size())
 					logger.warn("loaded {} bytes from {}, available device memory is {} bytes", bytes.length,
-							iosResource, memory.size());
-				memory.set(0, bytes);
+							iosResource, mem.size());
+				mem.set(0, bytes);
 			}
 			catch (final KnxPropertyException e) {
 				logger.warn("loading device memory from {}", iosResource, e);
@@ -799,7 +800,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		try {
 			logger.debug("saving device memory to {}", iosResource);
-			final byte[] bytes = memory.get(0, memory.size());
+			final Memory mem = deviceMemory();
+			final byte[] bytes = mem.get(0, mem.size());
 			ios.addInterfaceObject(objectTypeDeviceMemory);
 			ios.setProperty(objectTypeDeviceMemory, 1, pidDeviceMemory, 1, bytes.length / 4, bytes);
 		}
@@ -874,7 +876,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		// device status is not in programming mode
 		deviceObject.set(PID.PROGMODE, (byte) 0);
 		// Programming Mode (memory address 0x60) set off
-		memory.set(0x60, 0);
+		deviceMemory().set(0x60, 0);
 
 		deviceObject.set(PID.MANUFACTURER_ID, fromWord(defMfrId));
 		ios.setProperty(DEVICE_OBJECT, objectInstance, PID.MANUFACTURER_DATA, 1, defMfrData.length / 4, defMfrData);
