@@ -623,7 +623,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (startAddress >= size)
 			return ServiceResult.error(ReturnCode.AddressVoid);
 		if (startAddress + bytes >= size)
-			return ServiceResult.error(ReturnCode.AccessDenied);
+			return ServiceResult.error(ReturnCode.AddressVoid);
 
 		final byte[] tableData = checkGroupAddressTableAccess(startAddress, bytes);
 
