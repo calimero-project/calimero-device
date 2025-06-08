@@ -198,7 +198,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	ManagementServiceNotifier mgmtNotifier;
 	private KNXNetworkLink link;
 
-	private static final int deviceMemorySize = 0x10010; // multiple of 4
+	private static final int deviceMemorySize = 0x10200; // multiple of 4
 	private final Memory memory = new ThreadSafeByteArray(deviceMemorySize);
 
 	/**
