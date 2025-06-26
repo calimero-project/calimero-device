@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2019, 2023 B. Malinowsky
+    Copyright (c) 2019, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -149,7 +149,7 @@ class ManagementServiceNotifierTest {
 
 	@Test
 	void memoryExtendedWriteDataOverflow() {
-		final byte[] asdu = { (byte) 2, 0x1, 0x00, 0x0f, 1, 2 };
+		final byte[] asdu = { (byte) 2, 0x1, 0x01, (byte) 0xff, 1, 2 };
 		test = apdu -> assertEquals(ReturnCode.MemoryError, ReturnCode.of(apdu[2] & 0xff));
 		assertResponse(ManagementServiceNotifier.MemoryExtendedWrite, asdu);
 	}
