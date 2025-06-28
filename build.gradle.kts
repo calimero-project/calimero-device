@@ -80,8 +80,8 @@ testing {
 dependencies {
 	api("io.calimero:calimero-core:$version")
 
-	testRuntimeOnly("org.slf4j:slf4j-jdk-platform-logging:2.0.16")
-	testRuntimeOnly("org.slf4j:slf4j-simple:2.0.16")
+	testRuntimeOnly("org.slf4j:slf4j-jdk-platform-logging:2.0.17")
+	testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
 }
 
 publishing {
