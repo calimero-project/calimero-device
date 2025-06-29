@@ -1109,13 +1109,13 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final ReturnCode rc;
 		Priority priority = Priority.LOW;
 		if (bytes > getMaxApduLength() - 4) {
-			logger.log(WARNING, "memory-write of length {0} > max. {1} bytes - ignore", bytes, getMaxApduLength() - 4);
+			logger.log(WARNING, "{0} of length {1} > max. {2} bytes - ignore", name, bytes, getMaxApduLength() - 4);
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
 			final byte[] memory = Arrays.copyOfRange(data, 4, data.length);
 			if (memory.length != bytes) {
-				logger.log(WARNING, "ill-formed memory write: number field = {0} but memory length = {1}", bytes, memory);
+				logger.log(WARNING, "ill-formed {0}: number field = {1} but memory length = {2}", name, bytes, memory);
 				rc = ReturnCode.Error; // ReturnCode.DataVoid would probably fit better, but is not specified
 			}
 			else {
@@ -1205,7 +1205,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		byte[] read = {};
 		Priority priority = Priority.LOW;
 		if (length > getMaxApduLength() - 4) {
-			logger.log(WARNING, "memory-read request of length {0} > max. {1} bytes - ignored", length, getMaxApduLength() - 4);
+			logger.log(WARNING, "{0} request of length {1} > max. {2} bytes - ignored", name, length, getMaxApduLength() - 4);
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
@@ -1257,7 +1257,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				return;
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.log(INFO, "read property description: {0}", e.getMessage());
+			logger.log(INFO, "{0}: {1}", name, e.getMessage());
 			// answer with non-existent property description
 			byte[] apdu = DataUnitBuilder.apdu(PropertyExtDescriptionResponse).putShort(iot)
 					.putShort(instance << 4 | pid >> 8).put(pid)
@@ -1304,7 +1304,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				sr = mgmtSvc.readProperty(respondTo, objIndex, pid, start, elements);
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.log(INFO, "reading property data: {0}", e.getMessage());
+			logger.log(INFO, "{0}: {1}", name, e.getMessage());
 			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 
@@ -1347,7 +1347,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				sr = mgmtSvc.writeProperty(respondTo, objIndex, pid, start, elements, propertyData);
 		}
 		catch (KNXIllegalArgumentException | KnxPropertyException e) {
-			logger.log(WARNING, "writing property data: {0}", e.getMessage());
+			logger.log(WARNING, "{0}: {1}", name, e.getMessage());
 			sr = ServiceResult.error(ReturnCode.AddressVoid);
 		}
 		if (!confirm)
