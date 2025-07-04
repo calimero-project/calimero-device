@@ -48,6 +48,7 @@ import io.calimero.KNXException;
 import io.calimero.KNXIllegalArgumentException;
 import io.calimero.cemi.CEMIDevMgmt.ErrorCodes;
 import io.calimero.device.ios.InterfaceObjectServer.IosResourceHandler;
+import io.calimero.dptxlator.DptId;
 import io.calimero.dptxlator.PropertyTypes;
 import io.calimero.dptxlator.TranslatorTypes;
 import io.calimero.mgmt.Description;
@@ -214,7 +215,7 @@ public class InterfaceObject
 		return idx;
 	}
 
-	public boolean contains(int pid) { return findByPid(pid) != null; }
+	public boolean contains(final int pid) { return findByPid(pid) != null; }
 
 	void load(final IosResourceHandler rh) throws KNXException
 	{
@@ -330,7 +331,7 @@ public class InterfaceObject
 		// 4) trust input parameters and calculate type size
 
 		int pdt = -1;
-		Optional<String> dptId = Optional.empty();
+		Optional<DptId> dptId = Optional.empty();
 		Description d = null;
 		boolean createDescription = false;
 		try {
@@ -583,9 +584,9 @@ public class InterfaceObject
 		return p;
 	}
 
-	private static Optional<Integer> dptBitSize(final String dptId) {
+	private static Optional<Integer> dptBitSize(final DptId dptId) {
 		try {
-			return Optional.of(TranslatorTypes.createTranslator(0, dptId).bitSize());
+			return Optional.of(TranslatorTypes.createTranslator(0, dptId.toString()).bitSize());
 		}
 		catch (final KNXException e) {}
 		return Optional.empty();
