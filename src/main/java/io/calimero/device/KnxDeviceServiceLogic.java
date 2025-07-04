@@ -1075,7 +1075,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 					final var mainType = TranslatorTypes.ofBitSize((int) flags[0]).get(0);
 					final String dpt = mainType.getSubTypes().keySet().iterator().next();
-					final var dp = new StateDP(group, group.toString(), mainType.getMainNumber(), dpt);
+					final var dp = new StateDP(group, group.toString(), mainType.mainNumber(), dpt);
 					dp.setPriority((Priority) flags[1]);
 					datapoints.add(dp);
 				}
