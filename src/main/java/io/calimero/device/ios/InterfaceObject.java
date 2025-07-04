@@ -586,7 +586,7 @@ public class InterfaceObject
 
 	private static Optional<Integer> dptBitSize(final DptId dptId) {
 		try {
-			return Optional.of(TranslatorTypes.createTranslator(0, dptId.toString()).bitSize());
+			return Optional.of(TranslatorTypes.createTranslator(dptId).bitSize());
 		}
 		catch (final KNXException e) {}
 		return Optional.empty();
