@@ -1,4 +1,4 @@
-Calimero KNX Device [![CI with Gradle](https://github.com/calimero-project/calimero-device/actions/workflows/gradle.yml/badge.svg)](https://github.com/calimero-project/calimero-device/actions/workflows/gradle.yml)
+Calimero KNX Device [![CI with Gradle](https://github.com/calimero-project/calimero-device/actions/workflows/gradle.yml/badge.svg)](https://github.com/calimero-project/calimero-device/actions/workflows/gradle.yml) [![](https://jitpack.io/v/calimero-project/calimero-device.svg)](https://jitpack.io/#calimero-project/calimero-device) [![](https://img.shields.io/badge/jitpack-master-brightgreen?label=JitPack)](https://jitpack.io/#calimero-project/calimero-device/master)
 ===================
 
 ~~~ sh
