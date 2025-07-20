@@ -72,18 +72,10 @@ class BaseKnxDeviceTest
 
 	private final KNXNetworkLink link = new KNXNetworkLink() {
 		/**
-		 * @param settings
-		 */
-		@Override
-		public void setKNXMedium(final KNXMediumSettings settings)
-		{}
-
-		/**
 		 * @param count
 		 */
 		@Override
-		public void setHopCount(final int count)
-		{}
+		public void setHopCount(final int count) {}
 
 		/**
 		 * @param dst
