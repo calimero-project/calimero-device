@@ -5,7 +5,7 @@ Calimero KNX Device [![CI with Gradle](https://github.com/calimero-project/calim
 git clone https://github.com/calimero-project/calimero-device.git
 ~~~
 
-The Calimero KNX network stack to run a KNX device on Java SE. This library allows you to implement your own KNX device on any platform that supports a JRE. The minimum required runtime environment is [JDK 17](https://openjdk.org/projects/jdk/17/) (_java.base_). 
+The Calimero KNX network stack to run a KNX device on Java SE. This library allows you to implement your own KNX device on any platform that supports a JRE. The minimum required runtime environment is [JDK 21](https://openjdk.org/projects/jdk/21/) (_java.base_). 
 
 Code examples for using this library are shown in [introduction](https://github.com/calimero-project/introduction):
 
