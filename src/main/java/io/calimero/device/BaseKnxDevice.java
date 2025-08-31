@@ -1191,7 +1191,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			if (tasks.isEmpty())
 				taskSubmitted = false;
 			else
-				taskExecutor().submit(tasks.remove(0));
+				taskExecutor().submit(tasks.removeFirst());
 		}
 		finally {
 			lock.unlock();

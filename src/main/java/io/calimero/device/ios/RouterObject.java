@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2024, 2024 B. Malinowsky
+    Copyright (c) 2024, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ public final class RouterObject extends InterfaceObject {
 	// forwarding settings for group communication
 	public RoutingConfig routingLcGroupConfig(final boolean fromMain, final GroupAddress groupAddress) {
 		// MAIN_X: defines the handling of frames from main line
-		// SUB_X: defines the handling of frames from sub line
+		// SUB_X: defines the handling of frames from subline
 		final int pid = fromMain ? PropertyAccess.PID.MAIN_LCGROUPCONFIG : PropertyAccess.PID.SUB_LCGROUPCONFIG;
 
 		// | Bit   |  7  6  5 |         4        |   3   2  |   1   0  |

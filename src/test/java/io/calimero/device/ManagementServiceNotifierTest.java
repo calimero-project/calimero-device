@@ -193,7 +193,7 @@ class ManagementServiceNotifierTest {
 
 	private void sendGroupObjectDiagnostics(final GroupAddress group, final int service, final ReturnCode returnCode) {
 		final byte objectIndex = (byte) groupObjectTableIndex;
-		final byte pidGODiagnostics = (byte) 66;
+		final byte pidGODiagnostics = 66;
 		final var buffer = ByteBuffer.allocate(10).put(objectIndex).put(pidGODiagnostics).put((byte) 0)
 				.put((byte) service).put((byte) 0).put(group.toByteArray());
 		test = apdu -> {

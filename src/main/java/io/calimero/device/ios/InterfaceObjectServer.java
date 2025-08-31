@@ -558,7 +558,7 @@ public class InterfaceObjectServer implements PropertyAccess
 
 	private void updateIoList()
 	{
-		final InterfaceObject io = objects.get(0);
+		final InterfaceObject io = objects.getFirst();
 		if (io == null || io.getType() != InterfaceObject.DEVICE_OBJECT)
 			throw new IllegalStateException("IOS is missing mandatory device object");
 
@@ -567,7 +567,7 @@ public class InterfaceObjectServer implements PropertyAccess
 		for (final var interfaceObject : objects)
 			buffer.putShort((short) interfaceObject.getType());
 
-		objects.get(0).values.put(new PropertyKey(InterfaceObject.DEVICE_OBJECT, PID.IO_LIST), buffer.array());
+		objects.getFirst().values.put(new PropertyKey(InterfaceObject.DEVICE_OBJECT, PID.IO_LIST), buffer.array());
 	}
 
 	void initIoProperties(final InterfaceObject io, final boolean createDescription)
