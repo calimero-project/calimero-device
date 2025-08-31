@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2011, 2023 B. Malinowsky
+    Copyright (c) 2011, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -190,13 +190,13 @@ class ProcessCommunicationServiceTest {
 	void groupReadRequestRunnable() throws KNXException, InterruptedException {
 		final ProcessCommunicator pc = new ProcessCommunicatorImpl(link);
 		String s = pc.read(dp);
-		assertEquals(s, "on");
+		assertEquals("on", s);
 
 		s = pc.read(dp);
-		assertEquals(s, "on");
+		assertEquals("on", s);
 
 		s = pc.read(dp);
-		assertEquals(s, "on");
+		assertEquals("on", s);
 
 		pc.close();
 	}
@@ -220,11 +220,11 @@ class ProcessCommunicationServiceTest {
 		pc.write(dp, "on");
 		String s = pc.read(dp);
 		// this is on since the server network buffer returns last value
-		assertEquals(s, "on");
+		assertEquals("on", s);
 
 		pc.write(dp, "off");
 		s = pc.read(dp);
-		assertEquals(s, "off");
+		assertEquals("off", s);
 
 		pc.close();
 	}
