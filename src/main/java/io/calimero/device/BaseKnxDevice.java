@@ -94,7 +94,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import io.calimero.DeviceDescriptor;
 import io.calimero.DeviceDescriptor.DD0;
 import io.calimero.IndividualAddress;
 import io.calimero.KNXException;
@@ -131,7 +130,6 @@ import io.calimero.link.KNXNetworkLinkUsb;
 import io.calimero.link.medium.KNXMediumSettings;
 import io.calimero.log.LogService;
 import io.calimero.mgmt.Description;
-import io.calimero.mgmt.PropertyAccess;
 import io.calimero.mgmt.PropertyAccess.PID;
 import io.calimero.mgmt.TransportLayer;
 import io.calimero.mgmt.TransportLayerImpl;
@@ -215,7 +213,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 *        load/store a plain (unencrypted) interface object server
 	 * @throws KnxPropertyException on error setting KNX properties during device initialization
 	 */
-	public BaseKnxDevice(final String name, final DeviceDescriptor.DD0 dd, final ProcessCommunicationService process,
+	public BaseKnxDevice(final String name, final DD0 dd, final ProcessCommunicationService process,
 		final ManagementService mgmt, final URI iosResource, final char[] iosPassword) throws KnxPropertyException
 	{
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
@@ -234,7 +232,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		loadDeviceMemory();
 	}
 
-	BaseKnxDevice(final String name, final DeviceDescriptor.DD0 dd, final KNXNetworkLink link,
+	BaseKnxDevice(final String name, final DD0 dd, final KNXNetworkLink link,
 			final ProcessCommunicationService process, final ManagementService mgmt)
 			throws KNXLinkClosedException, KnxPropertyException {
 		this(name, dd, process, mgmt, null, NoPwd);
@@ -265,7 +263,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 */
 	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic, final URI iosResource,
 			final char[] iosPassword) throws KnxPropertyException {
-		this(name, DeviceDescriptor.DD0.TYPE_5705, logic, logic, iosResource, iosPassword);
+		this(name, DD0.TYPE_5705, logic, logic, iosResource, iosPassword);
 		logic.setDevice(this);
 	}
 
@@ -284,7 +282,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	public BaseKnxDevice(final String name, final KnxDeviceServiceLogic logic, final KNXNetworkLink link)
 		throws KNXLinkClosedException, KnxPropertyException
 	{
-		this(name, DeviceDescriptor.DD0.TYPE_5705, link, logic, logic);
+		this(name, DD0.TYPE_5705, link, logic, logic);
 	}
 
 	/**
@@ -385,7 +383,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final var secif = SecurityObject.lookup(getInterfaceObjectServer());
 		if (!secif.isLoaded() || !sal.isSecurityModeEnabled())
 			return;
-		if (unsigned(secif.get(SecurityObject.Pid.SequenceNumberSending)) > 1)
+		if (unsigned(secif.get(Pid.SequenceNumberSending)) > 1)
 			return;
 		secif.set(Pid.SequenceNumberSending, sixBytes(1).array());
 
@@ -460,23 +458,23 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		if (optGaIdx.isPresent()) {
 			final int idx = optGaIdx.orElseThrow();
 			final long sec = unsigned(ios.getProperty(InterfaceObject.SECURITY_OBJECT, objectInstance,
-					SecurityObject.Pid.GoSecurityFlags, idx, 1));
+					Pid.GoSecurityFlags, idx, 1));
 			if (sec < goSecurity)
-				ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityObject.Pid.GoSecurityFlags,
+				ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, Pid.GoSecurityFlags,
 						idx, 1, (byte) goSecurity);
 		}
 		else {
 			final int lastGaIdx = (int) unsigned(
-					ios.getProperty(ADDRESSTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, 0, 1));
+					ios.getProperty(ADDRESSTABLE_OBJECT, objectInstance, PID.TABLE, 0, 1));
 			final int newGaIdx = lastGaIdx + 1;
-			ios.setProperty(ADDRESSTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, newGaIdx, 1,
+			ios.setProperty(ADDRESSTABLE_OBJECT, objectInstance, PID.TABLE, newGaIdx, 1,
 					group.toByteArray());
-			ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, SecurityObject.Pid.GoSecurityFlags,
+			ios.setProperty(InterfaceObject.SECURITY_OBJECT, objectInstance, Pid.GoSecurityFlags,
 					newGaIdx, 1, (byte) goSecurity);
 
 			final boolean bigAssocTable = isBigAssocTable();
 
-			final byte[] table = ios.getProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, 1,
+			final byte[] table = ios.getProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PID.TABLE, 1,
 					Integer.MAX_VALUE);
 			final var buffer = ByteBuffer.wrap(table);
 			int maxGoIdx = 0;
@@ -502,7 +500,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			else
 				bb.put((byte) newGaIdx).put((byte) newGoIdx);
 			final byte[] assoc = bb.array();
-			ios.setProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PropertyAccess.PID.TABLE, newAssocIdx, 1, assoc);
+			ios.setProperty(ASSOCIATIONTABLE_OBJECT, objectInstance, PID.TABLE, newAssocIdx, 1, assoc);
 
 			final byte[] groupObjectDescriptor;
 			final int groupObjTablePdt = groupObjTablePdt();
@@ -519,7 +517,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	// prepare properties usually required for ETS download
-	public void identification(final DeviceDescriptor.DD0 dd, final int manufacturerId, final SerialNumber serialNumber,
+	public void identification(final DD0 dd, final int manufacturerId, final SerialNumber serialNumber,
 			final byte[] hardwareType, final byte[] programVersion, final byte[] fdsk) {
 		final var deviceObject = DeviceObject.lookup(ios);
 		// matching device descriptor to indicate BCU
@@ -535,7 +533,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(APPLICATIONPROGRAM_OBJECT, 1, PID.PROGRAM_VERSION, 1, 1, programVersion);
 
 		// fdsk for secure device download
-		SecurityObject.lookup(ios).set(SecurityObject.Pid.ToolKey, fdsk);
+		SecurityObject.lookup(ios).set(Pid.ToolKey, fdsk);
 	}
 
 	protected record IpRoutingConfig(InetAddress multicastGroup, byte[] groupKey, Duration latencyTolerance) {
@@ -765,7 +763,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				logger.log(INFO, "could not open {0}, create resource on closing device ({1})", iosResource,
 						cause.getMessage());
 			// re-add device object
-			ios.addInterfaceObject(InterfaceObject.DEVICE_OBJECT);
+			ios.addInterfaceObject(DEVICE_OBJECT);
 			return false;
 		}
 		catch (final GeneralSecurityException | IOException | KNXException e) {
@@ -1133,11 +1131,11 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		final var sno = deviceObject.serialNumber();
 
 		final var knxipObject = KnxipParameterObject.lookup(ios, 1);
-		final var ip = knxipObject.inetAddress(PropertyAccess.PID.CURRENT_IP_ADDRESS);
-		final var mcast = knxipObject.inetAddress(PropertyAccess.PID.ROUTING_MULTICAST_ADDRESS);
+		final var ip = knxipObject.inetAddress(PID.CURRENT_IP_ADDRESS);
+		final var mcast = knxipObject.inetAddress(PID.ROUTING_MULTICAST_ADDRESS);
 		final var deviceName = knxipObject.friendlyName();
-		final var projectInstId = (int) unsigned(knxipObject.get(PropertyAccess.PID.PROJECT_INSTALLATION_ID));
-		final var mac = knxipObject.get(PropertyAccess.PID.MAC_ADDRESS);
+		final var projectInstId = (int) unsigned(knxipObject.get(PID.PROJECT_INSTALLATION_ID));
+		final var mac = knxipObject.get(PID.MAC_ADDRESS);
 
 		final var deviceDib = new DeviceDIB(deviceName, progmode ? 1 : 0, projectInstId,
 				KNXMediumSettings.MEDIUM_KNXIP, deviceAddress, sno, mcast, mac);
@@ -1149,7 +1147,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	private void propertyChanged(final PropertyEvent pe) {
 		try {
-			if (pe.getInterfaceObject().getType() == InterfaceObject.KNXNETIP_PARAMETER_OBJECT) {
+			if (pe.getInterfaceObject().getType() == KNXNETIP_PARAMETER_OBJECT) {
 				final int pid = pe.getPropertyId();
 				if (pid == PID.TTL)
 					connectionOfLink().ifPresent(conn -> conn.setHopCount(pe.getNewData()[0]));
