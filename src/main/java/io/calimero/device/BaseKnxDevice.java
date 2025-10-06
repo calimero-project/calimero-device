@@ -1026,7 +1026,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			final var connOpt = connectionOfLink();
 			if (connOpt.isPresent()) {
 				final var conn = connOpt.get();
-				mcast = conn.getRemoteAddress().getAddress().getAddress();
+				mcast = conn.remoteAddress().address().getAddress().getAddress();
 
 				NetworkInterface netif = conn.networkInterface();
 				Optional<InterfaceAddress> addr = Optional.empty();
