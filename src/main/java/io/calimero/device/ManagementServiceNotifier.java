@@ -200,14 +200,12 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		logger = device.logger();
 
 		final int medium = device.getDeviceLink().getKNXMedium().getMedium();
-		if (medium == KNXMediumSettings.MEDIUM_PL110)
-			lengthDoA = 2;
-		else if (medium == KNXMediumSettings.MEDIUM_RF)
-			lengthDoA = 6;
-		else if (medium == KNXMediumSettings.MEDIUM_KNXIP)
-			lengthDoA = 4;
-		else
-			lengthDoA = 0;
+		lengthDoA = switch (medium) {
+			case KNXMediumSettings.MEDIUM_PL110 -> 2;
+			case KNXMediumSettings.MEDIUM_RF -> 6;
+			case KNXMediumSettings.MEDIUM_KNXIP -> 4;
+			default -> 0;
+		};
 
 		sal.addListener(this);
 		AccessPolicies.definitions = device.getInterfaceObjectServer().propertyDefinitions();
@@ -326,72 +324,41 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		securityCtrl = secCtrl;
 		final String name = decodeAPCI(svc);
-		if (svc == MEMORY_READ)
-			onMemoryRead(name, respondTo, data);
-		else if (svc == MEMORY_WRITE)
-			onMemoryWrite(name, respondTo, data);
-		else if (svc == PROPERTY_DESC_READ)
-			onPropDescRead(name, dst, respondTo, data);
-		else if (svc == PROPERTY_READ)
-			onPropertyRead(name, dst, respondTo, data);
-		else if (svc == PROPERTY_WRITE)
-			onPropertyWrite(name, dst, respondTo, data);
-		else if (svc == DEVICE_DESC_READ)
-			onDeviceDescRead(name, respondTo, data);
-		else if (svc == ADC_READ)
-			onAdcRead(name, respondTo, data);
-		else if (svc == AUTHORIZE_READ)
-			onAuthorize(name, respondTo, data);
-		else if (svc == IND_ADDR_READ)
-			onIndAddrRead(name, respondTo, data);
-		else if (svc == IND_ADDR_WRITE)
-			onIndAddrWrite(name, respondTo, data);
-		else if (svc == IND_ADDR_SN_READ)
-			onIndAddrSnRead(name, respondTo, data);
-		else if (svc == IND_ADDR_SN_WRITE)
-			onIndAddrSnWrite(name, respondTo, data);
-		else if (svc == DOA_READ)
-			onDoARead(name, respondTo, data);
-		else if (svc == DOA_SELECTIVE_READ)
-			onDoASelectiveRead(name, respondTo, data);
-		else if (svc == DOA_WRITE)
-			onDoAWrite(name, respondTo, data);
-		else if (svc == DoASerialNumberRead)
-			onDoASerialNumberRead(name, respondTo, data);
-		else if (svc == DoASerialNumberWrite)
-			onDoASerialNumberWrite(name, respondTo, data);
-		else if (svc == KEY_WRITE)
-			onKeyWrite(name, respondTo, data);
-		else if (svc == RESTART)
-			onRestart(name, respondTo, data);
-		else if (svc == FunctionPropertyCommand)
-			onFunctionPropertyCommandOrState(name, dst, respondTo, true, data);
-		else if (svc == FunctionPropertyStateRead)
-			onFunctionPropertyCommandOrState(name, dst, respondTo, false, data);
-		else if (svc == MemoryExtendedWrite)
-			onMemoryExtendedWrite(name, respondTo, data);
-		else if (svc == MemoryExtendedRead)
-			onMemoryExtendedRead(name, respondTo, data);
-		else if (svc == NetworkParamRead)
-			onNetworkParamRead(name, respondTo, data, false, dst.getRawAddress() == 0);
-		else if (svc == NetworkParamWrite)
-			onNetworkParamWrite(name, respondTo, data, false);
-		else if (svc == SystemNetworkParamRead)
-			onNetworkParamRead(name, respondTo, data, true, dst.getRawAddress() == 0);
-		else if (svc == SystemNetworkParamWrite)
-			onNetworkParamWrite(name, respondTo, data, true);
-		else if (svc == PropertyExtRead)
-			onPropertyExtRead(name, dst, respondTo, data);
-		else if (svc == PropertyExtWriteCon || svc == PropertyExtWriteUnCon)
-			onPropertyExtWrite(name, dst, respondTo, data, svc == PropertyExtWriteCon);
-		else if (svc == PropertyExtDescriptionRead)
-			onPropertyExtDescriptionRead(name, dst, respondTo, data);
-		else if (svc == FunctionPropertyExtCommand)
-			onFunctionPropertyExtCommandOrState(name, dst, respondTo, true, data, true);
-		else if (svc == FunctionPropertyExtStateRead)
-			onFunctionPropertyExtCommandOrState(name, dst, respondTo, false, data, true);
-		else
-			onManagement(svc, data, dst, respondTo);
+		switch (svc) {
+			case MEMORY_READ -> onMemoryRead(name, respondTo, data);
+			case MEMORY_WRITE -> onMemoryWrite(name, respondTo, data);
+			case PROPERTY_DESC_READ -> onPropDescRead(name, dst, respondTo, data);
+			case PROPERTY_READ -> onPropertyRead(name, dst, respondTo, data);
+			case PROPERTY_WRITE -> onPropertyWrite(name, dst, respondTo, data);
+			case DEVICE_DESC_READ -> onDeviceDescRead(name, respondTo, data);
+			case ADC_READ -> onAdcRead(name, respondTo, data);
+			case AUTHORIZE_READ -> onAuthorize(name, respondTo, data);
+			case IND_ADDR_READ -> onIndAddrRead(name, respondTo, data);
+			case IND_ADDR_WRITE -> onIndAddrWrite(name, respondTo, data);
+			case IND_ADDR_SN_READ -> onIndAddrSnRead(name, respondTo, data);
+			case IND_ADDR_SN_WRITE -> onIndAddrSnWrite(name, respondTo, data);
+			case DOA_READ -> onDoARead(name, respondTo, data);
+			case DOA_SELECTIVE_READ -> onDoASelectiveRead(name, respondTo, data);
+			case DOA_WRITE -> onDoAWrite(name, respondTo, data);
+			case DoASerialNumberRead -> onDoASerialNumberRead(name, respondTo, data);
+			case DoASerialNumberWrite -> onDoASerialNumberWrite(name, respondTo, data);
+			case KEY_WRITE -> onKeyWrite(name, respondTo, data);
+			case RESTART -> onRestart(name, respondTo, data);
+			case FunctionPropertyCommand -> onFunctionPropertyCommandOrState(name, dst, respondTo, true, data);
+			case FunctionPropertyStateRead -> onFunctionPropertyCommandOrState(name, dst, respondTo, false, data);
+			case MemoryExtendedWrite -> onMemoryExtendedWrite(name, respondTo, data);
+			case MemoryExtendedRead -> onMemoryExtendedRead(name, respondTo, data);
+			case NetworkParamRead -> onNetworkParamRead(name, respondTo, data, false, dst.getRawAddress() == 0);
+			case NetworkParamWrite -> onNetworkParamWrite(name, respondTo, data, false);
+			case SystemNetworkParamRead -> onNetworkParamRead(name, respondTo, data, true, dst.getRawAddress() == 0);
+			case SystemNetworkParamWrite -> onNetworkParamWrite(name, respondTo, data, true);
+			case PropertyExtRead -> onPropertyExtRead(name, dst, respondTo, data);
+			case PropertyExtWriteCon, PropertyExtWriteUnCon -> onPropertyExtWrite(name, dst, respondTo, data, svc == PropertyExtWriteCon);
+			case PropertyExtDescriptionRead -> onPropertyExtDescriptionRead(name, dst, respondTo, data);
+			case FunctionPropertyExtCommand -> onFunctionPropertyExtCommandOrState(name, dst, respondTo, true, data, true);
+			case FunctionPropertyExtStateRead -> onFunctionPropertyExtCommandOrState(name, dst, respondTo, false, data, true);
+			default -> onManagement(svc, data, dst, respondTo);
+		}
 	}
 
 	// test-info length of network param services is impl-specific, we allow operand (1 byte) + mfr-code (2 bytes)

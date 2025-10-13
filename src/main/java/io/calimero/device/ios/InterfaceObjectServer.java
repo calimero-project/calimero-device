@@ -419,8 +419,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * instance to refer to the interface object.
 	 *
 	 * @param objectType object type of the interface object containing the KNX property
-	 * @param objectInstance object instance of the interface object in the server, 1 refers to the
-	 *        first instance
+	 * @param objectInstance object instance of the interface object in the server, 1 refers to the first instance
 	 * @param propertyId see {@link #setProperty(int, int, int, int, byte[])}
 	 * @param start see {@link #setProperty(int, int, int, int, byte[])}
 	 * @param elements see {@link #setProperty(int, int, int, int, byte[])}
@@ -438,8 +437,7 @@ public class InterfaceObjectServer implements PropertyAccess
 	 * refer to the interface object.
 	 *
 	 * @param objectType object type of the interface object containing the KNX property
-	 * @param objectInstance object instance of the interface object in the server, 1 refers to the
-	 *        first instance
+	 * @param objectInstance object instance of the interface object in the server, 1 refers to the first instance
 	 * @param propertyId see {@link #getProperty(int, int, int, int)}
 	 * @param start see {@link #getProperty(int, int, int, int)}
 	 * @param elements see {@link #getProperty(int, int, int, int)}

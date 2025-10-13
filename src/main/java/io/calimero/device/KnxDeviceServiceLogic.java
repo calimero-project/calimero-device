@@ -434,22 +434,19 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				final int clearGroupAddresses = 3;
 				final int setGroupAddresses = 4;
 
-				if (serviceId == clearRoutingTable)
-					return new ServiceResult<>((byte) 0, (byte) clearRoutingTable);
-				if (serviceId == setRoutingTable)
-					return new ServiceResult<>((byte) 0, (byte) setRoutingTable);
-				if (serviceId == clearGroupAddresses) {
-//					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
-//					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
-					return new ServiceResult<>((byte) 0, (byte) clearGroupAddresses, command[2], command[3],
-							command[4], command[5]);
-				}
-				if (serviceId == setGroupAddresses) {
-//					final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
-//					final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
-					return new ServiceResult<>((byte) 0, (byte) setGroupAddresses, command[2], command[3],
-							command[4], command[5]);
-				}
+				return switch (serviceId) {
+					case clearRoutingTable -> new ServiceResult<>((byte) 0, (byte) clearRoutingTable);
+					case setRoutingTable -> new ServiceResult<>((byte) 0, (byte) setRoutingTable);
+					case clearGroupAddresses ->
+//					        final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+//					        final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
+							new ServiceResult<>((byte) 0, (byte) clearGroupAddresses, command[2], command[3], command[4], command[5]);
+					case setGroupAddresses ->
+//					        final int startAddress = (command[2] & 0xff) << 8 | (command[3] & 0xff);
+//					        final int endAddress = (command[4] & 0xff) << 8 | (command[5] & 0xff);
+							new ServiceResult<>((byte) 0, (byte) setGroupAddresses, command[2], command[3], command[4], command[5]);
+					default -> ServiceResult.error(ReturnCode.Error);
+				};
 			}
 		}
 		else if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
@@ -1067,8 +1064,8 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			if (!datapoints.contains(group)) {
 				try {
 					final var optFlags = groupAddressIndex(group)
-							.flatMap(this::groupObjectIndex).map(groupObjectIndex -> ios
-									.getProperty(GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, groupObjectIndex, 1))
+							.flatMap(this::groupObjectIndex)
+							.map(groupObjectIndex -> ios.getProperty(GROUP_OBJECT_TABLE_OBJECT, 1, PID.TABLE, groupObjectIndex, 1))
 							.map(KnxDeviceServiceLogic::groupObjectDescriptor);
 					if (optFlags.isEmpty())
 						continue;

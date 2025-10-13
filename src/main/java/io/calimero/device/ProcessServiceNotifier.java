@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2011, 2024 B. Malinowsky
+    Copyright (c) 2011, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -105,12 +105,11 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 		private void fireGroupReadWrite(final CEMILData f, final int eff, final byte[] tpdu, final int svc) {
 			final ProcessEvent e = new LteProcessEvent(ProcessServiceNotifier.this.recv, f.getSource(), eff,
 					(GroupAddress) f.getDestination(), tpdu);
-			if (svc == GroupPropRead)
-				groupReadRequest(e);
-			else if (svc == GroupPropInfo)
-				groupLteInfo(e);
-			else if (svc == GroupPropWrite)
-				groupWrite(e);
+			switch (svc) {
+				case GroupPropRead  -> groupReadRequest(e);
+				case GroupPropInfo  -> groupLteInfo(e);
+				case GroupPropWrite -> groupWrite(e);
+			}
 		}
 	}
 
