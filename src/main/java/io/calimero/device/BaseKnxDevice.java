@@ -506,9 +506,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			final int groupObjTablePdt = groupObjTablePdt();
 			groupObjectDescriptor = switch (groupObjTablePdt) {
 				case PropertyTypes.PDT_GENERIC_02 ->
-						KnxDeviceServiceLogic.groupObjectDescriptor(dp.getDPT(), dp.getPriority(), false, update);
+						KnxDeviceServiceLogic.groupObjectDescriptor(dp.dptId(), dp.getPriority(), false, update);
 				case PropertyTypes.PDT_GENERIC_03 ->
-						KnxDeviceServiceLogic.groupObjectDescriptor3Bytes(dp.getDPT(), dp.getPriority(), false, update);
+						KnxDeviceServiceLogic.groupObjectDescriptor3Bytes(dp.dptId(), dp.getPriority(), false, update);
 				default ->
 						throw new KnxRuntimeException("group object table: PID Table PDT " + groupObjTablePdt + " not supported");
 			};

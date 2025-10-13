@@ -222,7 +222,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	@Override
 	public void write(final Datapoint dp, final String value) throws KNXException
 	{
-		final DPTXlator t = TranslatorTypes.createTranslator(dp.getMainNumber(), dp.getDPT());
+		final DPTXlator t = TranslatorTypes.createTranslator(dp.dptId());
 		t.setValue(value);
 		write(dp.getMainAddress(), dp.getPriority(), t);
 	}

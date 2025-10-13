@@ -87,6 +87,7 @@ import io.calimero.device.ios.InterfaceObjectServer;
 import io.calimero.device.ios.KnxPropertyException;
 import io.calimero.device.ios.KnxipParameterObject;
 import io.calimero.dptxlator.DPTXlator;
+import io.calimero.dptxlator.DptId;
 import io.calimero.dptxlator.PropertyTypes;
 import io.calimero.dptxlator.TranslatorTypes;
 import io.calimero.knxnetip.KNXnetIPRouting;
@@ -1205,8 +1206,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				config = descriptor[1] & 0xff;
 				final int mainType = (descriptor[2] & 0xff) << 8 | descriptor[3] & 0xff;
 				final int subType = (descriptor[4] & 0xff) << 8 | descriptor[5] & 0xff;
-				final String dptId = mainType + "." + subType;
-				bitsize = translatorBitSize(dptId);
+				bitsize = translatorBitSize(new DptId(mainType, subType));
 			}
 			default -> throw new KnxRuntimeException("unsupported group object descriptor of " + descriptor.length + " bytes");
 		}
@@ -1219,7 +1219,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return new Object[] { bitsize, Priority.get(priority), responder, updateOnResponse };
 	}
 
-	static byte[] groupObjectDescriptor(final String dpt, final Priority p, final boolean responder,
+	static byte[] groupObjectDescriptor(final DptId dpt, final Priority p, final boolean responder,
 			final boolean update) {
 		final int enableFlag = 0x04;
 		final int respondFlag = responder ? 0x08 : 0;
@@ -1228,7 +1228,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return new byte[] { (byte) (updateFlag | respondFlag | enableFlag | p.value), (byte) bitsToValueFieldType(bitsize) };
 	}
 
-	static byte[] groupObjectDescriptor3Bytes(final String dpt, final Priority p, final boolean responder,
+	static byte[] groupObjectDescriptor3Bytes(final DptId dpt, final Priority p, final boolean responder,
 			final boolean update) {
 		final int enableFlag = 0x04;
 		final int respondFlag = responder ? 0x08 : 0;
@@ -1239,7 +1239,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 				(byte) bitsToValueFieldType(bitsize) };
 	}
 
-	private static int translatorBitSize(final String dptId) {
+	private static int translatorBitSize(final DptId dptId) {
 		try {
 			return TranslatorTypes.createTranslator(dptId).bitSize();
 		}
