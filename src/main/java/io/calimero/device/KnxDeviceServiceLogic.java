@@ -1008,7 +1008,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult<byte[]> management(final int svcType, final byte[] asdu, final KNXAddress dst,
 		final Destination respondTo, final TransportLayer tl)
 	{
-		logger.log(INFO, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
+		logger.log(DEBUG, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
 				HexFormat.ofDelimiter(" ").formatHex(asdu));
 		return null;
 	}
