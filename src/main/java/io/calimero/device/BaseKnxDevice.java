@@ -106,6 +106,7 @@ import io.calimero.device.KnxDeviceServiceLogic.LoadState;
 import io.calimero.device.ios.DeviceObject;
 import io.calimero.device.ios.InterfaceObject;
 import io.calimero.device.ios.InterfaceObjectServer;
+import io.calimero.device.ios.InterfaceObjectServerListener;
 import io.calimero.device.ios.KnxPropertyException;
 import io.calimero.device.ios.KnxipParameterObject;
 import io.calimero.device.ios.PropertyEvent;
@@ -199,6 +200,12 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private static final int deviceMemorySize = 0x10200; // multiple of 4
 	private final Memory memory = new ThreadSafeByteArray(deviceMemorySize);
 
+	// GraalVM native image doesn't like lambdas
+	private final class IOSL implements InterfaceObjectServerListener {
+		@Override
+		public void onPropertyValueChanged(final PropertyEvent pe) { propertyChanged(pe); }
+	}
+
 	/**
 	 * Creates a new KNX device with a specific device descriptor and a URI locating an interface object server
 	 * resource.
@@ -219,7 +226,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		threadingPolicy = OUTGOING_EVENTS_THREADED;
 		this.name = name;
 		ios = new InterfaceObjectServer(false);
-		ios.addServerListener(this::propertyChanged);
+		ios.addServerListener(new IOSL());
 		logger = LogService.getLogger("io.calimero.device." + name);
 
 		this.iosResource = iosResource != null ? iosResource : URI.create("");

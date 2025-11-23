@@ -191,6 +191,30 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private SecurityControl securityCtrl;
 
+	// workaround for GraalVM native image
+	private final TransportListener tll = new TransportListener() {
+		@Override
+		public void group(final FrameEvent e) { ManagementServiceNotifier.this.group(e); }
+
+		@Override
+		public void broadcast(final FrameEvent e) { ManagementServiceNotifier.this.broadcast(e); }
+
+		@Override
+		public void dataIndividual(final FrameEvent e) { ManagementServiceNotifier.this.dataIndividual(e); }
+
+		@Override
+		public void dataConnected(final FrameEvent e) { ManagementServiceNotifier.this.dataConnected(e); }
+
+		@Override
+		public void disconnected(final Destination d) { ManagementServiceNotifier.this.disconnected(d); }
+
+		@Override
+		public void detached(final DetachEvent e) { ManagementServiceNotifier.this.detached(e); }
+
+		@Override
+		public void linkClosed(final CloseEvent e) { ManagementServiceNotifier.this.linkClosed(e); }
+	};
+
 	// pre-condition: device != null, link != null
 	ManagementServiceNotifier(final BaseKnxDevice device, final ManagementService mgmt) {
 		this.device = device;
@@ -206,8 +230,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			case KNXMediumSettings.MEDIUM_KNXIP -> 4;
 			default -> 0;
 		};
-
-		sal.addListener(this);
+		// GraalVM native image throws MissingReflectionRegistrationError when passing 'this':
+		// Cannot reflectively access the 'java.lang.AutoCloseable'
+		sal.addListener(tll);
 		AccessPolicies.definitions = device.getInterfaceObjectServer().propertyDefinitions();
 	}
 
@@ -301,6 +326,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	@Override
 	public void close()
 	{
+		sal.removeListener(tll);
 		tl.detach();
 	}
 
