@@ -1,0 +1,23 @@
+{
+  "reflection": [
+    {
+      "type": "io.calimero.device.BaseKnxDevice$IOSL"
+    },
+    {
+      "type": {
+        "lambda": {
+          "declaringClass": "io.calimero.device.BaseKnxDevice",
+          "interfaces": [
+            "io.calimero.device.ios.InterfaceObjectServerListener"
+          ]
+        }
+      }
+    },
+    {
+      "type": "io.calimero.device.ManagementServiceNotifier$1"
+    },
+    {
+      "type": "io.calimero.device.ios.InterfaceObjectServerListener"
+    }
+  ]
+}

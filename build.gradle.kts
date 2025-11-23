@@ -2,6 +2,7 @@ plugins {
 	`java-library`
 	`maven-publish`
 	signing
+	id("org.graalvm.buildtools.native") version "0.11.3"
 	id("com.github.ben-manes.versions") version "0.53.0"
 	eclipse
 }
@@ -82,6 +83,27 @@ dependencies {
 
 	testRuntimeOnly("org.slf4j:slf4j-jdk-platform-logging:2.0.17")
 	testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
+}
+
+graalvmNative {
+//	toolchainDetection = true // only works reliably if a single JDK is installed, which is GraalVM
+	agent {
+//		enabled = true
+		defaultMode = "standard"
+	}
+	binaries {
+		named("main") {
+//			verbose = true
+			buildArgs.addAll(
+				listOf(
+					"--initialize-at-build-time",
+					"--no-fallback",
+					"--exact-reachability-metadata",
+					"-H:+ReportExceptionStackTraces",
+				)
+			)
+		}
+	}
 }
 
 publishing {
