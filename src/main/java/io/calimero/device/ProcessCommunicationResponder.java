@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2011, 2023 B. Malinowsky
+    Copyright (c) 2011, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -222,8 +222,7 @@ public class ProcessCommunicationResponder implements ProcessCommunication
 	@Override
 	public void write(final Datapoint dp, final String value) throws KNXException
 	{
-		final DPTXlator t = TranslatorTypes.createTranslator(dp.dptId());
-		t.setValue(value);
+		final DPTXlator t = TranslatorTypes.createTranslator(dp.dptId(), value);
 		write(dp.getMainAddress(), dp.getPriority(), t);
 	}
 

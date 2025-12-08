@@ -254,8 +254,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		if (dp == null)
 			return;
 		try {
-			final DPTXlator t = TranslatorTypes.createTranslator(0, dp.getDPT());
-			t.setData(e.getASDU());
+			final DPTXlator t = TranslatorTypes.createTranslator(dp.dptId(), e.getASDU());
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
@@ -500,7 +499,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			final var secCtrl = SecurityControl.of(conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
 			logger.log(DEBUG, "send group value write to {0} ({1})", ga, secCtrl);
 			try {
-				final var translator = TranslatorTypes.createTranslator(datapoint.getDPT(), data);
+				final var translator = TranslatorTypes.createTranslator(datapoint.dptId(), data);
 				updateDatapointValue(datapoint, translator);
 				sendGroupValue(ga, ProcessServiceNotifier.GROUP_WRITE, compactApdu, data, datapoint.getPriority());
 			}
