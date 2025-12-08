@@ -72,10 +72,10 @@ class ProcessCommunicationServiceTest {
 	// client link to read/write values to a KNX device
 	private KNXNetworkLink link;
 
-	private final Datapoint dp = new StateDP(new GroupAddress(1, 1, 1), "Switch", 0,
-			DPTXlatorBoolean.DPT_SWITCH.getID());
-	private final Datapoint dp2 = new StateDP(new GroupAddress(1, 1, 2), "Value", 0,
-			DPTXlator8BitUnsigned.DPT_SCALING.getID());
+	private final Datapoint dp = new StateDP(new GroupAddress(1, 1, 1), "Switch",
+			DPTXlatorBoolean.DPT_SWITCH.dptId());
+	private final Datapoint dp2 = new StateDP(new GroupAddress(1, 1, 2), "Value",
+			DPTXlator8BitUnsigned.DPT_SCALING.dptId());
 
 	private boolean dpState;
 	private int dp2State;
