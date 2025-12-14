@@ -726,7 +726,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 				try {
 					final byte[] securedFamilies = ios.getProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
 							pidSecuredServices, 1, 1);
-					securedFamilies[1] &= ~routingBit;
+					securedFamilies[1] &= (byte) ~routingBit;
 					ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, pidSecuredServices, 1, 1,
 							securedFamilies);
 				}
@@ -739,7 +739,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			if (enableSecureRouting) {
 				final byte[] securedFamilies = ios.getProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1,
 						pidSecuredServices, 1, 1);
-				securedFamilies[1] |= routingBit;
+				securedFamilies[1] |= (byte) routingBit;
 				ios.setProperty(InterfaceObject.KNXNETIP_PARAMETER_OBJECT, 1, pidSecuredServices, 1, 1,
 						securedFamilies);
 
@@ -864,7 +864,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final byte[] asdu = sr.result().toByteArray();
 		final byte[] apdu = DataUnitBuilder.createAPDU(DEVICE_DESC_RESPONSE, asdu);
-		apdu[1] |= type;
+		apdu[1] |= (byte) type;
 		send(d, apdu, svcPriority, decodeAPCI(DEVICE_DESC_RESPONSE));
 	}
 

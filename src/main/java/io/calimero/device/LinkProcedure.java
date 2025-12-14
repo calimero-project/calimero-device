@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2015, 2024 B. Malinowsky
+    Copyright (c) 2015, 2025 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -379,7 +379,7 @@ public final class LinkProcedure implements Runnable
 			}
 		}
 
-		value[0] |= flags;
+		value[0] |= (byte) flags;
 		return value;
 	}
 
