@@ -36,14 +36,12 @@
 
 package io.calimero.device.ios;
 
-import java.util.EventObject;
-
 /**
  * Event with details about a KNX property update. Objects of this type are immutable.
  *
  * @author B. Malinowsky
  */
-public class PropertyEvent extends EventObject
+public class PropertyEvent
 {
 	private final InterfaceObject io;
 	private final int pid;
@@ -67,7 +65,6 @@ public class PropertyEvent extends EventObject
 	public PropertyEvent(final InterfaceObjectServer source, final InterfaceObject io,
 		final int propertyId, final int start, final int elements, final byte[] data)
 	{
-		super(source);
 		this.io = io;
 		pid = propertyId;
 		this.start = start;

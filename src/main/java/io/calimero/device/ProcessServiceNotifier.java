@@ -38,7 +38,6 @@ package io.calimero.device;
 
 import static java.lang.System.Logger.Level.ERROR;
 
-import java.util.EventObject;
 import java.util.HexFormat;
 
 import io.calimero.DataUnitBuilder;
@@ -158,10 +157,10 @@ final class ProcessServiceNotifier implements ProcessListener, AutoCloseable
 	@Override
 	public void detached(final DetachEvent e) {}
 
-	void respond(final EventObject event, final ServiceResult<byte[]> sr)
+	void respond(final ProcessEvent event, final ServiceResult<byte[]> sr)
 	{
 		if (sr.result() != null) {
-			final GroupAddress to = ((ProcessEvent) event).getDestination();
+			final GroupAddress to = event.getDestination();
 			try {
 				res.setPriority(sr.getPriority());
 				res.write(to, sr.result(), sr.compact);

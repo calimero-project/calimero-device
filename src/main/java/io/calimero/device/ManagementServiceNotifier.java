@@ -49,7 +49,6 @@ import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.EventObject;
 import java.util.HexFormat;
 import java.util.Map;
 
@@ -278,17 +277,16 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private volatile Priority svcPriority;
 
 	@SuppressWarnings("resource") // for lambda () -> tl.createDestination
-	public void respond(final EventObject e, final ServiceResult<?>sr)
+	public void respond(final FrameEvent fe, final ServiceResult<?>sr)
 	{
 		// since our service code is not split up in request/response, just do everything here
-		final FrameEvent fe = (FrameEvent) e;
-		final CEMI cemi = fe.getFrame();
 
 		final IndividualAddress sender;
 		final KNXAddress dst;
 		final Destination d;
-		final byte[] tpdu = cemi.getPayload();
 
+		final CEMI cemi = fe.getFrame();
+		final byte[] tpdu = cemi.getPayload();
 		if (cemi instanceof CemiTData) {
 			sender = new IndividualAddress(0);
 			dst = new IndividualAddress(0);

@@ -71,7 +71,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EventObject;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -683,8 +682,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	private static final AtomicLong taskCounter = new AtomicLong();
 
-	 <T> void dispatch(final EventObject e, final Supplier<ServiceResult<T>> dispatch,
-		final BiConsumer<EventObject, ServiceResult<T>> respond)
+	 <T, U> void dispatch(final T e, final Supplier<ServiceResult<U>> dispatch,
+		final BiConsumer<T, ServiceResult<U>> respond)
 	{
 		final long start = System.nanoTime();
 		final long taskId = taskCounter.incrementAndGet();
