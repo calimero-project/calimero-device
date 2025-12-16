@@ -666,9 +666,11 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 	private byte[] domainAddress() {
 		final var settings = device.getDeviceLink().getKNXMedium();
-		final byte[] domain = settings instanceof PLSettings ? ((PLSettings) settings).getDomainAddress()
-				: settings instanceof RFSettings ? ((RFSettings) settings).getDomainAddress() : new byte[0];
-		return domain;
+		return switch (settings) {
+			case final PLSettings plSettings -> plSettings.getDomainAddress();
+			case final RFSettings rfSettings -> rfSettings.getDomainAddress();
+			default -> new byte[0];
+		};
 	}
 
 	private void onDoAWrite(final String name, final Destination respondTo, final byte[] data)
