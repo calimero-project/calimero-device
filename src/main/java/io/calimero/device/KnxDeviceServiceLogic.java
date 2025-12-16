@@ -855,7 +855,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		}
 		catch (final KnxPropertyException e) {
 			if (logError)
-				logger.log(WARNING, "error reading DoA property", e);
+				logger.log(INFO, "error reading DoA property: {0}", e.getMessage());
 		}
 		return new byte[0];
 	}
