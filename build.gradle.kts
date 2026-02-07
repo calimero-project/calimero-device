@@ -2,7 +2,7 @@ plugins {
 	`java-library`
 	`maven-publish`
 	signing
-	id("org.graalvm.buildtools.native") version "0.11.3"
+	id("org.graalvm.buildtools.native") version "0.11.4"
 	id("com.github.ben-manes.versions") version "0.53.0"
 	eclipse
 }
