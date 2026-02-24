@@ -18,12 +18,12 @@ jobs:
 
     steps:
     - name: Checkout calimero-core
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: calimero-project/calimero-core
         path: calimero-core
     - name: Checkout calimero-device
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         path: calimero-device
     - name: setup
