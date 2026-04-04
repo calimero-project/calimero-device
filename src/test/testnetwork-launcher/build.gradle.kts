@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "io.calimero"
-version = "3.0-SNAPSHOT"
+version = "3.0-M2"
 
 application {
 	mainClass.set("io.calimero.testnetwork.TestNetwork")
