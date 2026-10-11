@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2012, 2025 B. Malinowsky
+    Copyright (c) 2012, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -468,39 +468,50 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int eraseCode = masterReset ? data[1] & 0xff : 0;
 		final int channel = masterReset ? data[2] & 0xff : 0;
 
-		final int unsupportedEraseCode = 2;
-		byte errorCode = unsupportedEraseCode;
+		enum ErrorCode { NoError, AccessDenied, UnsupportedEraseCode, InvalidChannelNumber }
+		var errorCode = ErrorCode.UnsupportedEraseCode;
 		ServiceResult<Duration> sr = ServiceResult.of(Duration.ZERO);
 
 		EraseCode code = null;
 		try {
-			if (eraseCode > 0)
+			if (masterReset) {
 				code = EraseCode.of(eraseCode);
+
+				// the following erase codes require channel == 0
+				if (channel != 0 && (code == EraseCode.ConfirmedRestart
+				                  || code == EraseCode.ResetIndividualAddress
+				                  || code == EraseCode.ResetApplicationProgram)) {
+					errorCode = ErrorCode.InvalidChannelNumber;
+					throw new KNXIllegalArgumentException(code + " requires channel number 0, but is " + channel);
+				}
+			}
 			if (!AccessPolicies.checkRestartAccess(masterReset, code, sal.isSecurityModeEnabled(), securityCtrl))
 				return;
 			logger.log(TRACE, "{0}->{1} {2}: {3}, channel {4}", respondTo.getAddress(), device.getAddress(), name,
 					code == null ? "Basic Restart" : code, channel);
 
+			sr = mgmtSvc.restart(masterReset, code, channel);
 			// a basic restart does not have any response,
 			// a master reset returns an error code and process time
-			sr = mgmtSvc.restart(masterReset, code, channel);
 			if (!masterReset || ignoreOrSchedule(sr))
 				return;
-			errorCode = 0;
+			errorCode = ErrorCode.NoError;
 		}
 		catch (final KNXIllegalArgumentException e) {
-			// unsupported erase code
 			logger.log(WARNING, "{0}->{1} {2}: {3}", respondTo.getAddress(), device.getAddress(), name, e.getMessage());
 		}
 
-
 		final byte[] asdu = new byte[4];
 		asdu[0] = (1 << 5) | 1; // set response bit and master reset bit
-		asdu[1] = errorCode;
+		asdu[1] = (byte) errorCode.ordinal();
 		asdu[2] = 0;
 		asdu[3] = (byte) sr.result().toSeconds();
 		final byte[] apdu = DataUnitBuilder.createLengthOptimizedAPDU(RESTART, asdu);
 		send(respondTo, apdu, sr.getPriority(), name);
+
+		// on error, we only send response but don't execute restart
+		if (errorCode != ErrorCode.NoError)
+			return;
 
 		@SuppressWarnings("resource")
 		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination()).toList();

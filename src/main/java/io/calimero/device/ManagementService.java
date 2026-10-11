@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2011, 2025 B. Malinowsky
+    Copyright (c) 2011, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -259,10 +259,10 @@ public interface ManagementService
 	 * @param masterReset perform a master reset of the controller
 	 * @param eraseCode for a master reset, specifies the resources that shall be reset prior to restarting the device
 	 * @param channel for a master reset, specifies the number of the application channel that shall be reset and the
-	 *        application parameters set to default values; 0 is to clear all link information in the group address
-	 *        table and group object association table and reset all application parameters. With erase codes
-	 *        {@link EraseCode#ConfirmedRestart}, {@link EraseCode#ResetIndividualAddress}, and
-	 *        {@link EraseCode#ResetApplicationProgram}, the channel number is fixed to {@code 0}.
+	 *        application parameters set to default values, {@code 0 ≤ channel ≤ 255}; 0 is to clear all link
+	 *        information in the group address table and group object association table and reset all application
+	 *        parameters. With erase codes {@link EraseCode#ConfirmedRestart}, {@link EraseCode#ResetIndividualAddress},
+	 *        and {@link EraseCode#ResetApplicationProgram}, the channel number is fixed to {@code 0}.
 	 * @return process time required for restarting the device, can be 0 if time is &le; 5 seconds
 	 * @see ManagementClient#restart(Destination)
 	 * @see ManagementClient#restart(Destination, int, int)
