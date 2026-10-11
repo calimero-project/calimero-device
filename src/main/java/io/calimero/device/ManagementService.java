@@ -265,7 +265,7 @@ public interface ManagementService
 	 *        and {@link EraseCode#ResetApplicationProgram}, the channel number is fixed to {@code 0}.
 	 * @return process time required for restarting the device, can be 0 if time is &le; 5 seconds
 	 * @see ManagementClient#restart(Destination)
-	 * @see ManagementClient#restart(Destination, int, int)
+	 * @see ManagementClient#restart(Destination, EraseCode, int)
 	 */
 	ServiceResult<Duration> restart(boolean masterReset, EraseCode eraseCode, int channel);
 
