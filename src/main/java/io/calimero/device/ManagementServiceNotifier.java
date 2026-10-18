@@ -460,7 +460,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// we have to ignore the service without any response
 		final int reserved = data[0] & 0x1e;
 		if (reserved != 0) {
-			logger.log(WARNING, "{0} uses reserved bits -- ignore", name);
+			logger.log(INFO, "{0} uses reserved bits -- ignore", name);
 			return;
 		}
 

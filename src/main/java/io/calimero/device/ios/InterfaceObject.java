@@ -377,8 +377,8 @@ public class InterfaceObject
 			resize[0] = (byte) (size >> 8);
 			resize[1] = (byte) size;
 			// copy over existing values, if any
-			if (bytes != null)
-				if (bytes.length - 2 >= 0) System.arraycopy(bytes, 2, resize, 2, bytes.length - 2);
+			if (bytes != null && bytes.length > 2)
+				System.arraycopy(bytes, 2, resize, 2, bytes.length - 2);
 
 			values.put(key, resize);
 			bytes = resize;
