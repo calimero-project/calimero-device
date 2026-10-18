@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2010, 2025 B. Malinowsky
+    Copyright (c) 2010, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -335,7 +335,7 @@ public class InterfaceObject
 		Description d = null;
 		boolean createDescription = false;
 		try {
-			d = Description.from(getType(), getDescription(pid, 0));
+			d = getDescription(pid, 0);
 			pdt = d.pdt();
 		}
 		catch (final KnxPropertyException e) {
@@ -397,7 +397,7 @@ public class InterfaceObject
 		return changed;
 	}
 
-	byte[] getDescription(final int pid, final int propIndex) throws KnxPropertyException {
+	Description getDescription(final int pid, final int propIndex) throws KnxPropertyException {
 		Description d = null;
 		if (pid != 0)
 			d = findByPid(pid);
@@ -406,7 +406,7 @@ public class InterfaceObject
 
 		if (d != null) {
 			return new Description(getIndex(), d.objectType(), d.pid(), d.propIndex(), d.pdt(),
-					d.writeEnabled(), 0, d.maxElements(), d.readLevel(), d.writeLevel()).toByteArray();
+					d.writeEnabled(), 0, d.maxElements(), d.readLevel(), d.writeLevel());
 		}
 
 		var typeName = getTypeName();
