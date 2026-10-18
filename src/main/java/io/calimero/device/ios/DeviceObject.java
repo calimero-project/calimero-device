@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2021, 2024 B. Malinowsky
+    Copyright (c) 2021, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -93,7 +93,7 @@ public final class DeviceObject extends InterfaceObject {
 		set(domain.length == 6 ? pidRFDomainAddress : PID.DOMAIN_ADDRESS, domain);
 	}
 
-	public long downloadCounter() { return unsigned(get(pidDownloadCounter)); }
+	public int downloadCounter() { return (int) unsigned(get(pidDownloadCounter)); }
 
 	private byte[] get(final int pid) { return getProperty(pid, 1, 1); }
 

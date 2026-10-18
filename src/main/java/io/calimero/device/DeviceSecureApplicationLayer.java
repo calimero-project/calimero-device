@@ -336,7 +336,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 	}
 
 	private void resetToolAccessSequence() {
-		long counter = 0;
+		int counter = 0;
 		try {
 			counter = DeviceObject.lookup(ios).downloadCounter();
 		}
