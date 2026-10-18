@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2011, 2025 B. Malinowsky
+    Copyright (c) 2011, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -621,6 +622,17 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			logger.log(DEBUG, "saving interface object server to {0}", iosResource);
 			if (iosPwd.length > 0)
 				saveEncryptedIos(iosPwd);
+			else if ("file".equals(iosResource.getScheme())) {
+				final var target = Path.of(iosResource);
+				final var temp = createTempFile(target);
+				try (final var os = Files.newOutputStream(temp)) {
+					ios.saveInterfaceObjects(os);
+					Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+				}
+				finally {
+					Files.deleteIfExists(temp);
+				}
+			}
 			else
 				ios.saveInterfaceObjects(iosResource.toString());
 		}
@@ -637,13 +649,21 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	}
 
 	private void saveEncryptedIos(final char[] pwd) throws GeneralSecurityException, IOException, KNXException {
-		final var os = Files.newOutputStream(Path.of(iosResource));
-		final var generatedSalt = new byte[16];
-		final var cipher = iosCipher(pwd, generatedSalt, null);
-		try (var cos = new CipherOutputStream(os, cipher)) {
-			os.write(generatedSalt);
-			os.write(cipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV());
-			ios.saveInterfaceObjects(cos);
+		final var target = Path.of(iosResource);
+		final var temp = createTempFile(target);
+		try {
+			final var os = Files.newOutputStream(temp); // closed by cos
+			final var generatedSalt = new byte[16];
+			final var cipher = iosCipher(pwd, generatedSalt, null);
+			try (var cos = new CipherOutputStream(os, cipher)) {
+				os.write(generatedSalt);
+				os.write(cipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV());
+				ios.saveInterfaceObjects(cos);
+			}
+			Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+		}
+		finally {
+			Files.deleteIfExists(temp);
 		}
 	}
 
@@ -1205,5 +1225,25 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private static byte[] fromWord(final int word)
 	{
 		return new byte[] { (byte) (word >> 8), (byte) word };
+	}
+
+	// creates hidden temp file ".<base>_<random>.<ext>" in same dir
+	// uses .tmp extension if file name has no extension
+	// is deleted when vm terminates
+	private static Path createTempFile(final Path target) throws IOException {
+		final var dir = target.toAbsolutePath().getParent();
+		final String[] baseExt = splitBaseExt(target.getFileName(), ".tmp");
+		final var temp = Files.createTempFile(dir, "." + baseExt[0].replaceFirst("^\\.+", "") + "_", baseExt[1]);
+		temp.toFile().deleteOnExit();
+		return temp;
+	}
+
+	private static String[] splitBaseExt(final Path filename, final String defaultExt) {
+		final String fn = filename.getFileName().toString();
+		final int dot = fn.lastIndexOf('.');
+		final boolean hasExt = dot > 0 && dot < fn.length() - 1;
+		final String base = hasExt ? fn.substring(0, dot) : fn;
+		final String ext = hasExt ? fn.substring(dot) : defaultExt;
+		return new String[] { base, ext };
 	}
 }
