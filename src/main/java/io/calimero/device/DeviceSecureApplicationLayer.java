@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2024 B. Malinowsky
+    Copyright (c) 2019, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -182,6 +182,8 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 			if (idx >= 0) {
 				final var data = ByteBuffer.allocate(8).put(remote.toByteArray()).put(sixBytes(seqNo));
 				securityObject.set(Pid.SecurityIndividualAddressTable, idx + 1, 1, data.array());
+
+				checkWarnHighSequenceNumber(seqNo, remote, false);
 			}
 		}
 	}
