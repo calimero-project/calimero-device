@@ -517,9 +517,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final var destinations = transportLayerProxies().values().stream().map(p -> p.getDestination()).toList();
 		destinations.forEach(Destination::destroy);
 
-		if (code == EraseCode.FactoryReset || code == EraseCode.FactoryResetWithoutIndividualAddress) {
-			SecurityObject.lookup(device.getInterfaceObjectServer()).populateWithDefaults();
-		}
+		device.executeRestart(code);
 	}
 
 	// p2p connection-oriented mode

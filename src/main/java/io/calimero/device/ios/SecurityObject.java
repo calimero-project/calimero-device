@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2024 B. Malinowsky
+    Copyright (c) 2019, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@
 
 package io.calimero.device.ios;
 
+import java.util.Arrays;
 import java.util.Map;
 
 import io.calimero.device.KnxDeviceServiceLogic.LoadState;
@@ -89,9 +90,16 @@ public final class SecurityObject extends InterfaceObject {
 
 		// non-standardized
 
-		// Sequence Number Sending (PDT GENERIC_06)
+		// Sequence Number Sending for Tool Access (PDT GENERIC_06)
 		int ToolSequenceNumberSending = 250;
+
+		// last re-initialized Sequence Number Sending (PDT GENERIC_06)
+		int InitialSequenceNumberSending = 251;
+
+		int Fdsk = 252;
 	}
+
+	private static final int KeyLength = 16;
 
 	// > 1 security interfaces are not supported by a device
 	public static SecurityObject lookup(final InterfaceObjectServer ios) {
@@ -126,6 +134,11 @@ public final class SecurityObject extends InterfaceObject {
 			firePropertyChanged(pid, start, elements, data);
 	}
 
+	public byte[] toolKeyOrFdsk() {
+		final byte[] toolkey = get(Pid.ToolKey);
+		return Arrays.equals(toolkey, new byte[KeyLength]) ? get(Pid.Fdsk) : toolkey;
+	}
+
 	public void populateWithDefaults() {
 		set(Pid.LoadStateControl, (byte) LoadState.Loaded.ordinal());
 		set(Pid.SecurityMode, (byte) 0);
@@ -136,18 +149,24 @@ public final class SecurityObject extends InterfaceObject {
 				500, 3, 3), true);
 		set(Pid.SecurityFailuresLog, 1, 1, new byte[8]);
 
-		final byte[] toolkey = new byte[16];
-		set(Pid.ToolKey, toolkey);
+		set(Pid.ToolKey, new byte[KeyLength]);
 
 		set(Pid.SecurityReport, (byte) 0);
 		set(Pid.SecurityReportControl, (byte) 1);
 		set(Pid.SequenceNumberSending, new byte[] { 0, 0, 0, 0, 0, 1 });
 
 		final int goFlags = 4000;
-		set(Pid.GoSecurityFlags, 1, 4000, new byte[goFlags]);
-		setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GoSecurityFlags, 0, 0, true, 0, goFlags, 3, 3),
-				true);
+		setDescription(new Description(objIndex, SECURITY_OBJECT, Pid.GoSecurityFlags, 0, 0, true, 0, goFlags, 3, 3), true);
 
 		set(Pid.RoleTable, 1, 0);
+
+		// internal
+		set(Pid.Fdsk, new byte[KeyLength]);
+		set(Pid.InitialSequenceNumberSending, new byte[] { 0, 0, 0, 0, 0, 1 });
+	}
+
+	// clears property to 0 current elements
+	public void clear(int pid) {
+		set(pid, 0, 1, (byte) 0, (byte) 0);
 	}
 }

@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2012, 2025 B. Malinowsky
+    Copyright (c) 2012, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -972,21 +972,6 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		setProgrammingMode(false);
 		syncDatapoints();
 		if (masterReset) {
-
-			// increase download counter except for confirmed restart
-			if (eraseCode.ordinal() > 1) {
-				final int pidDownloadCounter = 30;
-				try {
-					final double counter = ios.getPropertyTranslated(0, pidDownloadCounter, 1, 1).getNumericValue();
-					final double inc = Math.min(0xffff, counter + 1);
-					ios.setProperty(0, pidDownloadCounter, 1, 1,
-							ByteBuffer.allocate(2).putShort((short) inc).array());
-				}
-				catch (KNXException | KnxPropertyException e) {
-					e.printStackTrace();
-				}
-			}
-
 			if (eraseCode == EraseCode.FactoryReset || eraseCode == EraseCode.FactoryResetWithoutIndividualAddress) {
 				final int accessLevel = accessLevel(null);
 				resetAuthKeys(accessLevel);
@@ -998,7 +983,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		return ServiceResult.of(Duration.ZERO);
 	}
 
-	private void resetAuthKeys(final int maxAccessLevel) {
+	void resetAuthKeys(final int maxAccessLevel) {
 		for (int i = maxAccessLevel; i < 16; i++)
 			authKeys[i] = defaultAuthKey;
 	}
@@ -1084,12 +1069,42 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	}
 
 	private void syncTableWithMemory(final int objectType) {
+		final int objectInstance = 1;
+		final int[] args = tableMemoryAccessArgs(objectType, objectInstance);
+		if (args == null)
+			return;
+
+		final int startAddr = args[0];
+		final int entries = args[1];
+		final int typeSize = args[2];
+		final int objIdx = args[3];
+		logger.log(TRACE, "syncing {0} from memory: address 0x{1}, {2} entries",
+				PropertyClient.getObjectTypeName(objectType), Integer.toHexString(startAddr), entries);
+		ios.setDescription(new Description(objIdx, 0, PID.TABLE, 0, 0, true, 0, entries, 3, 3), true);
+		final byte[] data = device.deviceMemory().get(startAddr, entries * typeSize);
+		ios.setProperty(objectType, objectInstance, PID.TABLE, 1, entries, data);
+	}
+
+	void clearTableMemory(final int objectType, final int objectInstance) {
+		final int[] args = tableMemoryAccessArgs(objectType, objectInstance);
+		if (args == null)
+			return;
+
+		final int startAddr = args[0];
+		final int entries = args[1];
+		final int typeSize = args[2];
+		logger.log(TRACE, "clearing {0} memory: address 0x{1}, {2} entries",
+				PropertyClient.getObjectTypeName(objectType), Integer.toHexString(startAddr), entries);
+		device.deviceMemory().set(startAddr, new byte[entries * typeSize]);
+	}
+
+	// returns { memory start address, table entries, entry type size, IOS object index }, or null if not applicable
+	private int[] tableMemoryAccessArgs(final int objectType, final int objectInstance) {
 		final var dd0 = DeviceObject.lookup(ios).deviceDescriptor();
 		// System 300 doesn't provide memory mapped access
 		if (dd0 == DD0.TYPE_0300)
-			return;
+			return null;
 
-		final int objectInstance = 1;
 		final int ref = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.TABLE_REFERENCE, 1, 1));
 
 		// System B provides memory mapped access to address table data (realization type 7) with different layout
@@ -1097,40 +1112,35 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 		final boolean systemB = isSystemB(dd0);
 		final int lengthSize = systemB ? 2 : 1;
 
-		logger.log(TRACE, "sync {0} from address 0x{1}", PropertyClient.getObjectTypeName(objectType), Integer.toHexString(ref));
-
 		final int tableEntries = (int) unsigned(device.deviceMemory().get(ref, lengthSize));
-		if (tableEntries > 0) {
+		if (tableEntries == 0)
+			return null;
 
-			// address table contains device address, except for realization type 7 (system B)
-			int devAddrOffset = 0;
-			int copyEntries = tableEntries;
-			if (objectType == ADDRESSTABLE_OBJECT && !systemB) {
-				devAddrOffset = 2;
-				--copyEntries;
-			}
-
-			final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
-			final var description = ios.getDescription(idx, PID.TABLE);
-			int pdt = description.pdt();
-			// system 7 group object table contains RAM flags table pointer
-			int flagsTablePtrOffset = 0;
-			if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
-				if (systemB)
-					pdt = PropertyTypes.PDT_GENERIC_02;
-				else if (isSystem7(ios)) {
-					pdt = PropertyTypes.PDT_GENERIC_04;
-					flagsTablePtrOffset = 2;
-				}
-			}
-
-			final int max = copyEntries;
-			ios.setDescription(new Description(idx, 0, PID.TABLE, 0, pdt, true, 0, max, 3, 3), true);
-			final int typeSize = PropertyTypes.bitSize(pdt).orElse(16) / 8;
-			final byte[] data = device.deviceMemory().get(ref + lengthSize + devAddrOffset + flagsTablePtrOffset,
-					copyEntries * typeSize);
-			ios.setProperty(objectType, objectInstance, PID.TABLE, 1, copyEntries, data);
+		// address table contains device address, except for realization type 7 (system B)
+		int devAddrOffset = 0;
+		int entries = tableEntries;
+		if (objectType == ADDRESSTABLE_OBJECT && !systemB) {
+			devAddrOffset = 2;
+			--entries;
 		}
+
+		final int idx = (int) unsigned(ios.getProperty(objectType, objectInstance, PID.OBJECT_INDEX, 1, 1));
+		final var description = ios.getDescription(idx, PID.TABLE);
+		int pdt = description.pdt();
+		// system 7 group object table contains RAM flags table pointer
+		int flagsTablePtrOffset = 0;
+		if (objectType == GROUP_OBJECT_TABLE_OBJECT) {
+			if (systemB)
+				pdt = PropertyTypes.PDT_GENERIC_02;
+			else if (isSystem7(ios)) {
+				pdt = PropertyTypes.PDT_GENERIC_04;
+				flagsTablePtrOffset = 2;
+			}
+		}
+
+		final int startAddr = ref + lengthSize + devAddrOffset + flagsTablePtrOffset;
+		final int typeSize = PropertyTypes.bitSize(pdt).orElse(16) / 8;
+		return new int[] { startAddr, entries, typeSize, idx };
 	}
 
 	private Optional<Integer> groupAddressIndex(final GroupAddress address) {

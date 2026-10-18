@@ -69,11 +69,14 @@ import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -131,7 +134,9 @@ import io.calimero.link.KNXNetworkLinkUsb;
 import io.calimero.link.medium.KNXMediumSettings;
 import io.calimero.log.LogService;
 import io.calimero.mgmt.Description;
+import io.calimero.mgmt.ManagementClient.EraseCode;
 import io.calimero.mgmt.PropertyAccess.PID;
+import io.calimero.mgmt.PropertyClient;
 import io.calimero.mgmt.TransportLayer;
 import io.calimero.mgmt.TransportLayerImpl;
 import io.calimero.secure.SecureApplicationLayer;
@@ -540,7 +545,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(APPLICATIONPROGRAM_OBJECT, 1, PID.PROGRAM_VERSION, 1, 1, programVersion);
 
 		// fdsk for secure device download
-		SecurityObject.lookup(ios).set(Pid.ToolKey, fdsk);
+		SecurityObject.lookup(ios).set(Pid.Fdsk, fdsk);
 	}
 
 	protected record IpRoutingConfig(InetAddress multicastGroup, byte[] groupKey, Duration latencyTolerance) {
@@ -587,6 +592,157 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		catch (final InterruptedException e) {
 			logger.log(WARNING, format("interrupted group sync for new device routing link ({0})", config), e);
 			Thread.currentThread().interrupt();
+		}
+	}
+
+	// master reset restart
+	protected void executeRestart(final EraseCode eraseCode) {
+		try (var closeThis = this) {
+			resetResources(eraseCode);
+		}
+	}
+
+	// manual device reset to factory defaults
+	protected void resetToDefaultState() {
+		if (mgmt instanceof final KnxDeviceServiceLogic logic)
+			logic.resetAuthKeys(0);
+		resetResources(EraseCode.FactoryReset);
+	}
+
+	private void resetResources(final EraseCode eraseCode) {
+		// except for "confirmed restart" and "reset IA", backup current IOS store (if any) and increment download counter
+		if (eraseCode == EraseCode.FactoryReset
+				|| eraseCode == EraseCode.ResetApplicationProgram /* app program memory modification */
+				|| eraseCode == EraseCode.ResetApplicationParameters
+				|| eraseCode == EraseCode.ResetLinks
+				|| eraseCode == EraseCode.FactoryResetWithoutIndividualAddress
+				|| eraseCode == EraseCode.ErasePersistentlyStoredApplicationData /* app data memory modification */) {
+			backupDeleteIos(eraseCode);
+			incrementDeviceDownloadCounter();
+		}
+
+		if (eraseCode == EraseCode.ResetLinks) {
+			// clear Group Address Table
+			clearGroupTable(ADDRESSTABLE_OBJECT, objectInstance);
+			// clear Group Object Association Table
+			clearGroupTable(ASSOCIATIONTABLE_OBJECT, objectInstance);
+		}
+
+		final var secObj = SecurityObject.lookup(ios);
+		if (eraseCode == EraseCode.FactoryReset
+				|| eraseCode == EraseCode.ResetLinks
+				|| eraseCode == EraseCode.FactoryResetWithoutIndividualAddress) {
+			secObj.clear(Pid.GroupKeyTable);
+			secObj.clear(Pid.ZoneKeyTable);
+			secObj.clear(Pid.GoSecurityFlags);
+			secObj.clear(Pid.SecurityReport);
+		}
+
+		if (eraseCode == EraseCode.FactoryReset
+				|| eraseCode == EraseCode.FactoryResetWithoutIndividualAddress) {
+			secObj.clear(Pid.P2PKeyTable);
+			secObj.clear(Pid.SecurityIndividualAddressTable);
+			secObj.set(Pid.SecurityReportControl, (byte) 0);
+			secObj.clear(Pid.SecurityFailuresLog);
+			if (sal != null)
+				sal.clearFailureLog();
+			// activate FDSK by resetting tool key
+			secObj.set(Pid.ToolKey, new byte[16]);
+		}
+
+		if (eraseCode == EraseCode.ResetIndividualAddress)
+			setAddress(new IndividualAddress(0xffff));
+
+		if (eraseCode == EraseCode.FactoryReset) {
+			resetNetworkResources();
+			checkReinitSequenceNumberSending();
+			secObj.set(Pid.SecurityMode, (byte) 0);
+			if (sal != null)
+				sal.factoryReset();
+		}
+	}
+
+	private void clearGroupTable(final int objectType, final int objectInstance) {
+		try {
+			ios.setProperty(objectType, objectInstance, PID.TABLE, 0, 1, (byte) 0, (byte) 0);
+			if (mgmt instanceof final KnxDeviceServiceLogic logic)
+				logic.clearTableMemory(objectType, objectInstance);
+		}
+		catch (final RuntimeException e) {
+			logger.log(WARNING, format("error clearing {0}", PropertyClient.getObjectTypeName(objectType)), e);
+		}
+	}
+
+	// required for manual reset and master reset with erase code = 2 (factory reset)
+	private void resetNetworkResources() {
+		setAddress(new IndividualAddress(0xffff));
+		// reset PL & RF domains
+		DeviceObject.lookup(ios).setDomainAddress(new byte[] { 0, (byte) 0xff});
+		final byte[] defRfDoA = new byte[6];
+		DeviceObject.lookup(ios).setDomainAddress(defRfDoA);
+		try {
+			final int pidRfDomainAddress = 56;
+			ios.setProperty(InterfaceObject.RF_MEDIUM_OBJECT, 1, pidRfDomainAddress, 1, 1, defRfDoA);
+		}
+		catch (final KnxPropertyException ignore) {}
+
+		if (!lookup(KNXNETIP_PARAMETER_OBJECT))
+			return;
+		final var knxipObject = KnxipParameterObject.lookup(ios, 1);
+		knxipObject.populateWithDefaults();
+
+		final byte[] ipAddr = new byte[4];
+		final byte[] mask = new byte[4];
+
+		knxipObject.set(PID.CURRENT_IP_ADDRESS, ipAddr);
+		knxipObject.set(PID.CURRENT_SUBNET_MASK, mask);
+		knxipObject.set(PID.IP_ADDRESS, ipAddr);
+		knxipObject.set(PID.SUBNET_MASK, mask);
+
+		final byte[] gwAddress = new byte[4];
+		knxipObject.set(PID.CURRENT_DEFAULT_GATEWAY, gwAddress);
+		knxipObject.set(PID.DEFAULT_GATEWAY, gwAddress);
+
+		knxipObject.setInetAddress(PID.ROUTING_MULTICAST_ADDRESS, KNXnetIPRouting.DefaultMulticast);
+
+		// switch to manual assignment
+		knxipObject.set(PID.CURRENT_IP_ASSIGNMENT_METHOD, (byte) 1);
+		knxipObject.set(PID.IP_ASSIGNMENT_METHOD, (byte) 1);
+
+		// clear additional addresses
+		knxipObject.set(PID.ADDITIONAL_INDIVIDUAL_ADDRESSES, 0, 1, new byte[] { 0, 0 });
+	}
+
+	private void incrementDeviceDownloadCounter() {
+		final int pidDownloadCounter = 30;
+		final int maxDownloadCounter = 0xffff;
+		try {
+			final var devObj = DeviceObject.lookup(ios);
+			final int counter = Math.min(devObj.downloadCounter() + 1, maxDownloadCounter);
+			if (counter == maxDownloadCounter)
+				logger.log(WARNING, "device download counter reached maximum ({0})", maxDownloadCounter);
+			devObj.set(pidDownloadCounter, ByteBuffer.allocate(2).putShort((short) counter).array());
+		}
+		catch (final KnxPropertyException e) {
+			logger.log(WARNING, "error incrementing device download counter", e);
+		}
+	}
+
+	private void checkReinitSequenceNumberSending() {
+		try {
+			final var secObj = SecurityObject.lookup(ios);
+			final long seq = unsigned(secObj.get(Pid.SequenceNumberSending));
+			if (seq >= 0xff00_0000_0000L) {
+				logger.log(INFO, "security sequence number is excessively high → reinitialize", seq);
+				final long prevInit = unsigned(secObj.get(Pid.InitialSequenceNumberSending));
+				final long reinit = Math.min(0xffffffffL, prevInit + 20);
+				final byte[] bytes = sixBytes(reinit).array();
+				secObj.set(Pid.SequenceNumberSending, bytes);
+				secObj.set(Pid.InitialSequenceNumberSending, bytes);
+			}
+		}
+		catch (final KnxPropertyException e) {
+			logger.log(WARNING, "error reinitializing security sequence number", e);
 		}
 	}
 
@@ -672,6 +828,34 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		try (var cis = new CipherInputStream(is, iosCipher(pwd, is.readNBytes(16), is.readNBytes(16)))) {
 			ios.loadInterfaceObjects(cis);
 		}
+	}
+
+	private void backupDeleteIos(final EraseCode eraseCode) {
+		if ("".equals(iosResource.toString()))
+			return;
+		try {
+			saveDeviceMemory();
+			saveIos();
+			final var src = Path.of(iosResource);
+			if (!Files.isRegularFile(src))
+				return;
+			final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
+			final String[] baseExt = splitBaseExt(src.getFileName(), "");
+			final String backupName = baseExt[0] + "_" + timestamp + "_EC" + eraseCode.code() + baseExt[1];
+			final var dst = src.resolveSibling(backupName);
+			Files.move(src, dst,  StandardCopyOption.REPLACE_EXISTING,  StandardCopyOption.ATOMIC_MOVE);
+		}
+		catch (IOException | RuntimeException e) {
+			final String error = e instanceof IOException ? errorFromExceptionType(e) : e.getMessage();
+			logger.log(WARNING, "failed to back up interface object server resource {0}: {1}", iosResource, error);
+		}
+	}
+
+	private static String errorFromExceptionType(final Exception e) {
+		return e.getClass().getSimpleName()
+				.replaceAll("Exception$", "")
+				.replaceAll("(\\p{javaLowerCase})(\\p{javaUpperCase})", "$1 $2")
+				.toLowerCase(Locale.ROOT);
 	}
 
 	// salt is input param on decrypt, output param on encrypt

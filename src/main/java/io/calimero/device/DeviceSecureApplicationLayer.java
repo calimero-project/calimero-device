@@ -143,7 +143,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	@Override
 	protected byte[] toolKey(final IndividualAddress addr) {
-		return securityObject.get(Pid.ToolKey);
+		return securityObject.toolKeyOrFdsk();
 	}
 
 	@Override
@@ -327,7 +327,7 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 				.putShort((short) role).array();
 	}
 
-	private void clearFailureLog() {
+	void clearFailureLog() {
 		initFailureCounter(InvalidScf, 0);
 		initFailureCounter(SeqNoError, 0);
 		initFailureCounter(CryptoError, 0);
