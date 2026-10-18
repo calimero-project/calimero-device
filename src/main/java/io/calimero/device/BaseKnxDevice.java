@@ -1158,6 +1158,11 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		final var knxipObject = KnxipParameterObject.lookup(ios, 1);
 		final var ip = knxipObject.inetAddress(PID.CURRENT_IP_ADDRESS);
+		if (ip.isAnyLocalAddress()) {
+			// can happen if device's ip params are not configured, or device just got reset to factory state
+			logger.log(DEBUG, "cannot respond to KNXnet/IP search.req: current IP address is not set");
+			return null;
+		}
 		final var mcast = knxipObject.inetAddress(PID.ROUTING_MULTICAST_ADDRESS);
 		final var deviceName = knxipObject.friendlyName();
 		final var projectInstId = (int) unsigned(knxipObject.get(PID.PROJECT_INSTALLATION_ID));
