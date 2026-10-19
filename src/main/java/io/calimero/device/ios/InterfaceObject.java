@@ -83,11 +83,15 @@ public class InterfaceObject
 	/** Interface object type 'device object' ({@value DEVICE_OBJECT}). */
 	public static final int DEVICE_OBJECT = 0;
 
-	/** Interface object type 'address table object' ({@value ADDRESSTABLE_OBJECT}). */
+	/**
+	 * Interface object type 'address table object' ({@value ADDRESSTABLE_OBJECT}).
+	 * This type is used for the Group Address Table.
+	 */
 	public static final int ADDRESSTABLE_OBJECT = 1;
 
 	/**
 	 * Interface object type 'association table object' ({@value ASSOCIATIONTABLE_OBJECT}).
+	 * This type is used for the Group Object Association Table.
 	 */
 	public static final int ASSOCIATIONTABLE_OBJECT = 2;
 

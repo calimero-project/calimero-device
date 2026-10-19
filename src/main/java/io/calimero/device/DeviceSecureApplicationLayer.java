@@ -157,8 +157,8 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 
 	@Override
 	protected byte[] securityKey(final KNXAddress addr) {
-		if (addr instanceof IndividualAddress) {
-			final int indAddressIndex = indAddressIndex((IndividualAddress) addr);
+		if (addr instanceof final IndividualAddress ia) {
+			final int indAddressIndex = indAddressIndex(ia);
 			if (indAddressIndex > 0)
 				return p2pKey(indAddressIndex);
 			return null;

@@ -1003,8 +1003,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 				logger.log(WARNING, "loading device memory from " + iosResource, e);
 			}
 		}
-		catch (final KnxPropertyException e) { // lookup failed, no device memory stored
-		}
+		catch (final KnxPropertyException ignore) {} // lookup failed, no device memory stored
 	}
 
 	private void saveDeviceMemory() {
