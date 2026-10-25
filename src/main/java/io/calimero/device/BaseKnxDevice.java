@@ -330,7 +330,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			DeviceObject.lookup(ios).setDeviceAddress(address);
 
 			try {
-				setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, address.toByteArray());
+				ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, PID.KNX_INDIVIDUAL_ADDRESS, 1, 1, address.toByteArray());
 			}
 			catch (final KnxPropertyException ignore) {
 				// fails if we don't have a KNX IP object
@@ -1185,11 +1185,6 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		ios.setProperty(APPLICATIONPROGRAM_OBJECT, objectInstance, PID.PROGRAM_VERSION, 1, 1, applicationVersion);
 	}
 
-	private void setIpProperty(final int propertyId, final byte... data)
-	{
-		ios.setProperty(KNXNETIP_PARAMETER_OBJECT, objectInstance, propertyId, 1, 1, data);
-	}
-
 	private Optional<KNXnetIPRouting> connectionOfLink() throws ReflectiveOperationException {
 		return Optional.ofNullable(accessField(AbstractLink.class, "conn", link));
 	}
@@ -1241,7 +1236,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			knxipObject.setFriendlyName(name);
 		}
 
-		setIpProperty(PID.KNX_INDIVIDUAL_ADDRESS, getAddress().toByteArray());
+		final var knxipObject = KnxipParameterObject.lookup(ios, objectInstance);
+		knxipObject.set(PID.KNX_INDIVIDUAL_ADDRESS, getAddress().toByteArray());
 
 		// pull out IP info from KNX IP protocol
 		byte[] ip = new byte[4];
@@ -1296,18 +1292,18 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 				if (conn instanceof final SecureRouting secRouting) {
 					// TODO set actual key
-					setIpProperty(KnxipParameterObject.Pid.BackboneKey, new byte[16]);
+					knxipObject.set(KnxipParameterObject.Pid.BackboneKey, new byte[16]);
 
 					final int bits = 1 << ServiceFamily.Routing.id();
 					// function property
-					setIpProperty(KnxipParameterObject.Pid.SecuredServiceFamilies, new byte[] { 0, (byte) bits });
+					knxipObject.set(KnxipParameterObject.Pid.SecuredServiceFamilies, new byte[] { 0, (byte) bits });
 
 					final long ms = secRouting.latencyTolerance().toMillis();
 					final byte[] msData = new byte[] { (byte) (ms >> 8), (byte) (ms & 0xff)};
-					setIpProperty(KnxipParameterObject.Pid.LatencyTolerance, msData);
+					knxipObject.set(KnxipParameterObject.Pid.LatencyTolerance, msData);
 
 					final double frac = secRouting.syncLatencyFraction();
-					setIpProperty(KnxipParameterObject.Pid.SyncLatencyFraction, (byte) (frac * 255));
+					knxipObject.set(KnxipParameterObject.Pid.SyncLatencyFraction, (byte) (frac * 255));
 				}
 			}
 
@@ -1316,20 +1312,19 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			logger.log(WARNING, "initializing KNX IP properties, {0}", e.toString());
 		}
 
-		final var knxipObject = KnxipParameterObject.lookup(ios, objectInstance);
 		knxipObject.populateWithDefaults();
 
-		setIpProperty(PID.CURRENT_IP_ADDRESS, ip);
-		setIpProperty(PID.CURRENT_SUBNET_MASK, mask);
+		knxipObject.set(PID.CURRENT_IP_ADDRESS, ip);
+		knxipObject.set(PID.CURRENT_SUBNET_MASK, mask);
 
 		final byte[] gw = new byte[4];
-		setIpProperty(PID.CURRENT_DEFAULT_GATEWAY, gw);
-		setIpProperty(PID.IP_ADDRESS, ip);
-		setIpProperty(PID.SUBNET_MASK, mask);
-		setIpProperty(PID.DEFAULT_GATEWAY, gw);
-		setIpProperty(PID.MAC_ADDRESS, mac);
+		knxipObject.set(PID.CURRENT_DEFAULT_GATEWAY, gw);
+		knxipObject.set(PID.IP_ADDRESS, ip);
+		knxipObject.set(PID.SUBNET_MASK, mask);
+		knxipObject.set(PID.DEFAULT_GATEWAY, gw);
+		knxipObject.set(PID.MAC_ADDRESS, mac);
 		if (!Arrays.equals(mcast, new byte[4]))
-			setIpProperty(PID.ROUTING_MULTICAST_ADDRESS, mcast);
+			knxipObject.set(PID.ROUTING_MULTICAST_ADDRESS, mcast);
 	}
 
 	private void initRfProperties() {

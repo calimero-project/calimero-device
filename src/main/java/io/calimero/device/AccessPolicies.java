@@ -100,11 +100,6 @@ public final class AccessPolicies {
 	static final int RoleX = 1;
 	static final int Tool = 2;
 
-	// Security
-	static final int None = 0;
-	static final int AuthOnly = 1;
-	static final int AuthConf = 2;
-
 	// R/W/RW
 	private static final int Read = 0b01;
 	private static final int Write = 0b10;
@@ -113,7 +108,7 @@ public final class AccessPolicies {
 
 	private AccessPolicies() {}
 
-	// service level access policies
+	// service-level access policies
 
 	static boolean checkServiceAccess(final int service, final boolean securityMode,
 			final SecurityControl securityCtrl) {
@@ -140,7 +135,7 @@ public final class AccessPolicies {
 		return readWrite(policy, securityMode, securityCtrl);
 	}
 
-	// data level access policies
+	// data-level access policies
 
 	private static final int defaultPropertyAccessPolicy = accessPolicy("3FF/0CC");
 
@@ -202,7 +197,7 @@ public final class AccessPolicies {
 		if (!masterReset || code == EraseCode.ConfirmedRestart)
 			return readWrite(accessPolicy("2AA/0AA"), securityMode, securityCtrl);
 		if (securityMode && (code == EraseCode.ResetIndividualAddress || code == EraseCode.ResetApplicationProgram))
-			throw new KNXIllegalArgumentException("unsupported restart service erase code " + code);
+			throw new KNXIllegalArgumentException("unsupported restart service erase code '%s'".formatted(code));
 		return readWrite(accessPolicy("2AA/008"), securityMode, securityCtrl);
 	}
 
