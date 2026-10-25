@@ -1,6 +1,6 @@
 /*
     Calimero - A library for KNX network access
-    Copyright (c) 2019, 2025 B. Malinowsky
+    Copyright (c) 2019, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -200,7 +200,7 @@ public final class AccessPolicies {
 	private static int restartAccess(final boolean masterReset, final EraseCode code, final boolean securityMode,
 			final SecurityControl securityCtrl) {
 		if (!masterReset || code == EraseCode.ConfirmedRestart)
-			return accessPolicy("2AA/0AA");
+			return readWrite(accessPolicy("2AA/0AA"), securityMode, securityCtrl);
 		if (securityMode && (code == EraseCode.ResetIndividualAddress || code == EraseCode.ResetApplicationProgram))
 			throw new KNXIllegalArgumentException("unsupported restart service erase code " + code);
 		return readWrite(accessPolicy("2AA/008"), securityMode, securityCtrl);
