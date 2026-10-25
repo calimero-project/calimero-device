@@ -660,6 +660,12 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 			setAddress(new IndividualAddress(0xffff));
 
 		if (eraseCode == EraseCode.FactoryReset) {
+			final int pidPL110Param = 73;
+			try {
+				DeviceObject.lookup(ios).set(pidPL110Param, (byte) 0xff);
+			}
+			catch (final KnxPropertyException ignored) {}
+
 			resetNetworkResources();
 			checkReinitSequenceNumberSending();
 			secObj.set(Pid.SecurityMode, (byte) 0);
