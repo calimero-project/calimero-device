@@ -82,6 +82,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -205,6 +206,9 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	private static final int deviceMemorySize = 0x10200; // multiple of 4
 	private final Memory memory = new ThreadSafeByteArray(deviceMemorySize);
 
+	private final AtomicBoolean closed = new AtomicBoolean(false);
+	private final Thread shutdownHook = new Thread(this::close);
+
 	// GraalVM native image doesn't like lambdas
 	private final class IOSL implements InterfaceObjectServerListener {
 		@Override
@@ -242,6 +246,8 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 		initIos(dd);
 		loadDeviceMemory();
+
+		Runtime.getRuntime().addShutdownHook(shutdownHook);
 	}
 
 	BaseKnxDevice(final String name, final DD0 dd, final KNXNetworkLink link,
@@ -763,6 +769,13 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 
 	@Override
 	public void close() {
+		if (!closed.compareAndSet(false, true))
+			return;
+		try {
+			Runtime.getRuntime().removeShutdownHook(shutdownHook);
+		}
+		catch (final IllegalStateException ignored) {}
+
 		if (sal != null)
 			sal.close();
 
