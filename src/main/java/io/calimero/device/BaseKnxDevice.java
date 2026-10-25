@@ -1415,11 +1415,13 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 		return new byte[] { (byte) (word >> 8), (byte) word };
 	}
 
-	// creates hidden temp file ".<base>_<random>.<ext>" in same dir
+	// creates a hidden temp file ".<base>_<random>.<ext>" in same dir
+	// creates all non-existing parent directories prior to temp file creation
 	// uses .tmp extension if file name has no extension
 	// is deleted when vm terminates
 	private static Path createTempFile(final Path target) throws IOException {
 		final var dir = target.toAbsolutePath().getParent();
+		Files.createDirectories(dir);
 		final String[] baseExt = splitBaseExt(target.getFileName(), ".tmp");
 		final var temp = Files.createTempFile(dir, "." + baseExt[0].replaceFirst("^\\.+", "") + "_", baseExt[1]);
 		temp.toFile().deleteOnExit();
