@@ -239,7 +239,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 					return new ServiceResult<>(t.getData(), t.getTypeSize() == 0);
 			}
 			catch (KNXException | RuntimeException ex) {
-				logger.log(WARNING, "on group read request {0}->{1}: {2}", e.getSourceAddr(), dst,
+				logger.log(WARNING, "on group read request {0}→{1}: {2}", e.getSourceAddr(), dst,
 						HexFormat.ofDelimiter(" ").formatHex(e.getASDU()), ex);
 			}
 		}
@@ -258,7 +258,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 			updateDatapointValue(dp, t);
 		}
 		catch (KNXException | RuntimeException ex) {
-			logger.log(WARNING, "on group write {0}->{1}: {2}, {3}", e.getSourceAddr(), dst,
+			logger.log(WARNING, "on group write {0}→{1}: {2}, {3}", e.getSourceAddr(), dst,
 					HexFormat.ofDelimiter(" ").formatHex(e.getASDU()), ex.getMessage());
 		}
 	}
@@ -325,7 +325,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 
 			final var event = LoadEvent.values()[stateMachineAndEvent & 0xf];
 			final var state = nextLoadState(event);
-			logic.logger.log(DEBUG, "state machine {0} (0x{1}) event {2} -> load state {3}", stateMachine,
+			logic.logger.log(DEBUG, "state machine {0} (0x{1}) event {2} → load state {3}", stateMachine,
 					Integer.toHexString(addr), event, state);
 			logic.writeMemory(addr, new byte[] { (byte) state.ordinal() });
 		}
@@ -992,7 +992,7 @@ public abstract class KnxDeviceServiceLogic implements ProcessCommunicationServi
 	public ServiceResult<byte[]> management(final int svcType, final byte[] asdu, final KNXAddress dst,
 		final Destination respondTo, final TransportLayer tl)
 	{
-		logger.log(DEBUG, "{0}->{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
+		logger.log(DEBUG, "{0}→{1} {2} {3}", respondTo.getAddress(), dst, DataUnitBuilder.decodeAPCI(svcType),
 				HexFormat.ofDelimiter(" ").formatHex(asdu));
 		return null;
 	}

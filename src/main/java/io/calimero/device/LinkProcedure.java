@@ -1,6 +1,6 @@
 /*
     Calimero 3 - A library for KNX network access
-    Copyright (c) 2015, 2025 B. Malinowsky
+    Copyright (c) 2015, 2026 B. Malinowsky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -299,7 +299,7 @@ public final class LinkProcedure implements Runnable
 				return;
 			}
 
-			logger.log(INFO, "starting link procedure for {0} {1}->{2}", isActuator ? "actuator" : "sensor", self, remote);
+			logger.log(INFO, "starting link procedure for {0} {1}→{2}", isActuator ? "actuator" : "sensor", self, remote);
 			((ManagementClientImpl) mgmt).addEventListener(onEvent);
 			int groupObject = 0;
 			final Iterator<Integer> connectionCodes = groupObjects.keySet().iterator();
@@ -332,7 +332,7 @@ public final class LinkProcedure implements Runnable
 		}
 		finally {
 			((ManagementClientImpl) mgmt).removeEventListener(onEvent);
-			logger.log(INFO, "finished link procedure for {0} {1}->{2}", isActuator ? "actuator" : "sensor", self, remote);
+			logger.log(INFO, "finished link procedure for {0} {1}→{2}", isActuator ? "actuator" : "sensor", self, remote);
 		}
 	}
 
