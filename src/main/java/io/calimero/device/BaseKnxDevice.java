@@ -459,7 +459,7 @@ public class BaseKnxDevice implements KnxDevice, AutoCloseable
 	 * {@return the task executor providing the threads to run the process communication and
 	 *         management services}
 	 */
-	public ExecutorService taskExecutor()
+	protected ExecutorService taskExecutor()
 	{
 		return Executor.executor();
 	}
