@@ -215,8 +215,8 @@ final class DeviceSecureApplicationLayer extends SecureManagement {
 					conf ? DataSecurity.AuthConf : auth ? DataSecurity.Auth : DataSecurity.None, false);
 			// if group object security does not match exactly, complete service is ignored
 			if (!securityCtrl.equals(required)) {
-				logger.log(WARNING, "group object {0} security mismatch: requested {1} but requires {2}, ignore", dst,
-						securityCtrl, required);
+				logger.log(WARNING, "group object {0} security mismatch: requested {1} but requires {2}, discarding message",
+						dst, securityCtrl, required);
 				return false;
 			}
 			return true;

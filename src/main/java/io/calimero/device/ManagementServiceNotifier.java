@@ -460,7 +460,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// we have to ignore the service without any response
 		final int reserved = data[0] & 0x1e;
 		if (reserved != 0) {
-			logger.log(INFO, "{0} uses reserved bits -- ignore", name);
+			logger.log(INFO, "{0} uses reserved bits -- discarding message", name);
 			return;
 		}
 
@@ -660,7 +660,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 			return;
 		final byte[] domain = domainAddress();
 		if (domain.length != lengthDoA) {
-			logger.log(ERROR, "length of domain address is {0} bytes, should be {1} - ignore", domain.length, lengthDoA);
+			logger.log(ERROR, "length of domain address is {0} bytes, should be {1} - discarding message",
+					domain.length, lengthDoA);
 			return;
 		}
 		final byte[] asdu;
@@ -774,7 +775,8 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final byte[] domain = domainAddress();
 		if (domain.length != lengthDoA) {
-			logger.log(WARNING, "length of domain address is {0} bytes, should be {1} - ignore", domain.length, lengthDoA);
+			logger.log(WARNING, "length of domain address is {0} bytes, should be {1} - discarding message",
+					domain.length, lengthDoA);
 			return;
 		}
 
@@ -810,7 +812,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		final int reserved = data[0] & 0xff;
 		if (reserved != 0) {
-			logger.log(WARNING, "first byte in authorize request not zero, ignore");
+			logger.log(WARNING, "first byte in authorize request not zero, discarding message");
 			return;
 		}
 		final byte[] key = Arrays.copyOfRange(data, 1, 5);
@@ -1068,7 +1070,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		// the remote application layer shall ignore a memory-write.ind if
 		// the value of the parameter number is greater than maximum APDU length - 3
 		if (bytes > getMaxApduLength() - 3) {
-			logger.log(WARNING, "{0} of length {1} > max. {2} bytes - ignore", name, bytes, getMaxApduLength() - 3);
+			logger.log(WARNING, "{0} of length {1} > max. {2} bytes - discarding message", name, bytes, getMaxApduLength() - 3);
 			return;
 		}
 
@@ -1111,7 +1113,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final ReturnCode rc;
 		Priority priority = Priority.LOW;
 		if (bytes > getMaxApduLength() - 5) {
-			logger.log(WARNING, "{0} of length {1} > max. {2} bytes - ignore", name, bytes, getMaxApduLength() - 5);
+			logger.log(WARNING, "{0} of length {1} > max. {2} bytes - reject request", name, bytes, getMaxApduLength() - 5);
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
@@ -1171,7 +1173,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 
 		// requests with a length exceeding the maximum APDU size shall be ignored by the application
 		if (length > getMaxApduLength() - 3) {
-			logger.log(WARNING, "{0} of length {1} > max. {2} bytes - ignored", name, length, getMaxApduLength() - 3);
+			logger.log(WARNING, "{0} of length {1} > max. {2} bytes - discarding message", name, length, getMaxApduLength() - 3);
 			return;
 		}
 		logger.log(TRACE, "{0}→{1} {2}: start address 0x{3}, {4} bytes", d.getAddress(), device.getAddress(), name,
@@ -1207,7 +1209,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		byte[] read = {};
 		Priority priority = Priority.LOW;
 		if (length > getMaxApduLength() - 5) {
-			logger.log(WARNING, "{0} request of length {1} > max. {2} bytes - ignored", name, length, getMaxApduLength() - 5);
+			logger.log(WARNING, "{0} request of length {1} > max. {2} bytes - reject request", name, length, getMaxApduLength() - 5);
 			rc = ReturnCode.ExceedsMaxApduLength;
 		}
 		else {
@@ -1243,7 +1245,7 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 		final int pid = (data[3] & 0xf) << 8 | data[4] & 0xff;
 		final int pdt = (data[5] & 0xff) >> 4; // reserved, always zero
 		if (pdt != 0) {
-			logger.log(INFO, "{0} PDT is reserved, but set to {1}, ignore service", name, pdt);
+			logger.log(INFO, "{0} PDT is reserved, but set to {1}, discarding message", name, pdt);
 			return;
 		}
 		final int propIndex = (data[5] & 0xf) << 8 | data[6] & 0xff;
@@ -1437,9 +1439,9 @@ class ManagementServiceNotifier implements TransportListener, AutoCloseable
 	private boolean verifyLength(final int length, final int minExpected, final int maxExpected, final String svcType)
 	{
 		if (length < minExpected)
-			logger.log(WARNING, svcType + " SDU of length " + length + " too short, expected " + minExpected);
+			logger.log(WARNING, "{0} SDU of length {1} too short, expected {2}, discarding message", svcType, length, minExpected);
 		else if (length > maxExpected)
-			logger.log(WARNING, svcType + " SDU of length " + length + " too long, maximum " + maxExpected);
+			logger.log(WARNING, "{0} SDU of length {1} too long, maximum {2}, discarding message", svcType, length, maxExpected);
 		return length >= minExpected && length <= maxExpected;
 	}
 
